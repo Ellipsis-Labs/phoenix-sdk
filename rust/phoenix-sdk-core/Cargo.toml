@@ -11,7 +11,9 @@ solana-program = { workspace = true }
 phoenix-types = { workspace = true }
 borsh = { workspace = true }
 solana-sdk = { workspace = true }
-num-traits = "0.2"
-rust_decimal = "1.26.1"
-rust_decimal_macros = "1.26"
+num-traits = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
 itertools = "0.10.5"
+rand = { workspace = true }
+anyhow = { workspace = true }

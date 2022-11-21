@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use itertools::Itertools;
 use num_traits::ToPrimitive;
 use phoenix_types::enums::Side;
-use phoenix_types::market::FIFOOrderId;
+use phoenix_types::market::{FIFOOrderId, FIFORestingOrder, Market};
 use rust_decimal::Decimal;
 
 use crate::sdk_client_core::PhoenixOrder;
@@ -69,6 +69,56 @@ pub struct Orderbook<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> {
     pub price_mult: f64,
     pub bids: BTreeMap<K, V>,
     pub asks: BTreeMap<K, V>,
+}
+
+impl Orderbook<FIFOOrderId, PhoenixOrder> {
+    pub fn from_market(market: &dyn Market, size_mult: f64, price_mult: f64) -> Self {
+        let traders = market
+            .get_registered_traders()
+            .iter()
+            .map(|(trader, _)| *trader)
+            .collect::<Vec<_>>();
+
+        let mut index_to_trader = BTreeMap::new();
+        for trader in traders.iter() {
+            let index = market.get_trader_address(trader).unwrap();
+            index_to_trader.insert(index as u64, *trader);
+        }
+
+        let mut orderbook = Orderbook {
+            size_mult,
+            price_mult,
+            bids: BTreeMap::new(),
+            asks: BTreeMap::new(),
+        };
+        for side in [Side::Bid, Side::Ask].iter() {
+            orderbook.update_orders(
+                *side,
+                market
+                    .get_book(*side)
+                    .iter()
+                    .map(
+                        |(
+                            &k,
+                            &FIFORestingOrder {
+                                trader_index,
+                                num_base_lots,
+                            },
+                        )| {
+                            (
+                                k,
+                                PhoenixOrder {
+                                    num_base_lots,
+                                    maker_id: index_to_trader[&trader_index],
+                                },
+                            )
+                        },
+                    )
+                    .collect::<Vec<_>>(),
+            );
+        }
+        orderbook
+    }
 }
 
 impl<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> Orderbook<K, V> {

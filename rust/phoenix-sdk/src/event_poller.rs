@@ -67,7 +67,7 @@ impl EventPoller {
 
             // This is not 100% robust, but it's good enough for now.
             for (i, signature) in rpc_client
-                .get_signatures_for_address_with_config(&sdk.active_market_key, config)
+                .get_signatures_for_address_with_config(&sdk.core.active_market_key, config)
                 .ok()?
                 .iter()
                 .map(|tx| Signature::from_str(&tx.signature).unwrap())
