@@ -1,0 +1,30 @@
+cargo-features = ["workspace-inheritance"]
+
+[package]
+name = "phoenix-sdk"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+anyhow = { workspace = true }
+solana-program = { workspace = true }
+phoenix-types = { workspace = true }
+clap = { workspace = true }
+borsh = { workspace = true }
+rand = { workspace = true }
+spl-token = { workspace = true }
+solana-sdk = { workspace = true }
+solana-client = { workspace = true }
+tokio = { workspace = true }
+ellipsis-client = { workspace = true }
+futures = "0.3.21"
+solana-transaction-status = "1.14.5"
+spl-noop = { workspace = true }
+async-trait = "0.1.52"
+binance = "0.19.0"
+num-traits = "0.2"
+rust_decimal = "1.26.1"
+rust_decimal_macros = "1.26"
+itertools = "0.10.5"
+phoenix-sdk-core = { version = "0.1.0", path = "../phoenix-sdk-core" }

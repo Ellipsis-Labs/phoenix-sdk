@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+    "phoenix-sdk",
+    "phoenix-sdk-core"
+]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+overflow-checks = true
+
+[workspace.dependencies]
+spl-noop = { version = "=0.1.0", features = [ "no-entrypoint" ] }
+spl-token = { version = "3.2.0", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "1.1.1", features = [ "no-entrypoint" ] } 
+solana-program = "1.14.5"
+solana-account-decoder = "1.14.7"
+anyhow = "1.0.52"
+solana-sdk = "1.10.32"
+borsh = "0.9.3"
+rand = "0.7.3"
+phoenix-types = { git = "https://github.com/Ellipsis-Labs/phoenix-types", branch = "master" }
+ellipsis-client = "0.1.7"
+tokio = { version = "1.8.4", features = ["full"] }
+solana-client = "1.10.32"
+clap = { version = "3.0.13", features = ["derive"] }
+shellexpand = "2.1.2"
+phoenix-sdk = { version = "0.1.0", path = "./phoenix-sdk" }
+phoenix = { path = "./program", features = ["no-entrypoint"] }
