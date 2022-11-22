@@ -28,3 +28,7 @@ solana-client = "1.10.32"
 clap = { version = "3.0.13", features = ["derive"] }
 shellexpand = "2.1.2"
 phoenix-sdk = { version = "0.1.0", path = "./phoenix-sdk" }
+num-traits = "0.2"
+rust_decimal = "1.26.1"
+rust_decimal_macros = "1.26"
+itertools = "0.10.5"

@@ -2446,10 +2446,12 @@ dependencies = [
 name = "phoenix-sdk-core"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "borsh",
  "itertools",
  "num-traits",
  "phoenix-types",
+ "rand 0.7.3",
  "rust_decimal",
  "rust_decimal_macros",
  "solana-program",
