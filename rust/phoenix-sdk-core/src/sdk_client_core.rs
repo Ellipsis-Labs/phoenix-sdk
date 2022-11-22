@@ -3,9 +3,9 @@ use phoenix_types::{
     enums::{SelfTradeBehavior, Side},
     events::MarketEvent,
     instructions::{
-        create_cancel_multiple_orders_by_id_instruction, create_cancel_multiple_orders_instruction,
-        create_new_order_instruction, CancelMultipleOrdersByIdParams, CancelMultipleOrdersParams,
-        CancelOrderParams,
+        create_cancel_multiple_orders_by_id_instruction, create_cancel_up_to_instruction,
+        create_new_order_instruction, CancelMultipleOrdersByIdParams, CancelOrderParams,
+        CancelUpToParams,
     },
     market::{FIFOOrderId, TraderState},
     order_packet::OrderPacket,
@@ -746,8 +746,8 @@ impl SDKClientCore {
         )
     }
 
-    pub fn get_cancel_multiple_ix(&self, tick_limit: Option<u64>, side: Side) -> Instruction {
-        let params = CancelMultipleOrdersParams {
+    pub fn get_cancel_up_to_ix(&self, tick_limit: Option<u64>, side: Side) -> Instruction {
+        let params = CancelUpToParams {
             side,
             tick_limit,
             num_orders_to_search: None,
@@ -755,7 +755,7 @@ impl SDKClientCore {
         };
 
         let meta = &self.markets[&self.active_market_key];
-        create_cancel_multiple_orders_instruction(
+        create_cancel_up_to_instruction(
             &self.active_market_key.clone(),
             &self.trader,
             &meta.base_mint,

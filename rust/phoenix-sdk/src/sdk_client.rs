@@ -794,7 +794,7 @@ impl SDKClient {
     }
 
     pub fn get_cancel_multiple_ix(&self, tick_limit: Option<u64>, side: Side) -> Instruction {
-        self.core.get_cancel_multiple_ix(tick_limit, side)
+        self.core.get_cancel_up_to_ix(tick_limit, side)
     }
 
     pub async fn send_cancel_all(&self) -> Option<(Signature, Vec<PhoenixEvent>)> {
