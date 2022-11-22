@@ -2,7 +2,8 @@
 resolver = "2"
 members = [
     "phoenix-sdk",
-    "phoenix-sdk-core"
+    "phoenix-sdk-core",
+    "examples"
 ]
 
 [profile.release]
@@ -27,4 +28,3 @@ solana-client = "1.10.32"
 clap = { version = "3.0.13", features = ["derive"] }
 shellexpand = "2.1.2"
 phoenix-sdk = { version = "0.1.0", path = "./phoenix-sdk" }
-phoenix = { path = "./program", features = ["no-entrypoint"] }

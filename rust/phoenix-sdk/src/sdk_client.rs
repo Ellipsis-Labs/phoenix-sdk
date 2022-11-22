@@ -158,7 +158,7 @@ impl SDKClient {
 }
 
 impl SDKClient {
-    pub async fn new_from_ellipis_client(market_key: &Pubkey, client: EllipsisClient) -> Self {
+    pub async fn new_from_ellipsis_client(market_key: &Pubkey, client: EllipsisClient) -> Self {
         let market_metadata = Self::get_market_metadata(&client, market_key).await;
         let mut markets = BTreeMap::new();
 
@@ -172,9 +172,9 @@ impl SDKClient {
         SDKClient { client, core }
     }
 
-    pub fn new_from_ellipis_client_sync(market_key: &Pubkey, client: EllipsisClient) -> Self {
+    pub fn new_from_ellipsis_client_sync(market_key: &Pubkey, client: EllipsisClient) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(Self::new_from_ellipis_client(market_key, client))
+        rt.block_on(Self::new_from_ellipsis_client(market_key, client))
     }
 
     pub async fn new(market_key: &Pubkey, payer: &Keypair, url: &str) -> Self {
