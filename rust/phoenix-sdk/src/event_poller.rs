@@ -1,5 +1,5 @@
 use crate::{market_event_handler::SDKMarketEvent, sdk_client::SDKClient};
-use solana_client::rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient};
+use solana_client::rpc_client::GetConfirmedSignaturesForAddress2Config;
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Signature};
 use std::{
     str::FromStr,
@@ -15,13 +15,12 @@ pub struct EventPoller {
 impl EventPoller {
     pub fn new(
         sdk: Arc<SDKClient>,
-        rpc_client: RpcClient,
         event_sender: Sender<Vec<SDKMarketEvent>>,
         timeout_ms: u64,
     ) -> Self {
         let worker = Builder::new()
             .name("event-poller".to_string())
-            .spawn(move || Self::run(event_sender, sdk.clone(), rpc_client, timeout_ms))
+            .spawn(move || Self::run(event_sender, sdk.clone(), timeout_ms))
             .unwrap();
 
         Self { worker }
@@ -29,10 +28,9 @@ impl EventPoller {
 
     pub fn new_with_default_timeout(
         sdk: Arc<SDKClient>,
-        rpc_client: RpcClient,
         event_sender: Sender<Vec<SDKMarketEvent>>,
     ) -> Self {
-        Self::new(sdk, rpc_client, event_sender, 1000)
+        Self::new(sdk, event_sender, 1000)
     }
 
     pub fn join(self) -> Option<()> {
@@ -42,7 +40,6 @@ impl EventPoller {
     pub fn run(
         event_sender: Sender<Vec<SDKMarketEvent>>,
         sdk: Arc<SDKClient>,
-        rpc_client: RpcClient,
         timeout_ms: u64,
     ) -> Option<()> {
         let mut until = None;
@@ -66,7 +63,8 @@ impl EventPoller {
             };
 
             // This is not 100% robust, but it's good enough for now.
-            for (i, signature) in rpc_client
+            for (i, signature) in sdk
+                .client
                 .get_signatures_for_address_with_config(&sdk.core.active_market_key, config)
                 .ok()?
                 .iter()
@@ -77,17 +75,23 @@ impl EventPoller {
                 if i == 0 {
                     until = Some(signature);
                 }
+                // TODO: This currently blocks on every iteration, which is not ideal.
+                //       We should be able to spin up chunks of requests and join.
                 let events = rt
                     .block_on(sdk.parse_events_from_transaction(&signature))
                     .unwrap_or_default();
-                event_sender
+                if event_sender
                     .send(
                         events
                             .iter()
                             .map(|&e| SDKMarketEvent::PhoenixEvent { event: Box::new(e) })
                             .collect::<Vec<_>>(),
                     )
-                    .unwrap()
+                    .is_err()
+                {
+                    println!("Event sender disconnected, continuing");
+                    continue;
+                }
             }
             std::thread::sleep(Duration::from_millis(timeout_ms));
         }
