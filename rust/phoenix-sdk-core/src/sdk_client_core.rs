@@ -3,9 +3,9 @@ use phoenix_types::{
     enums::{SelfTradeBehavior, Side},
     events::MarketEvent,
     instructions::{
-        create_cancel_multiple_orders_by_id_instruction, create_cancel_up_to_instruction,
-        create_new_order_instruction, CancelMultipleOrdersByIdParams, CancelOrderParams,
-        CancelUpToParams,
+        create_cancel_all_orders_instruction, create_cancel_multiple_orders_by_id_instruction,
+        create_cancel_up_to_instruction, create_new_order_instruction,
+        CancelMultipleOrdersByIdParams, CancelOrderParams, CancelUpToParams,
     },
     market::{FIFOOrderId, TraderState},
     order_packet::OrderPacket,
@@ -15,7 +15,7 @@ use solana_sdk::signature::Signature;
 use std::{
     collections::BTreeMap,
     fmt::Display,
-    ops::{Div, Rem},
+    ops::{Deref, Div, Rem},
     sync::{Arc, Mutex},
 };
 
@@ -92,60 +92,90 @@ pub struct SDKClientCore {
     pub trader: Pubkey,
 }
 
+impl Deref for SDKClientCore {
+    type Target = MarketMetadata;
+
+    fn deref(&self) -> &Self::Target {
+        self.markets.get(&self.active_market_key).unwrap()
+    }
+}
+
 impl SDKClientCore {
+    /// RECOMMENDED:
+    /// Converts base units to base lots. For example if the base currency was a Widget and you wanted to
+    /// convert 3 Widgets to base lots you would call sdk.base_unit_to_base_lots(3.0). This would return
+    /// the number of base lots that would be equivalent to 3 Widgets.
     pub fn base_units_to_base_lots(&self, base_units: f64) -> u64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        (base_units * market.base_multiplier as f64 / market.base_lot_size as f64) as u64
+        (base_units * self.base_multiplier as f64 / self.base_lot_size as f64) as u64
     }
 
+    /// RECOMMENDED:
+    /// Converts base amount to base lots. For example if the base currency was a Widget with 9 decimals and you wanted to
+    /// convert 3 Widgets to base lots you would call sdk.base_amount_to_base_lots(3_000_000_000). This would return
+    /// the number of base lots that would be equivalent to 3 Widgets.
     pub fn base_amount_to_base_lots(&self, base_amount: u64) -> u64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        base_amount / market.base_lot_size
+        base_amount / self.base_lot_size
     }
 
+    /// RECOMMENDED:
+    /// Converts base lots to base units. For example if the base currency was a Widget where there are
+    /// 100 base lots per Widget, you would call sdk.base_lots_to_base_units(300) to convert 300 base lots
+    /// to 3 Widgets.
     pub fn base_lots_to_base_amount(&self, base_lots: u64) -> u64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        base_lots * market.base_lot_size
+        base_lots * self.base_lot_size
     }
 
+    /// RECOMMENDED:
+    /// Converts quote units to quote lots. For example if the quote currency was USDC you wanted to
+    /// convert 3 USDC to quote lots you would call sdk.quote_unit_to_quote_lots(3.0). This would return
+    /// the number of quote lots that would be equivalent to 3 USDC.
     pub fn quote_units_to_quote_lots(&self, quote_units: f64) -> u64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        (quote_units * market.quote_multiplier as f64 / market.quote_lot_size as f64) as u64
+        (quote_units * self.quote_multiplier as f64 / self.quote_lot_size as f64) as u64
     }
 
+    /// RECOMMENDED:
+    /// Converts quote amount to quote lots. For example if the quote currency was USDC with 6 decimals and you wanted to
+    /// convert 3 USDC to quote lots you would call sdk.quote_amount_to_quote_lots(3_000_000). This would return
+    /// the number of quote lots that would be equivalent to 3 USDC.
     pub fn quote_amount_to_quote_lots(&self, quote_amount: u64) -> u64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        quote_amount / market.quote_lot_size
+        quote_amount / self.quote_lot_size
     }
 
+    /// RECOMMENDED:
+    /// Converts quote lots to quote units. For example if the quote currency was USDC there are
+    /// 100 quote lots per USDC (each quote lot is worth 0.01 USDC), you would call sdk.quote_lots_to_quote_units(300) to convert 300 quote lots
+    /// to an amount equal to 3 USDC (3_000_000).
     pub fn quote_lots_to_quote_amount(&self, quote_lots: u64) -> u64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        quote_lots * market.quote_lot_size
+        quote_lots * self.quote_lot_size
     }
 
+    /// Converts a base amount to a floating point number of base units. For example if the base currency
+    /// is a Widget where the token has 9 decimals and you wanted to convert a base amount of 1000000000 to
+    /// a floating point number of base units you would call sdk.base_amount_to_float(1_000_000_000). This
+    /// would return 1.0. This is useful for displaying the base amount in a human readable format.
     pub fn base_amount_to_base_unit_as_float(&self, base_amount: u64) -> f64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        base_amount as f64 / market.base_multiplier as f64
+        base_amount as f64 / self.base_multiplier as f64
     }
 
+    /// Converts a quote amount to a floating point number of quote units. For example if the quote currency
+    /// is USDC the token has 6 decimals and you wanted to convert a quote amount of 1000000 to
+    /// a floating point number of quote units you would call sdk.quote_amount_to_float(1_000_000). This
+    /// would return 1.0. This is useful for displaying the quote amount in a human readable format.
     pub fn quote_amount_to_quote_unit_as_float(&self, quote_amount: u64) -> f64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        quote_amount as f64 / market.quote_multiplier as f64
+        quote_amount as f64 / self.quote_multiplier as f64
     }
 
+    /// Takes in a quote amount and prints it as a human readable string to the console
     pub fn print_quote_amount(&self, quote_amount: u64) {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        println!(
-            "{}",
-            get_decimal_string(quote_amount, market.quote_decimals)
-        );
+        println!("{}", get_decimal_string(quote_amount, self.quote_decimals));
     }
 
+    /// Takes in a base amount and prints it as a human readable string to the console
     pub fn print_base_amount(&self, base_amount: u64) {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        println!("{}", get_decimal_string(base_amount, market.base_decimals));
+        println!("{}", get_decimal_string(base_amount, self.base_decimals));
     }
 
+    /// Takes in information from a fill event and converts it into the equivalent quote amount
     pub fn fill_event_to_quote_amount(&self, fill: &Fill) -> u64 {
         let &Fill {
             base_lots_filled: base_lots,
@@ -155,35 +185,33 @@ impl SDKClientCore {
         self.order_to_quote_amount(base_lots, price_in_ticks)
     }
 
+    /// Takes in tick price and base lots of an order converts it into the equivalent quote amount
     pub fn order_to_quote_amount(&self, base_lots: u64, price_in_ticks: u64) -> u64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        base_lots * price_in_ticks * market.num_quote_lots_per_tick * market.quote_lot_size
-            / market.num_base_lots_per_base_unit
+        base_lots * price_in_ticks * self.num_quote_lots_per_tick * self.quote_lot_size
+            / self.num_base_lots_per_base_unit
     }
 
+    /// Takes in a price as a floating point number and converts it to a number of ticks (rounded down)
     pub fn float_price_to_ticks(&self, price: f64) -> u64 {
-        let meta = self.get_active_market_metadata();
-        ((price * meta.quote_multiplier as f64) / meta.tick_size as f64) as u64
+        ((price * self.quote_multiplier as f64) / self.tick_size as f64) as u64
     }
 
+    /// Takes in a price as a floating point number and converts it to a number of ticks (rounded up)
     pub fn float_price_to_ticks_rounded_up(&self, price: f64) -> u64 {
-        let meta = self.get_active_market_metadata();
-        ((price * meta.quote_multiplier as f64) / meta.tick_size as f64).ceil() as u64
+        ((price * self.quote_multiplier as f64) / self.tick_size as f64).ceil() as u64
     }
 
+    /// Takes in a number of ticks and converts it to a floating point number price
     pub fn ticks_to_float_price(&self, ticks: u64) -> f64 {
-        let meta = self.get_active_market_metadata();
-        (ticks as f64 * meta.tick_size as f64) / meta.quote_multiplier as f64
+        (ticks as f64 * self.tick_size as f64) / self.quote_multiplier as f64
     }
 
     pub fn base_lots_to_base_units_multiplier(&self) -> f64 {
-        let market = self.markets.get(&self.active_market_key).unwrap();
-        1.0 / market.num_base_lots_per_base_unit as f64
+        1.0 / self.num_base_lots_per_base_unit as f64
     }
 
     pub fn ticks_to_float_price_multiplier(&self) -> f64 {
-        let meta = self.get_active_market_metadata();
-        meta.tick_size as f64 / meta.quote_multiplier as f64
+        self.tick_size as f64 / self.quote_multiplier as f64
     }
 }
 
@@ -211,7 +239,6 @@ impl SDKClientCore {
         events: Vec<Vec<u8>>,
     ) -> Option<Vec<PhoenixEvent>> {
         let mut market_events: Vec<PhoenixEvent> = vec![];
-        let meta = self.get_active_market_metadata();
 
         for event in events.iter() {
             let num_bytes = event.len();
@@ -391,10 +418,10 @@ impl SDKClientCore {
                                 event_index: index as u64,
                                 details: MarketEventDetails::FillSummary(FillSummary {
                                     client_order_id,
-                                    total_base_filled: total_base_lots_filled * meta.base_lot_size,
+                                    total_base_filled: total_base_lots_filled * self.base_lot_size,
                                     total_quote_filled_including_fees: total_quote_lots_filled
-                                        * meta.quote_lot_size,
-                                    total_quote_fees: total_fee_in_quote_lots * meta.quote_lot_size,
+                                        * self.quote_lot_size,
+                                    total_quote_fees: total_fee_in_quote_lots * self.quote_lot_size,
                                 }),
                             }),
                             _ => {
@@ -427,16 +454,15 @@ impl SDKClientCore {
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
     ) -> Instruction {
-        let meta = &self.markets[&self.active_market_key];
-        let num_quote_ticks_per_base_unit = price / meta.tick_size;
+        let num_quote_ticks_per_base_unit = price / self.tick_size;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         create_new_order_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &OrderPacket::new_ioc_by_lots(
                 side,
                 num_quote_ticks_per_base_unit,
@@ -504,19 +530,18 @@ impl SDKClientCore {
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
     ) -> Instruction {
-        let meta = &self.markets[&self.active_market_key];
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
-        let target_price_in_ticks = price / meta.tick_size;
+        let target_price_in_ticks = price / self.tick_size;
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         match side {
             Side::Bid => {
-                let quote_lot_budget = size / meta.quote_lot_size;
+                let quote_lot_budget = size / self.quote_lot_size;
                 create_new_order_instruction(
                     &self.active_market_key.clone(),
                     &self.trader,
-                    &meta.base_mint,
-                    &meta.quote_mint,
+                    &self.base_mint,
+                    &self.quote_mint,
                     &OrderPacket::new_fok_buy_with_limit_price(
                         target_price_in_ticks,
                         quote_lot_budget,
@@ -528,12 +553,12 @@ impl SDKClientCore {
                 )
             }
             Side::Ask => {
-                let num_base_lots = size / meta.base_lot_size;
+                let num_base_lots = size / self.base_lot_size;
                 create_new_order_instruction(
                     &self.active_market_key.clone(),
                     &self.trader,
-                    &meta.base_mint,
-                    &meta.quote_mint,
+                    &self.base_mint,
+                    &self.quote_mint,
                     &OrderPacket::new_fok_sell_with_limit_price(
                         target_price_in_ticks,
                         num_base_lots,
@@ -553,8 +578,6 @@ impl SDKClientCore {
         min_lots_out: u64,
         side: Side,
     ) -> Instruction {
-        let meta = self.get_active_market_metadata();
-
         let order_type = match side {
             Side::Bid => OrderPacket::new_ioc_buy_with_slippage(lots_in, min_lots_out),
             Side::Ask => OrderPacket::new_ioc_sell_with_slippage(lots_in, min_lots_out),
@@ -563,8 +586,8 @@ impl SDKClientCore {
         create_new_order_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &order_type,
         )
     }
@@ -575,13 +598,11 @@ impl SDKClientCore {
         side: Side,
         size: u64,
     ) -> Instruction {
-        let meta = &self.markets[&self.active_market_key];
-
         create_new_order_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &OrderPacket::new_ioc_by_lots(
                 side,
                 tick_price,
@@ -607,16 +628,15 @@ impl SDKClientCore {
         reject_post_only: Option<bool>,
         use_only_deposited_funds: Option<bool>,
     ) -> Instruction {
-        let meta = &self.markets[&self.active_market_key];
-        let price_in_ticks = price / meta.tick_size;
+        let price_in_ticks = price / self.tick_size;
         let client_order_id = client_order_id.unwrap_or(0);
         let reject_post_only = reject_post_only.unwrap_or(false);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         create_new_order_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &OrderPacket::new_post_only(
                 side,
                 price_in_ticks,
@@ -636,12 +656,11 @@ impl SDKClientCore {
         client_order_id: u128,
         improve_price_on_cross: bool,
     ) -> Instruction {
-        let meta = &self.markets[&self.active_market_key];
         create_new_order_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &if improve_price_on_cross {
                 OrderPacket::new_adjustable_post_only_default_with_client_order_id(
                     side,
@@ -675,16 +694,15 @@ impl SDKClientCore {
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
     ) -> Instruction {
-        let meta = &self.markets[&self.active_market_key];
-        let num_quote_ticks_per_base_unit = price / meta.tick_size;
+        let num_quote_ticks_per_base_unit = price / self.tick_size;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::DecrementTake);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         create_new_order_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &OrderPacket::new_limit_order(
                 side,
                 num_quote_ticks_per_base_unit,
@@ -704,12 +722,11 @@ impl SDKClientCore {
         size: u64,
         client_order_id: u128,
     ) -> Instruction {
-        let meta = &self.markets[&self.active_market_key];
         create_new_order_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &OrderPacket::new_limit_order_default_with_client_order_id(
                 side,
                 tick_price,
@@ -732,7 +749,6 @@ impl SDKClientCore {
                 order_id: order_sequence_number,
             });
         }
-        let meta = &self.markets[&self.active_market_key];
         let cancel_multiple_orders = CancelMultipleOrdersByIdParams {
             orders: cancel_orders,
         };
@@ -740,8 +756,8 @@ impl SDKClientCore {
         create_cancel_multiple_orders_by_id_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &cancel_multiple_orders,
         )
     }
@@ -754,13 +770,21 @@ impl SDKClientCore {
             num_orders_to_cancel: None,
         };
 
-        let meta = &self.markets[&self.active_market_key];
         create_cancel_up_to_instruction(
             &self.active_market_key.clone(),
             &self.trader,
-            &meta.base_mint,
-            &meta.quote_mint,
+            &self.base_mint,
+            &self.quote_mint,
             &params,
+        )
+    }
+
+    pub fn get_cancel_all_ix(&self) -> Instruction {
+        create_cancel_all_orders_instruction(
+            &self.active_market_key.clone(),
+            &self.trader,
+            &self.base_mint,
+            &self.quote_mint,
         )
     }
 }
