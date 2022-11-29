@@ -47,7 +47,7 @@ impl PriceListener {
         for symbol in symbols.iter() {
             match market.get_depth(symbol) {
                 Ok(msg) => {
-                    let mut modified_ladder = ladder.write().unwrap();
+                    let mut modified_ladder = ladder.write().ok()?;
                     let bids = msg
                         .bids
                         .iter()
@@ -69,7 +69,9 @@ impl PriceListener {
         println!("alive {:?}", endpoints);
         let mut web_socket: WebSockets<'_> = WebSockets::new(|event: WebsocketEvent| {
             if let WebsocketEvent::DepthOrderBook(depth_order_book) = event {
-                let mut modified_ladder = ladder.write().unwrap();
+                let mut modified_ladder = ladder
+                    .write()
+                    .map_err(|e| format!("Error writing to ladder: {e}"))?;
                 modified_ladder.update_orders(
                     Side::Bid,
                     depth_order_book
@@ -87,7 +89,10 @@ impl PriceListener {
                         .collect::<Vec<_>>(),
                 );
             }
-            let vwap = ladder.read().unwrap().vwap(3);
+            let vwap = ladder
+                .read()
+                .map_err(|e| format!("Error reading from ladder: {e}"))?
+                .vwap(3);
             match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
                 Ok(_) => {}
                 Err(e) => println!("Error while sending fair price update: {}", e),
@@ -96,11 +101,11 @@ impl PriceListener {
         });
 
         let keep_running = AtomicBool::new(true);
-        web_socket.connect_multiple_streams(&endpoints).unwrap(); // check error
+        web_socket.connect_multiple_streams(&endpoints).ok()?; // check error
         if let Err(e) = web_socket.event_loop(&keep_running) {
             println!("Binance Error: {:?}", e);
         }
-        web_socket.disconnect().unwrap();
+        web_socket.disconnect().ok()?;
         Some(())
     }
 }
