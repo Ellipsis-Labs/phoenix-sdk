@@ -63,6 +63,7 @@ impl EventPoller {
             };
 
             // This is not 100% robust, but it's good enough for now.
+            // TODO: join futures and await
             for (i, signature) in sdk
                 .client
                 .get_signatures_for_address_with_config(&sdk.core.active_market_key, config)
