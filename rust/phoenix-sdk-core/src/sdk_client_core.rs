@@ -400,7 +400,6 @@ impl SDKClientCore {
                         let fill_summary_event =
                             MarketEvent::try_from_slice(&event[offset..offset + size]).ok()?;
                         offset += size;
-                        println!("Fill summary event: {:?}", fill_summary_event);
 
                         match fill_summary_event {
                             MarketEvent::FillSummary {
