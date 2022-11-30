@@ -132,17 +132,31 @@ impl SDKClient {
     pub async fn get_market_orderbook(&self) -> Orderbook<FIFOOrderId, PhoenixOrder> {
         let mut market_account_data = (self.client.get_account_data(&self.active_market_key))
             .await
-            .unwrap();
+            .unwrap_or(vec![]);
+        let default = Orderbook::<FIFOOrderId, PhoenixOrder> {
+            size_mult: 0.0,
+            price_mult: 0.0,
+            bids: BTreeMap::new(),
+            asks: BTreeMap::new(),
+        };
+        if market_account_data.len() == 0 {
+            return default;
+        }
         let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_params, bytes)
-            .unwrap()
-            .inner;
-        Orderbook::from_market(
-            market,
-            self.base_lots_to_base_units_multiplier(),
-            self.ticks_to_float_price_multiplier(),
-        )
+        MarketHeader::try_from_slice(header_bytes)
+            .ok()
+            .map(|header| {
+                load_with_dispatch_mut(&header.market_params, bytes)
+                    .map(|market| {
+                        Orderbook::from_market(
+                            market.inner,
+                            self.base_lots_to_base_units_multiplier(),
+                            self.ticks_to_float_price_multiplier(),
+                        )
+                    })
+                    .unwrap_or(default.clone())
+            })
+            .unwrap_or(default)
     }
 
     pub fn get_market_orderbook_sync(&self) -> Orderbook<FIFOOrderId, PhoenixOrder> {

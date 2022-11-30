@@ -64,6 +64,7 @@ impl OrderbookValue for Decimal {
     }
 }
 
+#[derive(Debug, Clone, Default)]
 pub struct Orderbook<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> {
     pub size_mult: f64,
     pub price_mult: f64,
