@@ -51,6 +51,8 @@ pub struct Reduce {
     /// The quote ticks per base unit of the order.
     pub price_in_ticks: u64,
     /// The number of lots that remain in the order.
+    pub base_lots_removed: u64,
+    /// The number of lots that remain in the order.
     pub base_lots_remaining: u64,
     /// Whether the order was fully canceled.
     pub is_full_cancel: bool,

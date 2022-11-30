@@ -302,7 +302,7 @@ impl SDKClientCore {
                                 index,
                                 order_sequence_number,
                                 price_in_ticks,
-                                base_lots_removed: _,
+                                base_lots_removed,
                                 base_lots_remaining,
                             } => market_events.push(PhoenixEvent {
                                 market: header.market,
@@ -316,6 +316,7 @@ impl SDKClientCore {
                                     order_sequence_number,
                                     maker: header.signer,
                                     price_in_ticks,
+                                    base_lots_removed,
                                     base_lots_remaining,
                                     is_full_cancel: base_lots_remaining == 0,
                                 }),
