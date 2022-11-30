@@ -9,7 +9,7 @@ use std::{
 };
 
 pub struct EventPoller {
-    pub worker: JoinHandle<Option<()>>,
+    pub worker: JoinHandle<()>,
 }
 
 impl EventPoller {
@@ -33,15 +33,11 @@ impl EventPoller {
         Self::new(sdk, event_sender, 1000)
     }
 
-    pub fn join(self) -> Option<()> {
+    pub fn join(self) {
         self.worker.join().unwrap()
     }
 
-    pub fn run(
-        event_sender: Sender<Vec<SDKMarketEvent>>,
-        sdk: Arc<SDKClient>,
-        timeout_ms: u64,
-    ) -> Option<()> {
+    pub fn run(event_sender: Sender<Vec<SDKMarketEvent>>, sdk: Arc<SDKClient>, timeout_ms: u64) {
         let mut until = None;
         let rt = tokio::runtime::Runtime::new().unwrap();
         // TODO: keep some state of signatures that have already been processed
@@ -67,7 +63,7 @@ impl EventPoller {
             for (i, signature) in sdk
                 .client
                 .get_signatures_for_address_with_config(&sdk.core.active_market_key, config)
-                .ok()?
+                .unwrap_or_default()
                 .iter()
                 .map(|tx| Signature::from_str(&tx.signature).unwrap())
                 .enumerate()
