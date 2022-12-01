@@ -2461,7 +2461,6 @@ dependencies = [
 [[package]]
 name = "phoenix-types"
 version = "0.1.9"
-source = "git+https://github.com/Ellipsis-Labs/phoenix-types?branch=master#bc202cbf0a927f636b1c30a416a5d070809452a8"
 dependencies = [
  "borsh",
  "bytemuck",
