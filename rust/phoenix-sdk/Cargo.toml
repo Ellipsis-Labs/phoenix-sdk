@@ -20,7 +20,6 @@ tokio = { workspace = true }
 ellipsis-client = { workspace = true }
 futures = "0.3.21"
 solana-transaction-status = "1.14.5"
-spl-noop = { workspace = true }
 async-trait = "0.1.52"
 binance = "0.19.0"
 num-traits = { workspace = true }

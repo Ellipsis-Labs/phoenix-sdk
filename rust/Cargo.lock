@@ -2437,7 +2437,6 @@ dependencies = [
  "solana-program",
  "solana-sdk",
  "solana-transaction-status",
- "spl-noop",
  "spl-token",
  "tokio",
 ]
