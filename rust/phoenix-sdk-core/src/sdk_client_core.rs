@@ -69,9 +69,8 @@ pub struct MarketMetadata {
     pub quote_multiplier: u64,
     pub quote_lot_size: u64,
     pub base_lot_size: u64,
-    pub tick_size: u64,
+    pub tick_size_in_quote_atoms_per_base_unit: u64,
     pub num_base_lots_per_base_unit: u64,
-    pub num_quote_lots_per_tick: u64,
 }
 
 #[derive(Debug, Copy, Clone, BorshDeserialize, BorshSerialize)]
@@ -187,23 +186,29 @@ impl SDKClientCore {
 
     /// Takes in tick price and base lots of an order converts it into the equivalent quote amount
     pub fn order_to_quote_amount(&self, base_lots: u64, price_in_ticks: u64) -> u64 {
-        base_lots * price_in_ticks * self.num_quote_lots_per_tick * self.quote_lot_size
+        base_lots * price_in_ticks * self.tick_size_in_quote_atoms_per_base_unit
+            / self.quote_lot_size
+            * self.quote_lot_size
             / self.num_base_lots_per_base_unit
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded down)
     pub fn float_price_to_ticks(&self, price: f64) -> u64 {
-        ((price * self.quote_multiplier as f64) / self.tick_size as f64) as u64
+        ((price * self.quote_multiplier as f64)
+            / self.tick_size_in_quote_atoms_per_base_unit as f64) as u64
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded up)
     pub fn float_price_to_ticks_rounded_up(&self, price: f64) -> u64 {
-        ((price * self.quote_multiplier as f64) / self.tick_size as f64).ceil() as u64
+        ((price * self.quote_multiplier as f64)
+            / self.tick_size_in_quote_atoms_per_base_unit as f64)
+            .ceil() as u64
     }
 
     /// Takes in a number of ticks and converts it to a floating point number price
     pub fn ticks_to_float_price(&self, ticks: u64) -> f64 {
-        (ticks as f64 * self.tick_size as f64) / self.quote_multiplier as f64
+        (ticks as f64 * self.tick_size_in_quote_atoms_per_base_unit as f64)
+            / self.quote_multiplier as f64
     }
 
     pub fn base_lots_to_base_units_multiplier(&self) -> f64 {
@@ -211,7 +216,7 @@ impl SDKClientCore {
     }
 
     pub fn ticks_to_float_price_multiplier(&self) -> f64 {
-        self.tick_size as f64 / self.quote_multiplier as f64
+        self.tick_size_in_quote_atoms_per_base_unit as f64 / self.quote_multiplier as f64
     }
 }
 
@@ -454,7 +459,7 @@ impl SDKClientCore {
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
     ) -> Instruction {
-        let num_quote_ticks_per_base_unit = price / self.tick_size;
+        let num_quote_ticks_per_base_unit = price / self.tick_size_in_quote_atoms_per_base_unit;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
@@ -532,7 +537,7 @@ impl SDKClientCore {
     ) -> Instruction {
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
-        let target_price_in_ticks = price / self.tick_size;
+        let target_price_in_ticks = price / self.tick_size_in_quote_atoms_per_base_unit;
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         match side {
             Side::Bid => {
@@ -628,7 +633,7 @@ impl SDKClientCore {
         reject_post_only: Option<bool>,
         use_only_deposited_funds: Option<bool>,
     ) -> Instruction {
-        let price_in_ticks = price / self.tick_size;
+        let price_in_ticks = price / self.tick_size_in_quote_atoms_per_base_unit;
         let client_order_id = client_order_id.unwrap_or(0);
         let reject_post_only = reject_post_only.unwrap_or(false);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
@@ -694,7 +699,7 @@ impl SDKClientCore {
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
     ) -> Instruction {
-        let num_quote_ticks_per_base_unit = price / self.tick_size;
+        let num_quote_ticks_per_base_unit = price / self.tick_size_in_quote_atoms_per_base_unit;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::DecrementTake);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
@@ -739,14 +744,14 @@ impl SDKClientCore {
     pub fn get_cancel_ids_ix(&self, ids: Vec<FIFOOrderId>) -> Instruction {
         let mut cancel_orders = vec![];
         for &FIFOOrderId {
-            num_quote_ticks_per_base_unit,
+            price_in_ticks,
             order_sequence_number,
         } in ids.iter()
         {
             cancel_orders.push(CancelOrderParams {
                 side: Side::from_order_sequence_number(order_sequence_number),
-                num_quote_ticks_per_base_unit,
-                order_id: order_sequence_number,
+                price_in_ticks,
+                order_sequence_number,
             });
         }
         let cancel_multiple_orders = CancelMultipleOrdersByIdParams {

@@ -1789,9 +1789,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "lib-sokoban"
-version = "0.1.13"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0a37b401ffe7007ca87335e1a9d07f0d64681d186d280cf3cddd790106fed07"
+checksum = "72181588f48ed392360ea172431c5311fbb910e6c254f500351ce5a94c1b02c8"
 dependencies = [
  "bytemuck",
  "num-derive",
@@ -2460,8 +2460,8 @@ dependencies = [
 
 [[package]]
 name = "phoenix-types"
-version = "0.1.8"
-source = "git+https://github.com/Ellipsis-Labs/phoenix-types?branch=master#ca185035f79a0947799a6398f31fe32f8e222460"
+version = "0.1.9"
+source = "git+https://github.com/Ellipsis-Labs/phoenix-types?branch=master#bc202cbf0a927f636b1c30a416a5d070809452a8"
 dependencies = [
  "borsh",
  "bytemuck",

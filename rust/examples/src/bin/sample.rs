@@ -96,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
         let header = MarketHeader::try_from_slice(header_bytes).unwrap();
 
         // use params from the header to deserialize the market
-        let _market = load_with_dispatch_mut(&header.market_params, market_bytes)
+        let _market = load_with_dispatch_mut(&header.market_size_params, market_bytes)
             .unwrap()
             .inner;
 
