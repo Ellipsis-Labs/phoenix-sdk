@@ -187,8 +187,6 @@ impl SDKClientCore {
     /// Takes in tick price and base lots of an order converts it into the equivalent quote amount
     pub fn order_to_quote_amount(&self, base_lots: u64, price_in_ticks: u64) -> u64 {
         base_lots * price_in_ticks * self.tick_size_in_quote_atoms_per_base_unit
-            / self.quote_lot_size
-            * self.quote_lot_size
             / self.num_base_lots_per_base_unit
     }
 
