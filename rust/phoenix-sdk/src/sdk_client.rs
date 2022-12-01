@@ -117,7 +117,7 @@ impl SDKClient {
             .unwrap();
         let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
         let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_params, bytes)
+        let market = load_with_dispatch_mut(&header.market_size_params, bytes)
             .unwrap()
             .inner;
 
@@ -132,21 +132,21 @@ impl SDKClient {
     pub async fn get_market_orderbook(&self) -> Orderbook<FIFOOrderId, PhoenixOrder> {
         let mut market_account_data = (self.client.get_account_data(&self.active_market_key))
             .await
-            .unwrap_or(vec![]);
+            .unwrap_or_default();
         let default = Orderbook::<FIFOOrderId, PhoenixOrder> {
             size_mult: 0.0,
             price_mult: 0.0,
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         };
-        if market_account_data.len() == 0 {
+        if market_account_data.is_empty() {
             return default;
         }
         let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
         MarketHeader::try_from_slice(header_bytes)
             .ok()
             .map(|header| {
-                load_with_dispatch_mut(&header.market_params, bytes)
+                load_with_dispatch_mut(&header.market_size_params, bytes)
                     .map(|market| {
                         Orderbook::from_market(
                             market.inner,
@@ -154,7 +154,7 @@ impl SDKClient {
                             self.ticks_to_float_price_multiplier(),
                         )
                     })
-                    .unwrap_or(default.clone())
+                    .unwrap_or_else(|| default.clone())
             })
             .unwrap_or(default)
     }
@@ -170,7 +170,7 @@ impl SDKClient {
             .unwrap();
         let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
         let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_params, bytes)
+        let market = load_with_dispatch_mut(&header.market_size_params, bytes)
             .unwrap()
             .inner;
 
@@ -192,7 +192,7 @@ impl SDKClient {
             .unwrap();
         let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
         let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_params, bytes)
+        let market = load_with_dispatch_mut(&header.market_size_params, bytes)
             .unwrap()
             .inner;
 
@@ -216,7 +216,7 @@ impl SDKClient {
         let mut market_account_data = (client.get_account_data(market_key)).await.unwrap();
         let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
         let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_params, bytes)
+        let market = load_with_dispatch_mut(&header.market_size_params, bytes)
             .unwrap()
             .inner;
 
@@ -241,9 +241,9 @@ impl SDKClient {
         let base_multiplier = 10u64.pow(base_mint_acct.decimals as u32);
         let base_mint = header.base_params.mint_key;
         let quote_mint = header.quote_params.mint_key;
-        let tick_size = header.get_tick_size().into();
+        let tick_size_in_quote_atoms_per_base_unit =
+            header.get_tick_size_in_quote_atoms_per_base_unit().into();
         let num_base_lots_per_base_unit = market.get_base_lots_per_base_unit().into();
-        let num_quote_lots_per_tick = market.get_quote_lots_per_tick().into();
 
         MarketMetadata {
             base_mint,
@@ -252,11 +252,10 @@ impl SDKClient {
             quote_decimals: quote_mint_acct.decimals as u32,
             base_multiplier,
             quote_multiplier,
-            tick_size,
+            tick_size_in_quote_atoms_per_base_unit,
             quote_lot_size,
             base_lot_size,
             num_base_lots_per_base_unit,
-            num_quote_lots_per_tick,
         }
     }
 

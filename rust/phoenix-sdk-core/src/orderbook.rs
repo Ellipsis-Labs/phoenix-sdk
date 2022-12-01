@@ -18,7 +18,7 @@ pub trait OrderbookValue {
 
 impl OrderbookKey for FIFOOrderId {
     fn price(&self) -> f64 {
-        self.num_quote_ticks_per_base_unit.to_f64().unwrap()
+        self.price_in_ticks.to_f64().unwrap()
     }
 }
 
