@@ -8,6 +8,7 @@ pub use phoenix_sdk_core::{
 use phoenix_types as phoenix;
 use phoenix_types::dispatch::*;
 use phoenix_types::enums::*;
+use phoenix_types::instructions::PhoenixInstruction;
 use phoenix_types::market::*;
 use rand::{rngs::StdRng, SeedableRng};
 use solana_client::rpc_client::RpcClient;
@@ -266,26 +267,21 @@ impl SDKClient {
         let tx = self.client.get_transaction(sig).await.ok()?;
         let mut event_list = vec![];
         for inner_ixs in tx.inner_instructions.iter() {
-            let mut in_cpi = false;
             for inner_ix in inner_ixs.iter() {
-                let parent_program_id = tx.instructions[inner_ix.parent_index].program_id.clone();
                 let current_program_id = inner_ix.instruction.program_id.clone();
-                let called_by_phoenix = parent_program_id == phoenix::id().to_string();
-                let is_wrapper_program = current_program_id == spl_noop::id().to_string();
-                // Not comprehensive, but should be good enough for now
-                if current_program_id == phoenix::id().to_string() {
-                    // if current_program_id is the Phoenix program, we know that the instruction is a CPI
-                    in_cpi = true;
-                } else if in_cpi
-                    && ![spl_token::id().to_string(), spl_noop::id().to_string()]
-                        .contains(&current_program_id)
-                {
-                    // if we are in a CPI and current_program_id is not a token or noop program,
-                    // we know that the CPI has completed
-                    in_cpi = false;
+                if current_program_id != phoenix::id().to_string() {
+                    continue;
                 }
-                if (called_by_phoenix || in_cpi) && is_wrapper_program {
-                    event_list.push(inner_ix.instruction.data.clone());
+                if inner_ix.instruction.data.is_empty() {
+                    continue;
+                }
+                let (tag, data) = inner_ix.instruction.data.split_first().unwrap();
+                let ix_enum = match PhoenixInstruction::try_from_slice(&[*tag]).ok() {
+                    Some(ix) => ix,
+                    None => continue,
+                };
+                if matches!(ix_enum, PhoenixInstruction::Log) {
+                    event_list.push(data.to_vec());
                 }
             }
         }
