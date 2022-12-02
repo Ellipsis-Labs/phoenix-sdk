@@ -9,11 +9,11 @@ use std::{
     thread::JoinHandle,
 };
 
-pub struct PriceListener {
+pub struct BinancePriceListener {
     pub worker: JoinHandle<Option<()>>,
 }
 
-impl PriceListener {
+impl BinancePriceListener {
     pub fn new(market_name: String, sender: Sender<Vec<SDKMarketEvent>>) -> Self {
         let ladder = Arc::new(RwLock::new(Orderbook {
             size_mult: 1.0,
