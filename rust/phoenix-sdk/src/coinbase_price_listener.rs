@@ -69,7 +69,7 @@ impl CoinbasePriceListener {
         } else {
             ChannelType::Level2
         };
-        
+
         let mut stream = rt
             .block_on(WSFeed::connect(
                 coinbase_ws_url,
@@ -79,69 +79,73 @@ impl CoinbasePriceListener {
             .unwrap();
 
         loop {
-            let msg = rt.block_on(stream.next()).unwrap().unwrap();
-            match msg {
-                Message::Level2(level2) => match level2 {
-                    Level2::Snapshot { asks, bids, .. } => {
-                        let mut modified_ladder = ladder.write().unwrap();
-                        let update_bids = bids
-                            .iter()
-                            .map(|bid| (Decimal::from_f64(bid.price).unwrap(), bid.size))
-                            .collect::<Vec<_>>();
+            let msg = rt.block_on(stream.next());
+            if let Some(Ok(msg)) = msg {
+                match msg {
+                    Message::Level2(level2) => match level2 {
+                        Level2::Snapshot { asks, bids, .. } => {
+                            let mut modified_ladder = ladder.write().unwrap();
+                            let update_bids = bids
+                                .iter()
+                                .map(|bid| (Decimal::from_f64(bid.price).unwrap(), bid.size))
+                                .collect::<Vec<_>>();
 
-                        modified_ladder.update_orders(Side::Bid, update_bids);
+                            modified_ladder.update_orders(Side::Bid, update_bids);
 
-                        let update_asks = asks
-                            .iter()
-                            .map(|ask| (Decimal::from_f64(ask.price).unwrap(), ask.size))
-                            .collect::<Vec<_>>();
+                            let update_asks = asks
+                                .iter()
+                                .map(|ask| (Decimal::from_f64(ask.price).unwrap(), ask.size))
+                                .collect::<Vec<_>>();
 
-                        modified_ladder.update_orders(Side::Ask, update_asks);
-                    }
-                    Level2::L2update { changes, .. } => {
-                        let mut modified_ladder = ladder.write().unwrap();
-                        for change in changes {
-                            match change.side {
-                                OrderSide::Buy => {
-                                    modified_ladder.update_orders(
-                                        Side::Bid,
-                                        vec![(
-                                            Decimal::from_f64(change.price).unwrap(),
-                                            change.size,
-                                        )],
-                                    );
-                                }
-                                OrderSide::Sell => {
-                                    modified_ladder.update_orders(
-                                        Side::Ask,
-                                        vec![(
-                                            Decimal::from_f64(change.price).unwrap(),
-                                            change.size,
-                                        )],
-                                    );
+                            modified_ladder.update_orders(Side::Ask, update_asks);
+                        }
+                        Level2::L2update { changes, .. } => {
+                            let mut modified_ladder = ladder.write().unwrap();
+                            for change in changes {
+                                match change.side {
+                                    OrderSide::Buy => {
+                                        modified_ladder.update_orders(
+                                            Side::Bid,
+                                            vec![(
+                                                Decimal::from_f64(change.price).unwrap(),
+                                                change.size,
+                                            )],
+                                        );
+                                    }
+                                    OrderSide::Sell => {
+                                        modified_ladder.update_orders(
+                                            Side::Ask,
+                                            vec![(
+                                                Decimal::from_f64(change.price).unwrap(),
+                                                change.size,
+                                            )],
+                                        );
+                                    }
                                 }
                             }
                         }
+                    },
+                    Message::Ticker(ticker) => {
+                        let price = ticker.price();
+                        match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }]) {
+                            Ok(_) => {}
+                            Err(e) => println!("Error while sending fair price update: {}", e),
+                        }
+                        continue;
                     }
-                },
-                Message::Ticker(ticker) => {
-                    let price = ticker.price();
-                    match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }]) {
-                        Ok(_) => {}
-                        Err(e) => println!("Error while sending fair price update: {}", e),
-                    }
-                    continue;
-                }
-                Message::Error { message } => println!("Error: {}", message),
-                Message::InternalError(_) => panic!("internal_error"),
-                other => println!("{:?}", other),
-            };
+                    Message::Error { message } => println!("Error: {}", message),
+                    Message::InternalError(_) => panic!("internal_error"),
+                    other => println!("{:?}", other),
+                };
 
-            let vwap = ladder.read().unwrap().vwap(3);
-            println!("VWAP: {}", vwap);
-            match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
-                Ok(_) => {}
-                Err(e) => println!("Error while sending vwap update: {}", e),
+                let vwap = ladder.read().unwrap().vwap(3);
+                println!("VWAP: {}", vwap);
+                match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
+                    Ok(_) => {}
+                    Err(e) => println!("Error while sending vwap update: {}", e),
+                }
+            } else {
+                println!("Issue retrieving next message from Coinbase WS: {:?}", msg);
             }
         }
     }
