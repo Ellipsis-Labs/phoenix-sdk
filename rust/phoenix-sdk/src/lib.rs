@@ -6,3 +6,4 @@ pub use phoenix_sdk_core::orderbook;
 pub mod price_listener;
 pub mod sdk_client;
 pub mod transaction_executor;
+pub mod coinbase_price_listener;
