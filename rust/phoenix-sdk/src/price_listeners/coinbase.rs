@@ -139,7 +139,6 @@ impl CoinbasePriceListener {
                 };
 
                 let vwap = ladder.read().unwrap().vwap(3);
-                println!("VWAP: {}", vwap);
                 match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
                     Ok(_) => {}
                     Err(e) => println!("Error while sending vwap update: {}", e),
