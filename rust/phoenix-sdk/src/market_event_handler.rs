@@ -31,8 +31,8 @@ pub trait MarketEventHandler<T> {
                 MarketEventDetails::FillSummary(..) => {
                     self.handle_fill_summary(sender, event)?;
                 }
-                _ => {
-                    // Unimplemented event type
+                MarketEventDetails::Fee(..) => {
+                    // Ignore fee events
                 }
             }
         }
