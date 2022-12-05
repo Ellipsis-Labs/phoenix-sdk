@@ -73,18 +73,6 @@ pub struct MarketMetadata {
     pub num_base_lots_per_base_unit: u64,
 }
 
-#[derive(Debug, Copy, Clone, BorshDeserialize, BorshSerialize)]
-pub enum MarketEventWrapper {
-    Uninitialized,
-    Header,
-    Fill,
-    Place,
-    Reduce,
-    Evict,
-    FillSummary,
-    Fee,
-}
-
 pub struct SDKClientCore {
     pub markets: BTreeMap<Pubkey, MarketMetadata>,
     pub rng: Arc<Mutex<StdRng>>,
