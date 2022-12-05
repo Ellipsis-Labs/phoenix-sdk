@@ -194,14 +194,14 @@ impl<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> Orderbook<K, V> {
                 book.insert(price, qty);
             }
             loop {
-                let key = if let Some(order) = match side {
-                    Side::Bid => opposite_book.first_entry(), // Smallest ask
-                    Side::Ask => opposite_book.last_entry(),  // Largest bid
+                let key = if let Some((key, _)) = match side {
+                    Side::Bid => opposite_book.iter().next(), // Smallest ask
+                    Side::Ask => opposite_book.iter().rev().next(), // Largest bid
                 } {
                     // We use the sign to determine whether the order crosses the book
                     let sign = 2.0 * (side == Side::Bid) as u64 as f64 - 1.0; // 1 for bid, -1 for ask
-                    if price.price() * sign >= order.key().price() * sign {
-                        *order.key()
+                    if price.price() * sign >= key.price() * sign {
+                        *key
                     } else {
                         break;
                     }
