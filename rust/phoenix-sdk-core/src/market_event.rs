@@ -103,4 +103,5 @@ pub enum MarketEventDetails {
     Evict(Evict),
     Reduce(Reduce),
     FillSummary(FillSummary),
+    Fee(u64),
 }
