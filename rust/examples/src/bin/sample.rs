@@ -105,8 +105,7 @@ async fn main() -> anyhow::Result<()> {
             market_pubkey, header.quote_params.mint_key, header.base_params.mint_key
         );
 
-        if header.base_params.mint_key.to_string() == "So11111111111111111111111111111111111111112"
-        {
+        if header.base_params.mint_key == devnet_token_faucet::get_mint_address("SOL") {
             sol_usdc_market = Some(market_pubkey);
         }
     }

@@ -24,3 +24,4 @@ shellexpand = { workspace = true }
 borsh = { workspace = true }
 phoenix-types = { workspace = true }
 phoenix-sdk = { path = "../phoenix-sdk" }
+devnet-token-faucet = { git = "https://github.com/Ellipsis-Labs/devnet-token-faucet" }
