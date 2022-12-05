@@ -1,4 +1,4 @@
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
 use phoenix_types::{
     enums::{SelfTradeBehavior, Side},
     events::MarketEvent,
