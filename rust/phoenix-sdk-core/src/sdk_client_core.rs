@@ -82,6 +82,7 @@ pub enum MarketEventWrapper {
     Reduce,
     Evict,
     FillSummary,
+    Fee,
 }
 
 pub struct SDKClientCore {
@@ -236,7 +237,7 @@ impl SDKClientCore {
         self.markets.get(&self.active_market_key).unwrap()
     }
 
-    pub fn parse_wrapper_events(
+    pub fn parse_phoenix_events(
         &self,
         sig: &Signature,
         events: Vec<Vec<u8>>,
@@ -244,7 +245,6 @@ impl SDKClientCore {
         let mut market_events: Vec<PhoenixEvent> = vec![];
 
         for event in events.iter() {
-            let num_bytes = event.len();
             let header_event = MarketEvent::try_from_slice(&event[..AUDIT_LOG_HEADER_LEN]).ok()?;
             let header = match header_event {
                 MarketEvent::Header { header } => Some(header),
@@ -252,187 +252,148 @@ impl SDKClientCore {
                     panic!("Expected a header event");
                 }
             }?;
-            let mut offset = AUDIT_LOG_HEADER_LEN;
-            while offset < num_bytes {
-                match MarketEventWrapper::try_from_slice(&[event[offset]]).ok()? {
-                    MarketEventWrapper::Fill => {
-                        let size = 67;
-                        let fill_event =
-                            MarketEvent::try_from_slice(&event[offset..offset + size]).ok()?;
-                        offset += size;
+            let offset = AUDIT_LOG_HEADER_LEN;
+            let mut phoenix_event_bytes = (header.total_events as u32).to_le_bytes().to_vec();
+            phoenix_event_bytes.extend_from_slice(&event[offset..]);
+            let phoenix_events = match Vec::<MarketEvent>::try_from_slice(&phoenix_event_bytes) {
+                Ok(v) => v,
+                Err(e) => {
+                    println!("Error parsing events: {:?}", e);
+                    return None;
+                }
+            };
+            for phoenix_event in phoenix_events {
+                match phoenix_event {
+                    MarketEvent::Fill {
+                        index,
+                        maker_id,
+                        order_sequence_number,
+                        price_in_ticks,
+                        base_lots_filled,
+                        base_lots_remaining,
+                    } => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.market_sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Fill(Fill {
+                            order_sequence_number,
+                            maker: maker_id,
+                            taker: header.signer,
+                            price_in_ticks,
+                            base_lots_filled,
+                            base_lots_remaining,
+                            side_filled: Side::from_order_sequence_number(order_sequence_number),
+                            is_full_fill: base_lots_remaining == 0,
+                        }),
+                    }),
+                    MarketEvent::Reduce {
+                        index,
+                        order_sequence_number,
+                        price_in_ticks,
+                        base_lots_removed,
+                        base_lots_remaining,
+                    } => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.market_sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Reduce(Reduce {
+                            order_sequence_number,
+                            maker: header.signer,
+                            price_in_ticks,
+                            base_lots_removed,
+                            base_lots_remaining,
+                            is_full_cancel: base_lots_remaining == 0,
+                        }),
+                    }),
 
-                        match fill_event {
-                            MarketEvent::Fill {
-                                index,
-                                maker_id,
-                                order_sequence_number,
-                                price_in_ticks,
-                                base_lots_filled,
-                                base_lots_remaining,
-                            } => market_events.push(PhoenixEvent {
-                                market: header.market,
-                                sequence_number: header.market_sequence_number,
-                                slot: header.slot,
-                                timestamp: header.timestamp,
-                                signature: *sig,
-                                signer: header.signer,
-                                event_index: index as u64,
-                                details: MarketEventDetails::Fill(Fill {
-                                    order_sequence_number,
-                                    maker: maker_id,
-                                    taker: header.signer,
-                                    price_in_ticks,
-                                    base_lots_filled,
-                                    base_lots_remaining,
-                                    side_filled: Side::from_order_sequence_number(
-                                        order_sequence_number,
-                                    ),
-                                    is_full_fill: base_lots_remaining == 0,
-                                }),
-                            }),
-                            _ => panic!("Expected a fill event"),
-                        };
-                    }
-
-                    MarketEventWrapper::Reduce => {
-                        let size = 35;
-                        let reduce_event =
-                            MarketEvent::try_from_slice(&event[offset..offset + size]).ok()?;
-                        offset += size;
-
-                        match reduce_event {
-                            MarketEvent::Reduce {
-                                index,
-                                order_sequence_number,
-                                price_in_ticks,
-                                base_lots_removed,
-                                base_lots_remaining,
-                            } => market_events.push(PhoenixEvent {
-                                market: header.market,
-                                sequence_number: header.market_sequence_number,
-                                slot: header.slot,
-                                timestamp: header.timestamp,
-                                signature: *sig,
-                                signer: header.signer,
-                                event_index: index as u64,
-                                details: MarketEventDetails::Reduce(Reduce {
-                                    order_sequence_number,
-                                    maker: header.signer,
-                                    price_in_ticks,
-                                    base_lots_removed,
-                                    base_lots_remaining,
-                                    is_full_cancel: base_lots_remaining == 0,
-                                }),
-                            }),
-                            _ => {
-                                panic!("Expected a reduce event");
-                            }
-                        };
-                    }
-
-                    MarketEventWrapper::Place => {
-                        let size = 43;
-                        let place_event =
-                            MarketEvent::try_from_slice(&event[offset..offset + size]).ok()?;
-                        offset += size;
-
-                        match place_event {
-                            MarketEvent::Place {
-                                index,
-                                order_sequence_number,
-                                client_order_id,
-                                price_in_ticks,
-                                base_lots_placed,
-                            } => market_events.push(PhoenixEvent {
-                                market: header.market,
-                                sequence_number: header.market_sequence_number,
-                                slot: header.slot,
-                                timestamp: header.timestamp,
-                                signature: *sig,
-                                signer: header.signer,
-                                event_index: index as u64,
-                                details: MarketEventDetails::Place(Place {
-                                    order_sequence_number,
-                                    client_order_id,
-                                    maker: header.signer,
-                                    price_in_ticks,
-                                    base_lots_placed,
-                                }),
-                            }),
-                            _ => {
-                                panic!("Expected a place event");
-                            }
-                        };
-                    }
-
-                    MarketEventWrapper::Evict => {
-                        let size = 58;
-                        let evict_event =
-                            MarketEvent::try_from_slice(&event[offset..offset + size]).ok()?;
-                        offset += size;
-
-                        match evict_event {
-                            MarketEvent::Evict {
-                                index,
-                                maker_id,
-                                order_sequence_number,
-                                price_in_ticks,
-                                base_lots_evicted,
-                            } => market_events.push(PhoenixEvent {
-                                market: header.market,
-                                sequence_number: header.market_sequence_number,
-                                slot: header.slot,
-                                timestamp: header.timestamp,
-                                signature: *sig,
-                                signer: header.signer,
-                                event_index: index as u64,
-                                details: MarketEventDetails::Evict(Evict {
-                                    order_sequence_number,
-                                    maker: maker_id,
-                                    price_in_ticks,
-                                    base_lots_evicted,
-                                }),
-                            }),
-                            _ => {
-                                panic!("Expected a place event");
-                            }
-                        };
-                    }
-                    MarketEventWrapper::FillSummary => {
-                        let size = 43;
-                        let fill_summary_event =
-                            MarketEvent::try_from_slice(&event[offset..offset + size]).ok()?;
-                        offset += size;
-
-                        match fill_summary_event {
-                            MarketEvent::FillSummary {
-                                index,
-                                client_order_id,
-                                total_base_lots_filled,
-                                total_quote_lots_filled,
-                                total_fee_in_quote_lots,
-                            } => market_events.push(PhoenixEvent {
-                                market: header.market,
-                                sequence_number: header.market_sequence_number,
-                                slot: header.slot,
-                                timestamp: header.timestamp,
-                                signature: *sig,
-                                signer: header.signer,
-                                event_index: index as u64,
-                                details: MarketEventDetails::FillSummary(FillSummary {
-                                    client_order_id,
-                                    total_base_filled: total_base_lots_filled * self.base_lot_size,
-                                    total_quote_filled_including_fees: total_quote_lots_filled
-                                        * self.quote_lot_size,
-                                    total_quote_fees: total_fee_in_quote_lots * self.quote_lot_size,
-                                }),
-                            }),
-                            _ => {
-                                panic!("Expected fill summary event");
-                            }
-                        };
-                    }
-
+                    MarketEvent::Place {
+                        index,
+                        order_sequence_number,
+                        client_order_id,
+                        price_in_ticks,
+                        base_lots_placed,
+                    } => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.market_sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Place(Place {
+                            order_sequence_number,
+                            client_order_id,
+                            maker: header.signer,
+                            price_in_ticks,
+                            base_lots_placed,
+                        }),
+                    }),
+                    MarketEvent::Evict {
+                        index,
+                        maker_id,
+                        order_sequence_number,
+                        price_in_ticks,
+                        base_lots_evicted,
+                    } => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.market_sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Evict(Evict {
+                            order_sequence_number,
+                            maker: maker_id,
+                            price_in_ticks,
+                            base_lots_evicted,
+                        }),
+                    }),
+                    MarketEvent::FillSummary {
+                        index,
+                        client_order_id,
+                        total_base_lots_filled,
+                        total_quote_lots_filled,
+                        total_fee_in_quote_lots,
+                    } => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.market_sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::FillSummary(FillSummary {
+                            client_order_id,
+                            total_base_filled: total_base_lots_filled * self.base_lot_size,
+                            total_quote_filled_including_fees: total_quote_lots_filled
+                                * self.quote_lot_size,
+                            total_quote_fees: total_fee_in_quote_lots * self.quote_lot_size,
+                        }),
+                    }),
+                    MarketEvent::Fee {
+                        index,
+                        fees_collected_in_quote_lots,
+                    } => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.market_sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Fee(
+                            fees_collected_in_quote_lots * self.quote_lot_size,
+                        ),
+                    }),
                     _ => {
                         panic!("Unexpected Event!");
                     }

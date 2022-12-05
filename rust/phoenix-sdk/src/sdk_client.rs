@@ -285,7 +285,7 @@ impl SDKClient {
                 }
             }
         }
-        self.parse_wrapper_events(sig, event_list)
+        self.parse_phoenix_events(sig, event_list)
     }
 
     pub async fn parse_places(&self, signature: &Signature) -> Vec<PhoenixEvent> {
