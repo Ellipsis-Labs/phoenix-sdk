@@ -148,10 +148,11 @@ impl CoinbasePriceListener {
                     }
                 } else {
                     println!("Issue retrieving next message from Coinbase WS: {:?}", msg);
-                    println!("Disconnecting and reconnecting to Coinbase WS");
+                    println!("Disconnecting for 5 seconds then reconnecting to Coinbase WS");
                     break;
                 }
             }
+            thread::sleep(std::time::Duration::from_secs(10));
         }
     }
 }
