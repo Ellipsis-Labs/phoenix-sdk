@@ -98,7 +98,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-access-control"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -111,7 +111,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-account"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -125,7 +125,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-constant"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "proc-macro2 1.0.47",
@@ -135,7 +135,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-error"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "proc-macro2 1.0.47",
@@ -146,7 +146,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-event"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -158,7 +158,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-interface"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -171,7 +171,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-program"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -183,7 +183,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-state"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -195,7 +195,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-accounts"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -207,7 +207,7 @@ dependencies = [
 [[package]]
 name = "anchor-lang"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -230,7 +230,7 @@ dependencies = [
 [[package]]
 name = "anchor-spl"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anchor-lang",
  "solana-program",
@@ -241,7 +241,7 @@ dependencies = [
 [[package]]
 name = "anchor-syn"
 version = "0.25.0"
-source = "git+https://github.com/coral-xyz/anchor/?branch=master#0ba2195ec7f6aebee317733dde6c774122ab13dd"
+source = "git+https://github.com/coral-xyz/anchor/?branch=master#6814ce646e9fa3277969c7d30fef9b73c9fcc1bc"
 dependencies = [
  "anyhow",
  "bs58 0.3.1",
@@ -1025,9 +1025,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.82"
+version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4a41a86530d0fe7f5d9ea779916b7cadd2d4f9add748b99c2c029cbbdfaf453"
+checksum = "bdf07d07d6531bfcdbe9b8b739b104610c6508dcc4d63b410585faf338241daf"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -1037,9 +1037,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.82"
+version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06416d667ff3e3ad2df1cd8cd8afae5da26cf9cec4d0825040f88b5ca659a2f0"
+checksum = "d2eb5b96ecdc99f72657332953d4d9c50135af1bac34277801cc3937906ebd39"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -1052,15 +1052,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.82"
+version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "820a9a2af1669deeef27cb271f476ffd196a2c4b6731336011e0ba63e2c7cf71"
+checksum = "ac040a39517fd1674e0f32177648334b0f4074625b5588a64519804ba0553b12"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.82"
+version = "1.0.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a08a6e2fcc370a089ad3b4aaf54db3b1b4cee38ddabce5896b33eb693275f470"
+checksum = "1362b0ddcfc4eb0a1f57b68bd77dd99f0e826958a96abd0ae9bd092e114ffed6"
 dependencies = [
  "proc-macro2 1.0.47",
  "quote 1.0.21",
@@ -1080,9 +1080,9 @@ dependencies = [
 
 [[package]]
 name = "data-encoding"
-version = "2.3.2"
+version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ee2393c4a91429dffb4bedf19f4d6abf27d8a732c8ce4980305d782e5426d57"
+checksum = "23d8666cb01533c39dde32bcbab8e227b4ed6679b2c925eba05feabea39508fb"
 
 [[package]]
 name = "der"
@@ -1300,8 +1300,6 @@ checksum = "90e5c1c8368803113bf0c9584fc495a58b86dc8a29edbf8fe877d21d9507e797"
 [[package]]
 name = "ellipsis-client"
 version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74237efb5d021b94b097fce88b20a6696190c74c458cfa26ea557ea172f55e4a"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1311,8 +1309,8 @@ dependencies = [
  "solana-client",
  "solana-logger",
  "solana-program",
- "solana-program-test",
  "solana-sdk",
+ "solana-test-client",
  "solana-transaction-status",
  "thiserror",
  "tokio",
@@ -2084,9 +2082,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.137"
+version = "0.2.138"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc7fcc620a3bff7cdd7a365be3376c97191aeaccc2a603e600951e452615bf89"
+checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 
 [[package]]
 name = "libloading"
@@ -2329,9 +2327,9 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.24.2"
+version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "195cdbc1741b8134346d515b3a56a1c94b0912758009cfd53f99ea0f57b065fc"
+checksum = "fa52e972a9a719cecb6864fb88568781eb706bac2cd1d4f04a648542dbf78069"
 dependencies = [
  "bitflags",
  "cfg-if",
@@ -2517,9 +2515,9 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openssl"
-version = "0.10.43"
+version = "0.10.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "020433887e44c27ff16365eaa2d380547a94544ad509aff6eb5b6e3e0b27b376"
+checksum = "29d971fd5722fec23977260f6e81aa67d2f22cadbdc2aa049f1022d9a3be1566"
 dependencies = [
  "bitflags",
  "cfg-if",
@@ -2549,9 +2547,9 @@ checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.78"
+version = "0.9.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07d5c8cb6e57b3a3612064d7b18b117912b4ce70955c2504d4b741c9e244b132"
+checksum = "5454462c0eced1e97f2ec09036abc8da362e66802f66fd20f86854d9d8cbcbc4"
 dependencies = [
  "autocfg",
  "cc",
@@ -2744,7 +2742,7 @@ dependencies = [
 [[package]]
 name = "phoenix-types"
 version = "0.1.9"
-source = "git+https://github.com/Ellipsis-Labs/phoenix-types?branch=master#0952782fe835dd0aec3e2f4f94688582aefef7fc"
+source = "git+https://github.com/Ellipsis-Labs/phoenix-types?branch=master#faadeeffec4a8c6498e84d4acaa91e8e187cb688"
 dependencies = [
  "borsh",
  "bytemuck",
@@ -3483,9 +3481,9 @@ checksum = "e25dfac463d778e353db5be2449d1cce89bd6fd23c9f1ea21310ce6e5a1b29c4"
 
 [[package]]
 name = "serde"
-version = "1.0.148"
+version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e53f64bb4ba0191d6d0676e1b141ca55047d83b74f5607e6d8eb88126c52c2dc"
+checksum = "256b9932320c590e707b94576e3cc1f7c9024d0ee6612dfbcf1cb106cbe8e055"
 dependencies = [
  "serde_derive",
 ]
@@ -3501,9 +3499,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.148"
+version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a55492425aa53521babf6137309e7d34c20bbfbbfcfe2c7f3a047fd1f6b92c0c"
+checksum = "b4eae9b04cbffdfd550eb462ed33bc6a1b68c935127d008b27444d08380f94e4"
 dependencies = [
  "proc-macro2 1.0.47",
  "quote 1.0.21",
@@ -3761,54 +3759,6 @@ dependencies = [
  "solana-program-runtime",
  "solana-sdk",
  "thiserror",
-]
-
-[[package]]
-name = "solana-banks-client"
-version = "1.14.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d220a44ece99cafc02307b4def429c5e9abe69ce6283a383689d1104d3aed5db"
-dependencies = [
- "borsh",
- "futures 0.3.25",
- "solana-banks-interface",
- "solana-program",
- "solana-sdk",
- "tarpc",
- "thiserror",
- "tokio",
- "tokio-serde",
-]
-
-[[package]]
-name = "solana-banks-interface"
-version = "1.14.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b29eccc04bf734902a7e7588545370ee944890e4d16c60f993be99694d499bdd"
-dependencies = [
- "serde",
- "solana-sdk",
- "tarpc",
-]
-
-[[package]]
-name = "solana-banks-server"
-version = "1.14.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aeae4bf045df3c34f4a91a7c36b5596b0c58c54253895e2a5189c2abce58fc6"
-dependencies = [
- "bincode",
- "crossbeam-channel",
- "futures 0.3.25",
- "solana-banks-interface",
- "solana-client",
- "solana-runtime",
- "solana-sdk",
- "solana-send-transaction-service",
- "tarpc",
- "tokio",
- "tokio-serde",
- "tokio-stream",
 ]
 
 [[package]]
@@ -4188,31 +4138,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-program-test"
-version = "1.14.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6530352467e25870a1a67eb7e12f55cc7f524eaf848b8f1189f5a18a91486422"
-dependencies = [
- "assert_matches",
- "async-trait",
- "base64 0.13.1",
- "bincode",
- "chrono-humanize",
- "log",
- "serde",
- "solana-banks-client",
- "solana-banks-server",
- "solana-bpf-loader-program",
- "solana-logger",
- "solana-program-runtime",
- "solana-runtime",
- "solana-sdk",
- "solana-vote-program",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "solana-rayon-threadlimit"
 version = "1.14.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4430,6 +4355,36 @@ dependencies = [
  "thiserror",
  "tokio",
  "x509-parser",
+]
+
+[[package]]
+name = "solana-test-client"
+version = "0.1.0"
+dependencies = [
+ "assert_matches",
+ "async-trait",
+ "base64 0.13.1",
+ "bincode",
+ "borsh",
+ "chrono-humanize",
+ "crossbeam-channel",
+ "futures 0.3.25",
+ "itertools",
+ "lazy_static",
+ "log",
+ "serde",
+ "solana-bpf-loader-program",
+ "solana-client",
+ "solana-logger",
+ "solana-program-runtime",
+ "solana-runtime",
+ "solana-sdk",
+ "solana-send-transaction-service",
+ "solana-vote-program",
+ "tarpc",
+ "thiserror",
+ "tokio",
+ "tokio-serde",
 ]
 
 [[package]]
@@ -5226,9 +5181,9 @@ dependencies = [
 
 [[package]]
 name = "typenum"
-version = "1.15.0"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
+checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 
 [[package]]
 name = "unicode-bidi"
