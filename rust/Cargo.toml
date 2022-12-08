@@ -20,6 +20,7 @@ anyhow = "1.0.52"
 solana-sdk = "1.10.32"
 borsh = "0.9.3"
 rand = "0.7.3"
+phoenix-types = { git = "https://github.com/Ellipsis-Labs/phoenix-types", branch = "master" }
 ellipsis-client = "0.1.9"
 tokio = { version = "1.8.4", features = ["full"] }
 solana-client = "1.10.32"
