@@ -276,7 +276,7 @@ impl SDKClient {
                     continue;
                 }
                 let (tag, data) = inner_ix.instruction.data.split_first().unwrap();
-                let ix_enum = match PhoenixInstruction::try_from_slice(&[*tag]).ok() {
+                let ix_enum = match PhoenixInstruction::try_from(*tag).ok() {
                     Some(ix) => ix,
                     None => continue,
                 };
