@@ -17,14 +17,7 @@ import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
  */
 export const SwapStruct = new beet.FixableBeetArgsStruct<{
   instructionDiscriminator: number;
-  orderPacket: OrderPacket;
-}>(
-  [
-    ["instructionDiscriminator", beet.u8],
-    ["orderPacket", orderPacketBeet],
-  ],
-  "SwapInstructionArgs"
-);
+}>([["instructionDiscriminator", beet.u8]], "SwapInstructionArgs");
 /**
  * Accounts required by the _Swap_ instruction
  *
@@ -67,10 +60,14 @@ export function createSwapInstruction(
   orderPacket: OrderPacket,
   programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
 ) {
-  const [data] = SwapStruct.serialize({
+  const [ixEnum] = SwapStruct.serialize({
     instructionDiscriminator: swapInstructionDiscriminator,
-    orderPacket,
   });
+
+  const paramData = orderPacketBeet.toFixedFromValue(orderPacket);
+  const data = Buffer.alloc(ixEnum.length + paramData.byteSize, ixEnum);
+  paramData.write(data, ixEnum.length, orderPacket);
+
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,

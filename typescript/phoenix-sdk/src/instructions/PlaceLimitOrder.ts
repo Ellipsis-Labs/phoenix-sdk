@@ -17,14 +17,7 @@ import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
  */
 export const PlaceLimitOrderStruct = new beet.FixableBeetArgsStruct<{
   instructionDiscriminator: number;
-  orderPacket: OrderPacket;
-}>(
-  [
-    ["instructionDiscriminator", beet.u8],
-    ["orderPacket", orderPacketBeet],
-  ],
-  "PlaceLimitOrderInstructionArgs"
-);
+}>([["instructionDiscriminator", beet.u8]], "PlaceLimitOrderInstructionArgs");
 /**
  * Accounts required by the _PlaceLimitOrder_ instruction
  *
@@ -66,13 +59,17 @@ export const placeLimitOrderInstructionDiscriminator = 2;
  */
 export function createPlaceLimitOrderInstruction(
   accounts: PlaceLimitOrderInstructionAccounts,
-  orderPacket: OrderPacket,
+  orderPacket: Partial<OrderPacket>,
   programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
 ) {
-  const [data] = PlaceLimitOrderStruct.serialize({
+  const [ixEnum] = PlaceLimitOrderStruct.serialize({
     instructionDiscriminator: placeLimitOrderInstructionDiscriminator,
-    orderPacket,
   });
+
+  const paramData = orderPacketBeet.toFixedFromValue(orderPacket);
+  const data = Buffer.alloc(ixEnum.length + paramData.byteSize, ixEnum);
+  paramData.write(data, ixEnum.length, orderPacket);
+
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
