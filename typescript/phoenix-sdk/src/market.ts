@@ -107,9 +107,9 @@ export class Market {
     const quoteAtomsPerBaseUnit = 10 ** toNum(this.header.quoteParams.decimals);
     for (const [orderId, restingOrder] of this.bids) {
       if (bids.length === 0) {
-        let numQuoteTicksPerBaseUnit = toNum(orderId.priceInTicks);
+        let priceInTicks = toNum(orderId.priceInTicks);
         bids.push([
-          (numQuoteTicksPerBaseUnit *
+          (priceInTicks *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
             quoteAtomsPerBaseUnit,
@@ -120,9 +120,9 @@ export class Market {
         if (!prev) {
           throw Error;
         }
-        let numQuoteTicksPerBaseUnit = toNum(orderId.priceInTicks);
+        let priceInTicks = toNum(orderId.priceInTicks);
         let price =
-          (numQuoteTicksPerBaseUnit *
+          (priceInTicks *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
           quoteAtomsPerBaseUnit;
@@ -142,9 +142,9 @@ export class Market {
 
     for (const [orderId, restingOrder] of this.asks) {
       if (asks.length === 0) {
-        let numQuoteTicksPerBaseUnit = toNum(orderId.priceInTicks);
+        let priceInTicks = toNum(orderId.priceInTicks);
         asks.push([
-          (numQuoteTicksPerBaseUnit *
+          (priceInTicks *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
             quoteAtomsPerBaseUnit,
@@ -155,9 +155,9 @@ export class Market {
         if (!prev) {
           throw Error;
         }
-        let numQuoteTicksPerBaseUnit = toNum(orderId.priceInTicks);
+        let priceInTicks = toNum(orderId.priceInTicks);
         let price =
-          (numQuoteTicksPerBaseUnit *
+          (priceInTicks *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
           quoteAtomsPerBaseUnit;
