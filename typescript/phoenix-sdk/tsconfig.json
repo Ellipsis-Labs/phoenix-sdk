@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "baseUrl": "src",
+        "module": "commonjs",
+        "target": "es2015",
+        "esModuleInterop": true,
+        "moduleResolution": "node",
+        "declaration": true,
+        "paths": {
+          "@instructions/*": ["instructions/*"],
+          "@types/*": ["types/*"]
+        },
+        "outDir": "./dist"
+      },
+      "include": [
+        "src/**/*.ts",
+        "tests/**/*.ts"
+      ]
+}
