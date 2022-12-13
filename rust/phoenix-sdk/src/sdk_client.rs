@@ -46,6 +46,15 @@ impl DerefMut for SDKClient {
 
 impl SDKClient {
     pub async fn new_from_ellipsis_client(market_key: &Pubkey, client: EllipsisClient) -> Self {
+        SDKClient::new_from_ellipsis_client_with_program_id(market_key, client, &phoenix::id())
+            .await
+    }
+
+    pub async fn new_from_ellipsis_client_with_program_id(
+        market_key: &Pubkey,
+        client: EllipsisClient,
+        program_id: &Pubkey,
+    ) -> Self {
         let market_metadata = Self::get_market_metadata(&client, market_key).await;
         let mut markets = BTreeMap::new();
 
@@ -55,6 +64,7 @@ impl SDKClient {
             rng: Arc::new(Mutex::new(StdRng::from_entropy())),
             active_market_key: *market_key,
             trader: client.payer.pubkey(),
+            program_id: *program_id,
         };
         SDKClient { client, core }
     }
@@ -64,26 +74,51 @@ impl SDKClient {
         rt.block_on(Self::new_from_ellipsis_client(market_key, client))
     }
 
+    pub fn new_from_ellipsis_client_with_program_id_sync(
+        market_key: &Pubkey,
+        client: EllipsisClient,
+        program_id: &Pubkey,
+    ) -> Self {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(Self::new_from_ellipsis_client_with_program_id(
+            market_key, client, program_id,
+        ))
+    }
+
     pub async fn new(market_key: &Pubkey, payer: &Keypair, url: &str) -> Self {
         let rpc = RpcClient::new_with_commitment(url, CommitmentConfig::confirmed());
         let client = EllipsisClient::from_rpc(rpc, payer).unwrap(); //fix error handling instead of panic
-        let market_metadata = Self::get_market_metadata(&client, market_key).await;
-        let mut markets = BTreeMap::new();
 
-        markets.insert(*market_key, market_metadata);
-        let core = SDKClientCore {
-            markets,
-            rng: Arc::new(Mutex::new(StdRng::from_entropy())),
-            active_market_key: *market_key,
-            trader: client.payer.pubkey(),
-        };
+        SDKClient::new_from_ellipsis_client(market_key, client).await
+    }
 
-        SDKClient { client, core }
+    pub async fn new_with_program_id(
+        market_key: &Pubkey,
+        payer: &Keypair,
+        url: &str,
+        program_id: &Pubkey,
+    ) -> Self {
+        let rpc = RpcClient::new_with_commitment(url, CommitmentConfig::confirmed());
+        let client = EllipsisClient::from_rpc(rpc, payer).unwrap(); //fix error handling instead of panic
+
+        SDKClient::new_from_ellipsis_client_with_program_id(market_key, client, program_id).await
     }
 
     pub fn new_sync(market_key: &Pubkey, payer: &Keypair, url: &str) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
         rt.block_on(Self::new(market_key, payer, url))
+    }
+
+    pub fn new_with_program_id_sync(
+        market_key: &Pubkey,
+        payer: &Keypair,
+        url: &str,
+        program_id: &Pubkey,
+    ) -> Self {
+        let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
+        rt.block_on(Self::new_with_program_id(
+            market_key, payer, url, program_id,
+        ))
     }
 
     pub fn set_payer(&mut self, payer: Keypair) {
@@ -269,7 +304,7 @@ impl SDKClient {
         for inner_ixs in tx.inner_instructions.iter() {
             for inner_ix in inner_ixs.iter() {
                 let current_program_id = inner_ix.instruction.program_id.clone();
-                if current_program_id != phoenix::id().to_string() {
+                if current_program_id != self.program_id.to_string() {
                     continue;
                 }
                 if inner_ix.instruction.data.is_empty() {
