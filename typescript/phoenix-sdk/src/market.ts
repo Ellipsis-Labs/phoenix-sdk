@@ -104,7 +104,7 @@ export class Market {
   getLadder(levels: number): Ladder {
     let bids: Array<[number, number]> = [];
     let asks: Array<[number, number]> = [];
-    const quoteAtomsPerBaseUnit = 10 ** toNum(this.header.quoteParams.decimals);
+    const quoteAtomsPerQuoteUnit = 10 ** toNum(this.header.quoteParams.decimals);
     for (const [orderId, restingOrder] of this.bids) {
       if (bids.length === 0) {
         let priceInTicks = toNum(orderId.priceInTicks);
@@ -112,7 +112,7 @@ export class Market {
           (priceInTicks *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
-            quoteAtomsPerBaseUnit,
+            quoteAtomsPerQuoteUnit,
           toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
         ]);
       } else {
@@ -125,7 +125,7 @@ export class Market {
           (priceInTicks *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
-          quoteAtomsPerBaseUnit;
+          quoteAtomsPerQuoteUnit;
         if (price === prev[0]) {
           prev[1] += toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit;
         } else {
@@ -147,7 +147,7 @@ export class Market {
           (priceInTicks *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
-            quoteAtomsPerBaseUnit,
+            quoteAtomsPerQuoteUnit,
           toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
         ]);
       } else {
@@ -160,7 +160,7 @@ export class Market {
           (priceInTicks *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
-          quoteAtomsPerBaseUnit;
+          quoteAtomsPerQuoteUnit;
         if (price === prev[0]) {
           prev[1] += toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit;
         } else {
