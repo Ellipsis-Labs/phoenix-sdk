@@ -1,5 +1,5 @@
 {
-    "name": "pit",
+    "name": "phoenix-sdk",
     "version": "1.0.0",
     "description": "SDK for phoenix",
     "main": "index.ts",

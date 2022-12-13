@@ -102,7 +102,17 @@ async function main() {
   );
   console.log(txId);
 
+  // Retry until we get the transaction. We give up after 10 tries
   let txResult = await getEventsFromTransaction(connection, txId);
+  let counter = 1;
+  while (txResult.instructions.length == 0) {
+    txResult = await getEventsFromTransaction(connection, txId);
+    counter += 1;
+    if (counter == 10) {
+      throw Error("Failed to fetch tranxaction");
+    }
+  }
+  console.log("Fetched transaction after", counter, "tries");
   let fillEvents = txResult.instructions[0];
 
   let summary = fillEvents.events[

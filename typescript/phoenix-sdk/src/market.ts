@@ -104,67 +104,73 @@ export class Market {
   getLadder(levels: number): Ladder {
     let bids: Array<[number, number]> = [];
     let asks: Array<[number, number]> = [];
-    const quoteLotsPerBaseUnit = 10 ** toNum(this.header.quoteParams.decimals);
-    for (const [k, v] of this.bids) {
+    const quoteAtomsPerBaseUnit = 10 ** toNum(this.header.quoteParams.decimals);
+    for (const [orderId, restingOrder] of this.bids) {
       if (bids.length === 0) {
-        let numQuoteTicksPerBaseUnit = toNum(k.priceInTicks);
+        let numQuoteTicksPerBaseUnit = toNum(orderId.priceInTicks);
         bids.push([
           (numQuoteTicksPerBaseUnit *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
-            quoteLotsPerBaseUnit,
-          toNum(v.numBaseLots) / this.baseLotsPerBaseUnit,
+            quoteAtomsPerBaseUnit,
+          toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
         ]);
       } else {
         let prev = bids[bids.length - 1];
         if (!prev) {
           throw Error;
         }
-        let numQuoteTicksPerBaseUnit = toNum(k.priceInTicks);
+        let numQuoteTicksPerBaseUnit = toNum(orderId.priceInTicks);
         let price =
           (numQuoteTicksPerBaseUnit *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
-          quoteLotsPerBaseUnit;
+          quoteAtomsPerBaseUnit;
         if (price === prev[0]) {
-          prev[1] += toNum(v.numBaseLots) / this.baseLotsPerBaseUnit;
+          prev[1] += toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit;
         } else {
           if (bids.length == levels) {
             break;
           }
-          bids.push([price, toNum(v.numBaseLots) / this.baseLotsPerBaseUnit]);
+          bids.push([
+            price,
+            toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
+          ]);
         }
       }
     }
 
-    for (const [k, v] of this.asks) {
+    for (const [orderId, restingOrder] of this.asks) {
       if (asks.length === 0) {
-        let numQuoteTicksPerBaseUnit = toNum(k.priceInTicks);
+        let numQuoteTicksPerBaseUnit = toNum(orderId.priceInTicks);
         asks.push([
           (numQuoteTicksPerBaseUnit *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
-            quoteLotsPerBaseUnit,
-          toNum(v.numBaseLots) / this.baseLotsPerBaseUnit,
+            quoteAtomsPerBaseUnit,
+          toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
         ]);
       } else {
         let prev = asks[asks.length - 1];
         if (!prev) {
           throw Error;
         }
-        let numQuoteTicksPerBaseUnit = toNum(k.priceInTicks);
+        let numQuoteTicksPerBaseUnit = toNum(orderId.priceInTicks);
         let price =
           (numQuoteTicksPerBaseUnit *
             this.quoteLotsPerBaseUnitPerTick *
             toNum(this.header.quoteLotSize)) /
-          quoteLotsPerBaseUnit;
+          quoteAtomsPerBaseUnit;
         if (price === prev[0]) {
-          prev[1] += toNum(v.numBaseLots) / this.baseLotsPerBaseUnit;
+          prev[1] += toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit;
         } else {
           if (asks.length == levels) {
             break;
           }
-          asks.push([price, toNum(v.numBaseLots) / this.baseLotsPerBaseUnit]);
+          asks.push([
+            price,
+            toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
+          ]);
         }
       }
     }
@@ -182,6 +188,8 @@ export class Ladder {
   }
 }
 
+// This dserializes the market and returns a Market object
+// This struct is defined here: https://github.com/Ellipsis-Labs/phoenix-types/blob/ab8ecbf168cebbe157c77a2eb64598781b8d317b/src/market.rs#L198
 export const deserializeMarket = (data: Buffer): Market => {
   let offset = marketHeaderBeet.byteSize;
   const [header] = marketHeaderBeet.deserialize(data.subarray(0, offset));
@@ -220,24 +228,34 @@ export const deserializeMarket = (data: Buffer): Market => {
   offset += asksSize;
   let traderBuffer = remaining.subarray(offset, offset + tradersSize);
 
-  let bidsUnsorted = deserializeTree(bidBuffer, orderIdBeet, restingOrderBeet);
-  let asksUnsorted = deserializeTree(askBuffer, orderIdBeet, restingOrderBeet);
+  let bidsUnsorted = deserializeRedBlackTree(
+    bidBuffer,
+    orderIdBeet,
+    restingOrderBeet
+  );
+  let asksUnsorted = deserializeRedBlackTree(
+    askBuffer,
+    orderIdBeet,
+    restingOrderBeet
+  );
 
+  // TODO: Respect price-time ordering
   let bids = [...bidsUnsorted].sort(
     (a, b) => toNum(-a[0].priceInTicks) + toNum(b[0].priceInTicks)
   );
 
+  // TODO: Respect price-time ordering
   let asks = [...asksUnsorted].sort(
     (a, b) => toNum(a[0].priceInTicks) - toNum(b[0].priceInTicks)
   );
 
   let traders = new Map<PublicKey, TraderState>();
-  for (const [k, v] of deserializeTree(
+  for (const [k, traderState] of deserializeRedBlackTree(
     traderBuffer,
     publicKeyBeet,
     traderStateBeet
   )) {
-    traders.set(k.publicKey, v);
+    traders.set(k.publicKey, traderState);
   }
 
   return new Market(
@@ -254,7 +272,9 @@ export const deserializeMarket = (data: Buffer): Market => {
   );
 };
 
-function deserializeTree<Key, Value>(
+// This deserialized the RedBlackTree defined in the sokoban library
+// https://github.com/Ellipsis-Labs/sokoban/tree/master
+function deserializeRedBlackTree<Key, Value>(
   buffer: Buffer,
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
@@ -270,7 +290,6 @@ function deserializeTree<Key, Value>(
   offset += 16;
 
   // Skip node allocator size
-  let size = buffer.readBigInt64LE(offset);
   offset += 8;
   let bumpIndex = buffer.readInt32LE(offset);
   offset += 4;
@@ -299,12 +318,17 @@ function deserializeTree<Key, Value>(
 
   let freeNodes = new Set<number>();
   let indexToRemove = freeListHead - 1;
+  let counter = 0;
   // If there's an infinite loop here, that means that the state is corrupted
   while (freeListHead !== 0) {
     // We need to subtract 1 because the node allocator is 1-indexed
     let next = freeListPointers[freeListHead - 1];
     [indexToRemove, freeListHead] = next;
     freeNodes.add(indexToRemove);
+    counter += 1;
+    if (counter > bumpIndex) {
+      throw new Error("Infinite loop detected");
+    }
   }
 
   for (let [index, [key, value]] of nodes.entries()) {
