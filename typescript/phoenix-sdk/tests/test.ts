@@ -112,7 +112,7 @@ async function main() {
       throw Error("Failed to fetch tranxaction");
     }
   }
-  console.log("Fetched transaction after", counter, "tries");
+  console.log("Fetched transaction after", counter, "attempt(s)");
   let fillEvents = txResult.instructions[0];
 
   let summary = fillEvents.events[
