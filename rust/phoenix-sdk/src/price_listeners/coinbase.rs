@@ -149,23 +149,29 @@ impl CoinbasePriceListener {
                             Level2::L2update { changes, .. } => {
                                 let mut modified_ladder = ladder.write().unwrap();
                                 for change in changes {
+                                    if change.price.is_nan()
+                                        || change.price.is_infinite()
+                                        || change.price <= 0.0
+                                    {
+                                        println!("Invalid price: {:?}", change.price);
+                                        continue;
+                                    }
+                                    let decimal_price = Decimal::from_f64(change.price);
+                                    if decimal_price.is_none() {
+                                        println!("Invalid price: {:?}", change.price);
+                                        continue;
+                                    }
                                     match change.side {
                                         OrderSide::Buy => {
                                             modified_ladder.update_orders(
                                                 Side::Bid,
-                                                vec![(
-                                                    Decimal::from_f64(change.price).unwrap(),
-                                                    change.size,
-                                                )],
+                                                vec![(decimal_price.unwrap(), change.size)],
                                             );
                                         }
                                         OrderSide::Sell => {
                                             modified_ladder.update_orders(
                                                 Side::Ask,
-                                                vec![(
-                                                    Decimal::from_f64(change.price).unwrap(),
-                                                    change.size,
-                                                )],
+                                                vec![(decimal_price.unwrap(), change.size)],
                                             );
                                         }
                                     }
