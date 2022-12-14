@@ -210,9 +210,15 @@ impl CoinbasePriceListener {
                     }
                     continue;
                 }
-                Message::Error { message } => println!("Error: {}", message),
+                Message::Error { message } => {
+                    println!("Error: {}", message);
+                    continue;
+                }
                 Message::InternalError(_) => panic!("internal_error"),
-                other => println!("{:?}", other),
+                other => {
+                    println!("Received other message {:?}", other);
+                    continue;
+                }
             };
 
             let vwap = ladder.read().unwrap().vwap(3);
