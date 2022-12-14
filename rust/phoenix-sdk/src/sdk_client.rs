@@ -305,21 +305,26 @@ impl SDKClient {
         &self,
         sig: &Signature,
     ) -> Option<Vec<PhoenixEvent>> {
-        let raw_tx = self
-            .client
-            .get_transaction_with_config(
-                &sig,
-                RpcTransactionConfig {
-                    encoding: Some(UiTransactionEncoding::Json),
-                    commitment: Some(CommitmentConfig::confirmed()),
-                    max_supported_transaction_version: None,
-                },
-            )
-            .ok()?;
-        if raw_tx.transaction.meta.as_ref()?.err.is_some() {
-            return None;
-        }
-        let tx = parse_transaction(raw_tx);
+        let tx = if !self.client.is_bank_client {
+            let raw_tx = self
+                .client
+                .get_transaction_with_config(
+                    &sig,
+                    RpcTransactionConfig {
+                        encoding: Some(UiTransactionEncoding::Json),
+                        commitment: Some(CommitmentConfig::confirmed()),
+                        max_supported_transaction_version: None,
+                    },
+                )
+                .ok()?;
+            if raw_tx.transaction.meta.as_ref()?.err.is_some() {
+                return None;
+            }
+
+            parse_transaction(raw_tx)
+        } else {
+            self.client.get_transaction(&sig).await.ok()?
+        };
         let mut event_list = vec![];
         for inner_ixs in tx.inner_instructions.iter() {
             for inner_ix in inner_ixs.iter() {
