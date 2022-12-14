@@ -129,7 +129,11 @@ impl CoinbasePriceListener {
                         Message::Ticker(ticker) => {
                             let price = ticker.price();
                             if price.is_nan() || price.is_infinite() || *price <= 0.0 {
-                                continue;
+                                println!(
+                                    "Price is invalid: {}, reconnecting as after 10 seconds",
+                                    price
+                                );
+                                break;
                             }
                             match sender
                                 .send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }])
@@ -146,7 +150,11 @@ impl CoinbasePriceListener {
 
                     let vwap = ladder.read().unwrap().vwap(3);
                     if vwap.is_nan() || vwap.is_infinite() || vwap <= 0.0 {
-                        continue;
+                        println!(
+                            "Price is invalid: {}, reconnecting as after 10 seconds",
+                            vwap
+                        );
+                        break;
                     }
                     match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
                         Ok(_) => {}
