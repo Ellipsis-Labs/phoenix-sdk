@@ -86,19 +86,65 @@ impl CoinbasePriceListener {
                         Message::Level2(level2) => match level2 {
                             Level2::Snapshot { asks, bids, .. } => {
                                 let mut modified_ladder = ladder.write().unwrap();
+                                let mut response_ok = true;
                                 let update_bids = bids
                                     .iter()
-                                    .map(|bid| (Decimal::from_f64(bid.price).unwrap(), bid.size))
+                                    .filter_map(|bid| {
+                                        if bid.price.is_nan()
+                                            || bid.price.is_infinite()
+                                            || bid.price <= 0.0
+                                        {
+                                            response_ok = false;
+                                            None
+                                        } else {
+                                            Some((
+                                                Decimal::from_f64(bid.price).map_or_else(
+                                                    || {
+                                                        response_ok = false;
+                                                        None
+                                                    },
+                                                    |price| Some(price),
+                                                )?,
+                                                bid.size,
+                                            ))
+                                        }
+                                    })
                                     .collect::<Vec<_>>();
 
                                 modified_ladder.update_orders(Side::Bid, update_bids);
 
                                 let update_asks = asks
                                     .iter()
-                                    .map(|ask| (Decimal::from_f64(ask.price).unwrap(), ask.size))
+                                    .filter_map(|ask| {
+                                        if ask.price.is_nan()
+                                            || ask.price.is_infinite()
+                                            || ask.price <= 0.0
+                                        {
+                                            response_ok = false;
+                                            None
+                                        } else {
+                                            Some((
+                                                Decimal::from_f64(ask.price).map_or_else(
+                                                    || {
+                                                        response_ok = false;
+                                                        None
+                                                    },
+                                                    |price| Some(price),
+                                                )?,
+                                                ask.size,
+                                            ))
+                                        }
+                                    })
                                     .collect::<Vec<_>>();
 
                                 modified_ladder.update_orders(Side::Ask, update_asks);
+                                if !response_ok {
+                                    println!(
+                                        "Response is invalid, bids: {:?}, asks {:?}",
+                                        bids, asks
+                                    );
+                                    continue;
+                                }
                             }
                             Level2::L2update { changes, .. } => {
                                 let mut modified_ladder = ladder.write().unwrap();
