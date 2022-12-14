@@ -156,22 +156,24 @@ impl CoinbasePriceListener {
                                         println!("Invalid price: {:?}", change.price);
                                         continue;
                                     }
-                                    let decimal_price = Decimal::from_f64(change.price);
-                                    if decimal_price.is_none() {
-                                        println!("Invalid price: {:?}", change.price);
-                                        continue;
-                                    }
+                                    let decimal_price = match Decimal::from_f64(change.price) {
+                                        None => {
+                                            println!("Invalid price: {:?}", change.price);
+                                            continue;
+                                        }
+                                        Some(p) => p,
+                                    };
                                     match change.side {
                                         OrderSide::Buy => {
                                             modified_ladder.update_orders(
                                                 Side::Bid,
-                                                vec![(decimal_price.unwrap(), change.size)],
+                                                vec![(decimal_price, change.size)],
                                             );
                                         }
                                         OrderSide::Sell => {
                                             modified_ladder.update_orders(
                                                 Side::Ask,
-                                                vec![(decimal_price.unwrap(), change.size)],
+                                                vec![(decimal_price, change.size)],
                                             );
                                         }
                                     }
