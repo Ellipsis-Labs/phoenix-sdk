@@ -128,6 +128,9 @@ impl CoinbasePriceListener {
                         },
                         Message::Ticker(ticker) => {
                             let price = ticker.price();
+                            if price.is_nan() || price.is_infinite() || *price <= 0.0 {
+                                continue;
+                            }
                             match sender
                                 .send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }])
                             {
@@ -142,6 +145,9 @@ impl CoinbasePriceListener {
                     };
 
                     let vwap = ladder.read().unwrap().vwap(3);
+                    if vwap.is_nan() || vwap.is_infinite() || vwap <= 0.0 {
+                        continue;
+                    }
                     match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
                         Ok(_) => {}
                         Err(e) => println!("Error while sending vwap update: {}", e),
