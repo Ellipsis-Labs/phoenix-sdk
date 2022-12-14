@@ -46,11 +46,15 @@ impl DerefMut for SDKClient {
 
 impl SDKClient {
     pub async fn new_from_ellipsis_client(market_key: &Pubkey, client: EllipsisClient) -> Self {
-        SDKClient::new_from_ellipsis_client_with_program_id(market_key, client, &phoenix::id())
-            .await
+        SDKClient::new_from_ellipsis_client_with_custom_program_id(
+            market_key,
+            client,
+            &phoenix::id(),
+        )
+        .await
     }
 
-    pub async fn new_from_ellipsis_client_with_program_id(
+    pub async fn new_from_ellipsis_client_with_custom_program_id(
         market_key: &Pubkey,
         client: EllipsisClient,
         program_id: &Pubkey,
@@ -74,13 +78,13 @@ impl SDKClient {
         rt.block_on(Self::new_from_ellipsis_client(market_key, client))
     }
 
-    pub fn new_from_ellipsis_client_with_program_id_sync(
+    pub fn new_from_ellipsis_client_with_custom_program_id_sync(
         market_key: &Pubkey,
         client: EllipsisClient,
         program_id: &Pubkey,
     ) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(Self::new_from_ellipsis_client_with_program_id(
+        rt.block_on(Self::new_from_ellipsis_client_with_custom_program_id(
             market_key, client, program_id,
         ))
     }
@@ -92,7 +96,7 @@ impl SDKClient {
         SDKClient::new_from_ellipsis_client(market_key, client).await
     }
 
-    pub async fn new_with_program_id(
+    pub async fn new_with_custom_program_id(
         market_key: &Pubkey,
         payer: &Keypair,
         url: &str,
@@ -101,7 +105,8 @@ impl SDKClient {
         let rpc = RpcClient::new_with_commitment(url, CommitmentConfig::confirmed());
         let client = EllipsisClient::from_rpc(rpc, payer).unwrap(); //fix error handling instead of panic
 
-        SDKClient::new_from_ellipsis_client_with_program_id(market_key, client, program_id).await
+        SDKClient::new_from_ellipsis_client_with_custom_program_id(market_key, client, program_id)
+            .await
     }
 
     pub fn new_sync(market_key: &Pubkey, payer: &Keypair, url: &str) -> Self {
@@ -109,14 +114,14 @@ impl SDKClient {
         rt.block_on(Self::new(market_key, payer, url))
     }
 
-    pub fn new_with_program_id_sync(
+    pub fn new_with_custom_program_id_sync(
         market_key: &Pubkey,
         payer: &Keypair,
         url: &str,
         program_id: &Pubkey,
     ) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
-        rt.block_on(Self::new_with_program_id(
+        rt.block_on(Self::new_with_custom_program_id(
             market_key, payer, url, program_id,
         ))
     }
