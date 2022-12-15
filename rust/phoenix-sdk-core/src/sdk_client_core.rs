@@ -238,6 +238,7 @@ impl SDKClientCore {
         sig: &Signature,
         events: Vec<Vec<u8>>,
     ) -> Option<Vec<PhoenixEvent>> {
+        println!("deep in parsing");
         let mut market_events: Vec<PhoenixEvent> = vec![];
 
         for event in events.iter() {

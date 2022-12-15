@@ -7,13 +7,14 @@ use phoenix_types::enums::*;
 use rust_decimal::prelude::*;
 use std::{
     collections::BTreeMap,
-    sync::{mpsc::Sender, Arc, RwLock},
-    thread,
-    thread::JoinHandle,
+    sync::{Arc, RwLock},
 };
+use tokio::spawn;
+use tokio::sync::mpsc::Sender;
+use tokio::task::JoinHandle;
 
 pub struct CoinbasePriceListener {
-    pub worker: JoinHandle<Option<()>>,
+    pub worker: JoinHandle<()>,
 }
 
 impl CoinbasePriceListener {
@@ -24,10 +25,10 @@ impl CoinbasePriceListener {
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         }));
-        let worker = thread::Builder::new()
-            .name("coinbase-ladder".to_string())
-            .spawn(move || Self::run(ladder, market_name, sender, false))
-            .unwrap();
+
+        let worker = spawn(async move {
+            Self::run(ladder, market_name, sender, false).await;
+        });
 
         Self { worker }
     }
@@ -42,26 +43,20 @@ impl CoinbasePriceListener {
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         }));
-        let worker = thread::Builder::new()
-            .name("coinbase-ladder".to_string())
-            .spawn(move || Self::run(ladder, market_name, sender, true))
-            .unwrap();
+
+        let worker = spawn(async move {
+            Self::run(ladder, market_name, sender, true).await;
+        });
 
         Self { worker }
     }
 
-    pub fn join(self) -> Option<()> {
-        self.worker.join().unwrap()
-    }
-
-    pub fn run(
+    pub async fn run(
         ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
         market_name: String,
         sender: Sender<Vec<SDKMarketEvent>>,
         use_ticker: bool,
     ) -> Option<()> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-
         println!("Connecting to Coinbase Websocket API");
         let coinbase_ws_url = "wss://ws-feed.pro.coinbase.com";
 
@@ -72,28 +67,24 @@ impl CoinbasePriceListener {
                 ChannelType::Level2
             };
 
-            let mut stream = rt
-                .block_on(WSFeed::connect(
-                    coinbase_ws_url,
-                    &[market_name.as_str()],
-                    &[channel_type],
-                ))
-                .unwrap();
+            let mut stream =
+                WSFeed::connect(coinbase_ws_url, &[market_name.as_str()], &[channel_type])
+                    .await
+                    .unwrap();
 
-            Self::run_listener(&rt, &mut stream, ladder.clone(), sender.clone());
-
-            thread::sleep(std::time::Duration::from_secs(10));
+            Self::run_listener(&mut stream, ladder.clone(), sender.clone()).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
         }
     }
 
-    fn run_listener(
-        rt: &tokio::runtime::Runtime,
+    async fn run_listener(
         stream: &mut (impl CBStream + CBSink),
         ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
         sender: Sender<Vec<SDKMarketEvent>>,
     ) {
         loop {
-            let event = rt.block_on(stream.next());
+            // let event = rt.block_on(stream.next());
+            let event = stream.next().await;
             let msg = if let Some(Ok(msg)) = event {
                 msg
             } else {
@@ -204,7 +195,10 @@ impl CoinbasePriceListener {
                         );
                         return;
                     }
-                    match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }]) {
+                    match sender
+                        .send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }])
+                        .await
+                    {
                         Ok(_) => {}
                         Err(e) => println!("Error while sending fair price update: {}", e),
                     }
@@ -229,7 +223,10 @@ impl CoinbasePriceListener {
                 );
                 return;
             }
-            match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
+            match sender
+                .send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }])
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => println!("Error while sending vwap update: {}", e),
             }
