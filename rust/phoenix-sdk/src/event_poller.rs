@@ -3,10 +3,11 @@ use solana_client::rpc_client::GetConfirmedSignaturesForAddress2Config;
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Signature};
 use std::{str::FromStr, sync::Arc, time::Duration};
 use tokio::sync::mpsc::Sender;
-use tokio::task::{spawn, JoinHandle};
 
 pub struct EventPoller {
-    pub worker: JoinHandle<()>,
+    event_sender: Sender<Vec<SDKMarketEvent>>,
+    sdk: Arc<SDKClient>,
+    timeout_ms: u64,
 }
 
 impl EventPoller {
@@ -15,11 +16,11 @@ impl EventPoller {
         event_sender: Sender<Vec<SDKMarketEvent>>,
         timeout_ms: u64,
     ) -> Self {
-        let worker = spawn(async move {
-            Self::run(event_sender, sdk.clone(), timeout_ms).await;
-        });
-
-        Self { worker }
+        Self {
+            event_sender,
+            sdk,
+            timeout_ms,
+        }
     }
 
     pub fn new_with_default_timeout(
@@ -29,11 +30,7 @@ impl EventPoller {
         Self::new(sdk, event_sender, 1000)
     }
 
-    pub async fn run(
-        event_sender: Sender<Vec<SDKMarketEvent>>,
-        sdk: Arc<SDKClient>,
-        timeout_ms: u64,
-    ) {
+    pub async fn run(&self) {
         let mut until = None;
         // TODO: keep some state of signatures that have already been processed
         // TODO: make sure events are processed in order
@@ -55,9 +52,10 @@ impl EventPoller {
 
             // This is not 100% robust, but it's good enough for now.
             // TODO: join futures and await
-            for (i, signature) in sdk
+            for (i, signature) in self
+                .sdk
                 .client
-                .get_signatures_for_address_with_config(&sdk.core.active_market_key, config)
+                .get_signatures_for_address_with_config(&self.sdk.core.active_market_key, config)
                 .unwrap_or_default()
                 .iter()
                 .map(|tx| Signature::from_str(&tx.signature).unwrap())
@@ -70,8 +68,13 @@ impl EventPoller {
                 // TODO: This currently blocks on every iteration, which is not ideal.
                 //       We should be able to spin up chunks of requests and join.
                 println!("Processing transaction: {}", signature);
-                let events = sdk.parse_events_from_transaction(&signature).await.unwrap();
-                if event_sender
+                let events = self
+                    .sdk
+                    .parse_events_from_transaction(&signature)
+                    .await
+                    .unwrap();
+                if self
+                    .event_sender
                     .send(
                         events
                             .iter()
@@ -85,7 +88,7 @@ impl EventPoller {
                     continue;
                 }
             }
-            tokio::time::sleep(Duration::from_millis(timeout_ms)).await;
+            tokio::time::sleep(Duration::from_millis(self.timeout_ms)).await;
         }
     }
 }

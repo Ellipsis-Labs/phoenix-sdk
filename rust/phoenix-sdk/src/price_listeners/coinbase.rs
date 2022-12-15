@@ -9,12 +9,13 @@ use std::{
     collections::BTreeMap,
     sync::{Arc, RwLock},
 };
-use tokio::spawn;
 use tokio::sync::mpsc::Sender;
-use tokio::task::JoinHandle;
 
 pub struct CoinbasePriceListener {
-    pub worker: JoinHandle<()>,
+    ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
+    market_name: String,
+    sender: Sender<Vec<SDKMarketEvent>>,
+    use_ticker: bool,
 }
 
 impl CoinbasePriceListener {
@@ -26,11 +27,12 @@ impl CoinbasePriceListener {
             asks: BTreeMap::new(),
         }));
 
-        let worker = spawn(async move {
-            Self::run(ladder, market_name, sender, false).await;
-        });
-
-        Self { worker }
+        Self {
+            ladder,
+            market_name,
+            sender,
+            use_ticker: false,
+        }
     }
 
     pub fn new_with_last_trade_price(
@@ -44,35 +46,34 @@ impl CoinbasePriceListener {
             asks: BTreeMap::new(),
         }));
 
-        let worker = spawn(async move {
-            Self::run(ladder, market_name, sender, true).await;
-        });
-
-        Self { worker }
+        Self {
+            ladder,
+            market_name,
+            sender,
+            use_ticker: true,
+        }
     }
 
-    pub async fn run(
-        ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
-        market_name: String,
-        sender: Sender<Vec<SDKMarketEvent>>,
-        use_ticker: bool,
-    ) -> Option<()> {
+    pub async fn run(&self) {
         println!("Connecting to Coinbase Websocket API");
         let coinbase_ws_url = "wss://ws-feed.pro.coinbase.com";
 
         loop {
-            let channel_type = if use_ticker {
+            let channel_type = if self.use_ticker {
                 ChannelType::Ticker
             } else {
                 ChannelType::Level2
             };
 
-            let mut stream =
-                WSFeed::connect(coinbase_ws_url, &[market_name.as_str()], &[channel_type])
-                    .await
-                    .unwrap();
+            let mut stream = WSFeed::connect(
+                coinbase_ws_url,
+                &[self.market_name.as_str()],
+                &[channel_type],
+            )
+            .await
+            .unwrap();
 
-            Self::run_listener(&mut stream, ladder.clone(), sender.clone()).await;
+            Self::run_listener(&mut stream, self.ladder.clone(), self.sender.clone()).await;
             tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
         }
     }
@@ -114,7 +115,7 @@ impl CoinbasePriceListener {
                                                 response_ok = false;
                                                 None
                                             },
-                                            |price| Some(price),
+                                            Some,
                                         )?,
                                         bid.size,
                                     ))
@@ -138,7 +139,7 @@ impl CoinbasePriceListener {
                                                 response_ok = false;
                                                 None
                                             },
-                                            |price| Some(price),
+                                            Some,
                                         )?,
                                         ask.size,
                                     ))

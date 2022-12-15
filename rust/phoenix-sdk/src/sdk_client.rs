@@ -309,7 +309,7 @@ impl SDKClient {
             let raw_tx = self
                 .client
                 .get_transaction_with_config(
-                    &sig,
+                    sig,
                     RpcTransactionConfig {
                         encoding: Some(UiTransactionEncoding::Json),
                         commitment: Some(CommitmentConfig::confirmed()),
@@ -323,7 +323,7 @@ impl SDKClient {
 
             parse_transaction(raw_tx)
         } else {
-            self.client.get_transaction(&sig).await.ok()?
+            self.client.get_transaction(sig).await.ok()?
         };
         let mut event_list = vec![];
         for inner_ixs in tx.inner_instructions.iter() {

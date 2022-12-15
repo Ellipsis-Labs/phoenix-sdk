@@ -2,38 +2,38 @@ use crate::sdk_client::SDKClient;
 use solana_program::instruction::Instruction;
 use std::sync::Arc;
 use tokio::sync::mpsc::Receiver;
-use tokio::task::{spawn, JoinHandle};
 
 pub struct TransactionExecutor {
-    pub worker: JoinHandle<()>,
+    pub client: Arc<SDKClient>,
+    pub ix_receiver: Receiver<Vec<Instruction>>,
 }
 
 impl TransactionExecutor {
-    pub fn new(client: Arc<SDKClient>, receiver: Receiver<Vec<Instruction>>) -> Self {
-        let worker = spawn(async move {
-            Self::run(client, receiver).await;
-        });
-
-        Self { worker }
+    pub fn new(client: Arc<SDKClient>, ix_receiver: Receiver<Vec<Instruction>>) -> Self {
+        Self {
+            client,
+            ix_receiver,
+        }
     }
 
-    pub async fn run(sdk: Arc<SDKClient>, mut receiver: Receiver<Vec<Instruction>>) {
+    pub async fn run(&mut self) {
         loop {
-            let instructions = match receiver.recv().await {
+            let instructions = match self.ix_receiver.recv().await {
                 Some(instructions) => instructions,
                 None => {
                     continue;
                 }
             };
-            let signature = sdk
+            let signature = self
+                .client
                 .client
                 .sign_send_instructions(instructions, vec![])
                 .await;
             match signature {
                 Ok(s) => {
-                    let logs = sdk.client.get_transaction(&s).await;
+                    let logs = self.client.client.get_transaction(&s).await;
                     println!("Transaction sent: {}", s);
-                    println!("Fills: {:?}", sdk.parse_fills(&s).await);
+                    println!("Fills: {:?}", self.client.parse_fills(&s).await);
 
                     match logs {
                         Ok(logs) => {
