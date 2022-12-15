@@ -22,7 +22,7 @@ borsh = "0.9.3"
 rand = "0.7.3"
 phoenix-types = { git = "https://github.com/Ellipsis-Labs/phoenix-types", branch = "master" }
 ellipsis-client = "0.1.10"
-tokio = { version = "1.8.4", features = ["full"] }
+tokio = { version = "1.23.0", features = ["full"] }
 solana-client = "1.10.32"
 clap = { version = "3.0.13", features = ["derive"] }
 shellexpand = "2.1.2"

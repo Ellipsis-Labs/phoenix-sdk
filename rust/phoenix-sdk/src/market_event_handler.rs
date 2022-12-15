@@ -1,6 +1,7 @@
+use async_trait::async_trait;
 pub use phoenix_sdk_core::market_event::{Fill, MarketEventDetails, PhoenixEvent};
 use solana_program::instruction::Instruction;
-use std::sync::mpsc::Sender;
+use tokio::sync::mpsc::Sender;
 
 #[derive(Clone, Debug)]
 pub enum SDKMarketEvent {
@@ -9,27 +10,24 @@ pub enum SDKMarketEvent {
     RefreshEvent,
 }
 
-pub trait MarketEventHandler<T> {
+#[async_trait]
+pub trait MarketEventHandler<T: Send + Sync> {
     /// Called when a transaction with multiple events is processed
     /// Clients should override this method to build specific logic for handling
     /// new transactions
-    fn handle_events(
-        &mut self,
-        sender: &Sender<T>,
-        events: Vec<PhoenixEvent>,
-    ) -> anyhow::Result<()> {
+    async fn handle_events(&mut self, sender: &T, events: Vec<PhoenixEvent>) -> anyhow::Result<()> {
         for event in events.iter() {
             match event.details {
                 MarketEventDetails::Fill(..) => {
-                    self.handle_trade(sender, event)?;
+                    self.handle_trade(sender, event).await?;
                 }
                 MarketEventDetails::Evict(..)
                 | MarketEventDetails::Place(..)
                 | MarketEventDetails::Reduce(..) => {
-                    self.handle_orderbook_update(sender, event)?;
+                    self.handle_orderbook_update(sender, event).await?;
                 }
                 MarketEventDetails::FillSummary(..) => {
-                    self.handle_fill_summary(sender, event)?;
+                    self.handle_fill_summary(sender, event).await?;
                 }
                 MarketEventDetails::Fee(..) => {
                     // Ignore fee events
@@ -39,17 +37,17 @@ pub trait MarketEventHandler<T> {
         Ok(())
     }
 
-    fn handle_trade(&mut self, sender: &Sender<T>, update: &PhoenixEvent) -> anyhow::Result<()>;
+    async fn handle_trade(&mut self, sender: &T, update: &PhoenixEvent) -> anyhow::Result<()>;
 
-    fn handle_fill_summary(
+    async fn handle_fill_summary(
         &mut self,
-        sender: &Sender<T>,
+        sender: &T,
         update: &PhoenixEvent,
     ) -> anyhow::Result<()>;
 
-    fn handle_orderbook_update(
+    async fn handle_orderbook_update(
         &mut self,
-        sender: &Sender<T>,
+        sender: &T,
         update: &PhoenixEvent,
     ) -> anyhow::Result<()>;
 }
@@ -57,8 +55,9 @@ pub trait MarketEventHandler<T> {
 pub struct LogHandler;
 unsafe impl Send for LogHandler {}
 
-impl MarketEventHandler<Vec<Instruction>> for LogHandler {
-    fn handle_trade(
+#[async_trait]
+impl MarketEventHandler<Sender<Vec<Instruction>>> for LogHandler {
+    async fn handle_trade(
         &mut self,
         _sender: &Sender<Vec<Instruction>>,
         update: &PhoenixEvent,
@@ -67,7 +66,7 @@ impl MarketEventHandler<Vec<Instruction>> for LogHandler {
         Ok(())
     }
 
-    fn handle_orderbook_update(
+    async fn handle_orderbook_update(
         &mut self,
         _sender: &Sender<Vec<Instruction>>,
         update: &PhoenixEvent,
@@ -76,7 +75,7 @@ impl MarketEventHandler<Vec<Instruction>> for LogHandler {
         Ok(())
     }
 
-    fn handle_fill_summary(
+    async fn handle_fill_summary(
         &mut self,
         _sender: &Sender<Vec<Instruction>>,
         update: &PhoenixEvent,

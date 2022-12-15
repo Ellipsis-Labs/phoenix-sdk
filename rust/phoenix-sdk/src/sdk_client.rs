@@ -345,6 +345,7 @@ impl SDKClient {
                 }
             }
         }
+        println!("got event list");
         self.parse_phoenix_events(sig, event_list)
     }
 
