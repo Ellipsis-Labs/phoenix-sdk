@@ -54,7 +54,14 @@ where
     let scale = N::try_from(10_u64.pow(decimals)).unwrap();
     let lhs = amount / scale;
     let rhs = format!("{:0width$}", (amount % scale), width = decimals as usize).replace('-', ""); // remove negative sign from rhs
-    format!("{}.{}", lhs, rhs.trim_end_matches('0'))
+    let rhs = { 
+        let trim_zero = rhs.trim_end_matches('0');
+        match trim_zero {
+            "" => "0", 
+            _ => trim_zero
+        }
+    };
+    format!("{}.{}", lhs, rhs)
 }
 
 #[derive(Clone, Copy, Debug)]
