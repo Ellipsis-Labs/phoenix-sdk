@@ -54,11 +54,11 @@ where
     let scale = N::try_from(10_u64.pow(decimals)).unwrap();
     let lhs = amount / scale;
     let rhs = format!("{:0width$}", (amount % scale), width = decimals as usize).replace('-', ""); // remove negative sign from rhs
-    let rhs = { 
+    let rhs = {
         let trim_zero = rhs.trim_end_matches('0');
         match trim_zero {
-            "" => "0", 
-            _ => trim_zero
+            "" => "0",
+            _ => trim_zero,
         }
     };
     format!("{}.{}", lhs, rhs)
@@ -258,6 +258,7 @@ impl SDKClientCore {
                     return None;
                 }
             };
+            let mut trade_direction = None;
             for phoenix_event in phoenix_events {
                 match phoenix_event {
                     MarketEvent::Fill {
@@ -267,25 +268,36 @@ impl SDKClientCore {
                         price_in_ticks,
                         base_lots_filled,
                         base_lots_remaining,
-                    } => market_events.push(PhoenixEvent {
-                        market: header.market,
-                        sequence_number: header.market_sequence_number,
-                        slot: header.slot,
-                        timestamp: header.timestamp,
-                        signature: *sig,
-                        signer: header.signer,
-                        event_index: index as u64,
-                        details: MarketEventDetails::Fill(Fill {
-                            order_sequence_number,
-                            maker: maker_id,
-                            taker: header.signer,
-                            price_in_ticks,
-                            base_lots_filled,
-                            base_lots_remaining,
-                            side_filled: Side::from_order_sequence_number(order_sequence_number),
-                            is_full_fill: base_lots_remaining == 0,
-                        }),
-                    }),
+                    } => {
+                        let side_filled = Side::from_order_sequence_number(order_sequence_number);
+                        market_events.push(PhoenixEvent {
+                            market: header.market,
+                            sequence_number: header.market_sequence_number,
+                            slot: header.slot,
+                            timestamp: header.timestamp,
+                            signature: *sig,
+                            signer: header.signer,
+                            event_index: index as u64,
+                            details: MarketEventDetails::Fill(Fill {
+                                order_sequence_number,
+                                maker: maker_id,
+                                taker: header.signer,
+                                price_in_ticks,
+                                base_lots_filled,
+                                base_lots_remaining,
+                                side_filled: Side::from_order_sequence_number(
+                                    order_sequence_number,
+                                ),
+                                is_full_fill: base_lots_remaining == 0,
+                            }),
+                        });
+                        if trade_direction.is_none() {
+                            trade_direction = match side_filled {
+                                Side::Bid => Some(-1),
+                                Side::Ask => Some(1),
+                            }
+                        }
+                    }
                     MarketEvent::Reduce {
                         index,
                         order_sequence_number,
@@ -373,6 +385,7 @@ impl SDKClientCore {
                             total_quote_filled_including_fees: total_quote_lots_filled
                                 * self.quote_lot_size,
                             total_quote_fees: total_fee_in_quote_lots * self.quote_lot_size,
+                            trade_direction: trade_direction.unwrap_or(0),
                         }),
                     }),
                     MarketEvent::Fee {
