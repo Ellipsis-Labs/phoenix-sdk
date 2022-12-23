@@ -94,6 +94,8 @@ pub struct FillSummary {
     pub total_quote_filled_including_fees: u64,
     /// The total quote quantity fees that were paid.
     pub total_quote_fees: u64,
+    /// Direction of the trade, 1 if buy side, -1 if sell side, 0 if the trade failed to match
+    pub trade_direction: i8,
 }
 
 #[derive(Clone, Copy, Debug)]
