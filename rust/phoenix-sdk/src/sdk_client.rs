@@ -306,17 +306,9 @@ impl SDKClient {
         sig: &Signature,
     ) -> Option<Vec<PhoenixEvent>> {
         let tx = if !self.client.is_bank_client {
-            let raw_tx = self
-                .client
-                .get_transaction_with_config(
-                    sig,
-                    RpcTransactionConfig {
-                        encoding: Some(UiTransactionEncoding::Json),
-                        commitment: Some(CommitmentConfig::confirmed()),
-                        max_supported_transaction_version: None,
-                    },
-                )
-                .ok()?;
+            // default get_transaction behavior
+            // but catch the error and continue if we got error
+            let raw_tx = self.client.get_transaction(sig).await.ok()?;
             if raw_tx.transaction.meta.as_ref()?.err.is_some() {
                 return None;
             }
