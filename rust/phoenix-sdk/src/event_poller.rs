@@ -67,7 +67,6 @@ impl EventPoller {
                 }
                 // TODO: This currently blocks on every iteration, which is not ideal.
                 //       We should be able to spin up chunks of requests and join.
-                println!("Processing transaction: {}", signature);
                 let events = self
                     .sdk
                     .parse_events_from_transaction(&signature)
