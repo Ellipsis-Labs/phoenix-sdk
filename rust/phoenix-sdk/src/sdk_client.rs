@@ -1,5 +1,5 @@
 use borsh::BorshDeserialize;
-use ellipsis_client::{transaction_utils::parse_transaction, EllipsisClient};
+use ellipsis_client::EllipsisClient;
 use phoenix_sdk_core::sdk_client_core::MarketState;
 pub use phoenix_sdk_core::{
     market_event::{Evict, Fill, FillSummary, MarketEventDetails, PhoenixEvent, Place, Reduce},
@@ -11,7 +11,7 @@ use phoenix_types::enums::*;
 use phoenix_types::instructions::PhoenixInstruction;
 use phoenix_types::market::*;
 use rand::{rngs::StdRng, SeedableRng};
-use solana_client::{rpc_client::RpcClient, rpc_config::RpcTransactionConfig};
+use solana_client::rpc_client::RpcClient;
 use solana_program::instruction::Instruction;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
@@ -20,7 +20,7 @@ use solana_sdk::{
     signature::{Signature, Signer},
     signer::keypair::Keypair,
 };
-use solana_transaction_status::UiTransactionEncoding;
+
 use std::{collections::BTreeMap, mem::size_of, ops::DerefMut, sync::Arc};
 use std::{ops::Deref, sync::Mutex};
 
