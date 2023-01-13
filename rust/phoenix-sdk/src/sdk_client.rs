@@ -305,18 +305,7 @@ impl SDKClient {
         &self,
         sig: &Signature,
     ) -> Option<Vec<PhoenixEvent>> {
-        let tx = if !self.client.is_bank_client {
-            // default get_transaction behavior
-            // but catch the error and continue if we got error
-            let raw_tx = self.client.get_transaction(sig).await.ok()?;
-            if raw_tx.transaction.meta.as_ref()?.err.is_some() {
-                return None;
-            }
-
-            parse_transaction(raw_tx)
-        } else {
-            self.client.get_transaction(sig).await.ok()?
-        };
+        let tx = self.client.get_transaction(sig).await.ok()?;
         let mut event_list = vec![];
         for inner_ixs in tx.inner_instructions.iter() {
             for inner_ix in inner_ixs.iter() {
@@ -337,7 +326,6 @@ impl SDKClient {
                 }
             }
         }
-        println!("got event list");
         self.parse_phoenix_events(sig, event_list)
     }
 
