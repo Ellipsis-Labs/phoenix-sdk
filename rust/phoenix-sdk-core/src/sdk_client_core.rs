@@ -78,8 +78,10 @@ pub struct MarketMetadata {
     pub base_lot_size: u64,
     pub tick_size_in_quote_atoms_per_base_unit: u64,
     pub num_base_lots_per_base_unit: u64,
+    /// The adjustment factor to convert from the raw base unit (i.e. 1 BONK token) to the Phoenix BaseUnit (which may be a multiple of whole tokens).
+    /// The adjustment factor is almost always 1, unless one base token is worth less than one quote atom (i.e. 1e-6 USDC)
+    pub raw_base_units_to_base_units: u32,
 }
-
 pub struct SDKClientCore {
     pub markets: BTreeMap<Pubkey, MarketMetadata>,
     pub rng: Arc<Mutex<StdRng>>,
@@ -101,8 +103,11 @@ impl SDKClientCore {
     /// Converts base units to base lots. For example if the base currency was a Widget and you wanted to
     /// convert 3 Widgets to base lots you would call sdk.base_unit_to_base_lots(3.0). This would return
     /// the number of base lots that would be equivalent to 3 Widgets.
-    pub fn base_units_to_base_lots(&self, base_units: f64) -> u64 {
-        (base_units * self.base_multiplier as f64 / self.base_lot_size as f64) as u64
+    pub fn base_units_to_base_lots(&self, raw_base_units: f64) -> u64 {
+        // Convert to Phoenix base_units
+        let phoenix_base_units = raw_base_units / self.raw_base_units_to_base_units as f64;
+        // TODO: Do we need to check that the input raw_base_units is greater than the minimal transactable amount?
+        phoenix_base_units * self.num_base_lots_per_base_unit as f64 as u64
     }
 
     /// RECOMMENDED:
@@ -110,6 +115,7 @@ impl SDKClientCore {
     /// convert 3 Widgets to base lots you would call sdk.base_amount_to_base_lots(3_000_000_000). This would return
     /// the number of base lots that would be equivalent to 3 Widgets.
     pub fn base_amount_to_base_lots(&self, base_amount: u64) -> u64 {
+        // TODO: How is base_lot_size being determined? Ensure that the base_lot_size accounts for a Phoenix BaseUnit (MegaUnit)
         base_amount / self.base_lot_size
     }
 
@@ -205,7 +211,7 @@ impl SDKClientCore {
         (ticks as f64 * self.tick_size_in_quote_atoms_per_base_unit as f64)
             / self.quote_multiplier as f64
     }
-
+    //TODO: Ensure this doesn't need to change
     pub fn base_lots_to_base_units_multiplier(&self) -> f64 {
         1.0 / self.num_base_lots_per_base_unit as f64
     }
