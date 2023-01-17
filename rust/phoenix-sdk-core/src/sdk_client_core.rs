@@ -107,7 +107,7 @@ impl SDKClientCore {
         // Convert to Phoenix base_units
         let phoenix_base_units = raw_base_units / self.raw_base_units_to_base_units as f64;
         // TODO: Do we need to check that the input raw_base_units is greater than the minimal transactable amount?
-        phoenix_base_units * (self.num_base_lots_per_base_unit as f64) as u64
+        (phoenix_base_units * (self.num_base_lots_per_base_unit as f64)) as u64
     }
 
     /// RECOMMENDED:
