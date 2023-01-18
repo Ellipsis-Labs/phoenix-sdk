@@ -7,13 +7,15 @@ use phoenix_types::enums::*;
 use rust_decimal::prelude::*;
 use std::{
     collections::BTreeMap,
-    sync::{mpsc::Sender, Arc, RwLock},
-    thread,
-    thread::JoinHandle,
+    sync::{Arc, RwLock},
 };
+use tokio::sync::mpsc::Sender;
 
 pub struct CoinbasePriceListener {
-    pub worker: JoinHandle<Option<()>>,
+    ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
+    market_name: String,
+    sender: Sender<Vec<SDKMarketEvent>>,
+    use_ticker: bool,
 }
 
 impl CoinbasePriceListener {
@@ -24,12 +26,13 @@ impl CoinbasePriceListener {
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         }));
-        let worker = thread::Builder::new()
-            .name("coinbase-ladder".to_string())
-            .spawn(move || Self::run(ladder, market_name, sender, false))
-            .unwrap();
 
-        Self { worker }
+        Self {
+            ladder,
+            market_name,
+            sender,
+            use_ticker: false,
+        }
     }
 
     pub fn new_with_last_trade_price(
@@ -42,58 +45,47 @@ impl CoinbasePriceListener {
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         }));
-        let worker = thread::Builder::new()
-            .name("coinbase-ladder".to_string())
-            .spawn(move || Self::run(ladder, market_name, sender, true))
-            .unwrap();
 
-        Self { worker }
+        Self {
+            ladder,
+            market_name,
+            sender,
+            use_ticker: true,
+        }
     }
 
-    pub fn join(self) -> Option<()> {
-        self.worker.join().unwrap()
-    }
-
-    pub fn run(
-        ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
-        market_name: String,
-        sender: Sender<Vec<SDKMarketEvent>>,
-        use_ticker: bool,
-    ) -> Option<()> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-
+    pub async fn run(&self) {
         println!("Connecting to Coinbase Websocket API");
         let coinbase_ws_url = "wss://ws-feed.pro.coinbase.com";
 
         loop {
-            let channel_type = if use_ticker {
+            let channel_type = if self.use_ticker {
                 ChannelType::Ticker
             } else {
                 ChannelType::Level2
             };
 
-            let mut stream = rt
-                .block_on(WSFeed::connect(
-                    coinbase_ws_url,
-                    &[market_name.as_str()],
-                    &[channel_type],
-                ))
-                .unwrap();
+            let mut stream = WSFeed::connect(
+                coinbase_ws_url,
+                &[self.market_name.as_str()],
+                &[channel_type],
+            )
+            .await
+            .unwrap();
 
-            Self::run_listener(&rt, &mut stream, ladder.clone(), sender.clone());
-
-            thread::sleep(std::time::Duration::from_secs(10));
+            Self::run_listener(&mut stream, self.ladder.clone(), self.sender.clone()).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
         }
     }
 
-    fn run_listener(
-        rt: &tokio::runtime::Runtime,
+    async fn run_listener(
         stream: &mut (impl CBStream + CBSink),
         ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
         sender: Sender<Vec<SDKMarketEvent>>,
     ) {
         loop {
-            let event = rt.block_on(stream.next());
+            // let event = rt.block_on(stream.next());
+            let event = stream.next().await;
             let msg = if let Some(Ok(msg)) = event {
                 msg
             } else {
@@ -123,7 +115,7 @@ impl CoinbasePriceListener {
                                                 response_ok = false;
                                                 None
                                             },
-                                            |price| Some(price),
+                                            Some,
                                         )?,
                                         bid.size,
                                     ))
@@ -147,7 +139,7 @@ impl CoinbasePriceListener {
                                                 response_ok = false;
                                                 None
                                             },
-                                            |price| Some(price),
+                                            Some,
                                         )?,
                                         ask.size,
                                     ))
@@ -204,7 +196,10 @@ impl CoinbasePriceListener {
                         );
                         return;
                     }
-                    match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }]) {
+                    match sender
+                        .send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }])
+                        .await
+                    {
                         Ok(_) => {}
                         Err(e) => println!("Error while sending fair price update: {}", e),
                     }
@@ -229,7 +224,10 @@ impl CoinbasePriceListener {
                 );
                 return;
             }
-            match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
+            match sender
+                .send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }])
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => println!("Error while sending vwap update: {}", e),
             }
