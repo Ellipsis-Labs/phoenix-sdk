@@ -1,15 +1,13 @@
 use crate::{market_event_handler::SDKMarketEvent, sdk_client::SDKClient};
 use solana_client::rpc_client::GetConfirmedSignaturesForAddress2Config;
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Signature};
-use std::{
-    str::FromStr,
-    sync::{mpsc::Sender, Arc},
-    thread::{Builder, JoinHandle},
-    time::Duration,
-};
+use std::{str::FromStr, sync::Arc, time::Duration};
+use tokio::sync::mpsc::Sender;
 
 pub struct EventPoller {
-    pub worker: JoinHandle<()>,
+    event_sender: Sender<Vec<SDKMarketEvent>>,
+    sdk: Arc<SDKClient>,
+    timeout_ms: u64,
 }
 
 impl EventPoller {
@@ -18,12 +16,11 @@ impl EventPoller {
         event_sender: Sender<Vec<SDKMarketEvent>>,
         timeout_ms: u64,
     ) -> Self {
-        let worker = Builder::new()
-            .name("event-poller".to_string())
-            .spawn(move || Self::run(event_sender, sdk.clone(), timeout_ms))
-            .unwrap();
-
-        Self { worker }
+        Self {
+            event_sender,
+            sdk,
+            timeout_ms,
+        }
     }
 
     pub fn new_with_default_timeout(
@@ -33,13 +30,8 @@ impl EventPoller {
         Self::new(sdk, event_sender, 1000)
     }
 
-    pub fn join(self) {
-        self.worker.join().unwrap()
-    }
-
-    pub fn run(event_sender: Sender<Vec<SDKMarketEvent>>, sdk: Arc<SDKClient>, timeout_ms: u64) {
+    pub async fn run(&self) {
         let mut until = None;
-        let rt = tokio::runtime::Runtime::new().unwrap();
         // TODO: keep some state of signatures that have already been processed
         // TODO: make sure events are processed in order
         loop {
@@ -60,9 +52,10 @@ impl EventPoller {
 
             // This is not 100% robust, but it's good enough for now.
             // TODO: join futures and await
-            for (i, signature) in sdk
+            for (i, signature) in self
+                .sdk
                 .client
-                .get_signatures_for_address_with_config(&sdk.core.active_market_key, config)
+                .get_signatures_for_address_with_config(&self.sdk.core.active_market_key, config)
                 .unwrap_or_default()
                 .iter()
                 .map(|tx| Signature::from_str(&tx.signature).unwrap())
@@ -74,23 +67,27 @@ impl EventPoller {
                 }
                 // TODO: This currently blocks on every iteration, which is not ideal.
                 //       We should be able to spin up chunks of requests and join.
-                let events = rt
-                    .block_on(sdk.parse_events_from_transaction(&signature))
+                let events = self
+                    .sdk
+                    .parse_events_from_transaction(&signature)
+                    .await
                     .unwrap_or_default();
-                if event_sender
+                if self
+                    .event_sender
                     .send(
                         events
                             .iter()
                             .map(|&e| SDKMarketEvent::PhoenixEvent { event: Box::new(e) })
                             .collect::<Vec<_>>(),
                     )
+                    .await
                     .is_err()
                 {
                     println!("Event sender disconnected, continuing");
                     continue;
                 }
             }
-            std::thread::sleep(Duration::from_millis(timeout_ms));
+            tokio::time::sleep(Duration::from_millis(self.timeout_ms)).await;
         }
     }
 }
