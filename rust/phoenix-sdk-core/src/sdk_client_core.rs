@@ -80,7 +80,7 @@ pub struct MarketMetadata {
     pub num_base_lots_per_base_unit: u64,
     /// The adjustment factor to convert from the raw base unit (i.e. 1 BONK token) to the Phoenix BaseUnit (which may be a multiple of whole tokens).
     /// The adjustment factor is almost always 1, unless one base token is worth less than one quote atom (i.e. 1e-6 USDC)
-    pub raw_base_units_to_base_units: u32,
+    pub raw_base_units_per_base_unit: u32,
 }
 pub struct SDKClientCore {
     pub markets: BTreeMap<Pubkey, MarketMetadata>,
@@ -105,15 +105,15 @@ impl SDKClientCore {
     /// the number of base lots that would be equivalent to 3 Widgets.
     pub fn raw_base_units_to_base_lots(&self, raw_base_units: f64) -> u64 {
         // Convert to Phoenix BaseUnits
-        let phoenix_base_units = raw_base_units / self.raw_base_units_to_base_units as f64;
-        (phoenix_base_units * (self.num_base_lots_per_base_unit as f64)).floor() as u64
+        let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
+        (base_units * (self.num_base_lots_per_base_unit as f64)).floor() as u64
     }
 
     /// The same function as raw_base_units_to_base_lots, but rounds up instead of down.
     pub fn raw_base_units_to_base_lots_rounded_up(&self, raw_base_units: f64) -> u64 {
         // Convert to Phoenix BaseUnits
-        let phoenix_base_units = raw_base_units / self.raw_base_units_to_base_units as f64;
-        (phoenix_base_units * (self.num_base_lots_per_base_unit as f64)).ceil() as u64
+        let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
+        (base_units * (self.num_base_lots_per_base_unit as f64)).ceil() as u64
     }
 
     /// RECOMMENDED:
@@ -121,7 +121,7 @@ impl SDKClientCore {
     /// convert 3 Widgets to base lots you would call sdk.base_amount_to_base_lots(3_000_000_000). This would return
     /// the number of base lots that would be equivalent to 3 Widgets or 3 * 1e9 Widget atoms.
     pub fn base_atoms_to_base_lots(&self, base_atoms: u64) -> u64 {
-        base_atoms / self.base_lot_size //Lot size is the number of atoms in a lot
+        base_atoms / self.base_lot_size // Lot size is the number of atoms in a lot
     }
 
     /// RECOMMENDED:
@@ -129,7 +129,7 @@ impl SDKClientCore {
     /// 1_000 base atoms per base lot of Widget, you would call sdk.base_lots_to_base_atoms(300) to convert 300 base lots
     /// to 300_000 Widget atoms.
     pub fn base_lots_to_base_atoms(&self, base_lots: u64) -> u64 {
-        base_lots * self.base_lot_size //Lot size is the number of atoms in a lot
+        base_lots * self.base_lot_size // Lot size is the number of atoms in a lot
     }
 
     /// RECOMMENDED:
@@ -177,7 +177,7 @@ impl SDKClientCore {
         println!("{}", get_decimal_string(quote_amount, self.quote_decimals));
     }
 
-    /// Takes in a number of quote atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
+    /// Takes in a number of base atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
     pub fn print_base_amount(&self, base_amount: u64) {
         println!("{}", get_decimal_string(base_amount, self.base_decimals));
     }

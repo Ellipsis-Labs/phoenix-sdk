@@ -286,7 +286,8 @@ impl SDKClient {
         let tick_size_in_quote_atoms_per_base_unit =
             header.get_tick_size_in_quote_atoms_per_base_unit().into();
         let num_base_lots_per_base_unit = market.get_base_lots_per_base_unit().into();
-        let raw_base_units_to_base_units = header.raw_base_units_per_base_unit.max(1);
+        // max(1) is only relevant for old markets where the raw_base_units_per_base_unit was not set
+        let raw_base_units_per_base_unit = header.raw_base_units_per_base_unit.max(1);
 
         MarketMetadata {
             base_mint,
@@ -299,7 +300,7 @@ impl SDKClient {
             quote_lot_size,
             base_lot_size,
             num_base_lots_per_base_unit,
-            raw_base_units_to_base_units,
+            raw_base_units_per_base_unit,
         }
     }
 
