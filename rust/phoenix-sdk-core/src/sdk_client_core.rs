@@ -78,8 +78,10 @@ pub struct MarketMetadata {
     pub base_lot_size: u64,
     pub tick_size_in_quote_atoms_per_base_unit: u64,
     pub num_base_lots_per_base_unit: u64,
+    /// The adjustment factor to convert from the raw base unit (i.e. 1 BONK token) to the Phoenix BaseUnit (which may be a multiple of whole tokens).
+    /// The adjustment factor is almost always 1, unless one base token is worth less than one quote atom (i.e. 1e-6 USDC)
+    pub raw_base_units_per_base_unit: u32,
 }
-
 pub struct SDKClientCore {
     pub markets: BTreeMap<Pubkey, MarketMetadata>,
     pub rng: Arc<Mutex<StdRng>>,
@@ -98,27 +100,36 @@ impl Deref for SDKClientCore {
 
 impl SDKClientCore {
     /// RECOMMENDED:
-    /// Converts base units to base lots. For example if the base currency was a Widget and you wanted to
-    /// convert 3 Widgets to base lots you would call sdk.base_unit_to_base_lots(3.0). This would return
-    /// the number of base lots that would be equivalent to 3 Widgets.
-    pub fn base_units_to_base_lots(&self, base_units: f64) -> u64 {
-        (base_units * self.base_multiplier as f64 / self.base_lot_size as f64) as u64
+    /// Converts raw base units (whole tokens) to base lots. For example if the base currency was a Widget and you wanted to
+    /// convert 3 Widget tokens to base lots you would call sdk.raw_base_units_to_base_lots(3.0). This would return
+    /// the number of base lots that would be equivalent to 3 Widget tokens.
+    pub fn raw_base_units_to_base_lots(&self, raw_base_units: f64) -> u64 {
+        // Convert to Phoenix BaseUnits
+        let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
+        (base_units * (self.num_base_lots_per_base_unit as f64)).floor() as u64
+    }
+
+    /// The same function as raw_base_units_to_base_lots, but rounds up instead of down.
+    pub fn raw_base_units_to_base_lots_rounded_up(&self, raw_base_units: f64) -> u64 {
+        // Convert to Phoenix BaseUnits
+        let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
+        (base_units * (self.num_base_lots_per_base_unit as f64)).ceil() as u64
     }
 
     /// RECOMMENDED:
-    /// Converts base amount to base lots. For example if the base currency was a Widget with 9 decimals and you wanted to
+    /// Converts base atoms to base lots. For example if the base currency was a Widget with 9 decimals, where 1 atom is 1e-9 of one Widget and you wanted to
     /// convert 3 Widgets to base lots you would call sdk.base_amount_to_base_lots(3_000_000_000). This would return
-    /// the number of base lots that would be equivalent to 3 Widgets.
-    pub fn base_amount_to_base_lots(&self, base_amount: u64) -> u64 {
-        base_amount / self.base_lot_size
+    /// the number of base lots that would be equivalent to 3 Widgets or 3 * 1e9 Widget atoms.
+    pub fn base_atoms_to_base_lots(&self, base_atoms: u64) -> u64 {
+        base_atoms / self.base_lot_size // Lot size is the number of atoms in a lot
     }
 
     /// RECOMMENDED:
-    /// Converts base lots to base units. For example if the base currency was a Widget where there are
-    /// 100 base lots per Widget, you would call sdk.base_lots_to_base_units(300) to convert 300 base lots
-    /// to 3 Widgets.
-    pub fn base_lots_to_base_amount(&self, base_lots: u64) -> u64 {
-        base_lots * self.base_lot_size
+    /// Converts base lots to base atoms. For example if the base currency was a Widget where there are
+    /// 1_000 base atoms per base lot of Widget, you would call sdk.base_lots_to_base_atoms(300) to convert 300 base lots
+    /// to 300_000 Widget atoms.
+    pub fn base_lots_to_base_atoms(&self, base_lots: u64) -> u64 {
+        base_lots * self.base_lot_size // Lot size is the number of atoms in a lot
     }
 
     /// RECOMMENDED:
@@ -130,43 +141,43 @@ impl SDKClientCore {
     }
 
     /// RECOMMENDED:
-    /// Converts quote amount to quote lots. For example if the quote currency was USDC with 6 decimals and you wanted to
-    /// convert 3 USDC to quote lots you would call sdk.quote_amount_to_quote_lots(3_000_000). This would return
-    /// the number of quote lots that would be equivalent to 3 USDC.
-    pub fn quote_amount_to_quote_lots(&self, quote_amount: u64) -> u64 {
-        quote_amount / self.quote_lot_size
+    /// Converts quote atoms to quote lots. For example if the quote currency was USDC with 6 decimals and you wanted to
+    /// convert 3 USDC, or 3_000_000 USDC atoms, to quote lots you would call sdk.quote_atoms_to_quote_lots(3_000_000). This would return
+    /// the number of quote lots that would be equivalent to 3_000_000 USDC atoms.
+    pub fn quote_atoms_to_quote_lots(&self, quote_atoms: u64) -> u64 {
+        quote_atoms / self.quote_lot_size
     }
 
     /// RECOMMENDED:
-    /// Converts quote lots to quote units. For example if the quote currency was USDC there are
-    /// 100 quote lots per USDC (each quote lot is worth 0.01 USDC), you would call sdk.quote_lots_to_quote_units(300) to convert 300 quote lots
-    /// to an amount equal to 3 USDC (3_000_000).
-    pub fn quote_lots_to_quote_amount(&self, quote_lots: u64) -> u64 {
+    /// Converts quote lots to quote atoms. For example if the quote currency was USDC and there are
+    /// 100 quote atoms per quote lot of USDC, you would call sdk.quote_lots_to_quote_atoms(300) to convert 300 quote lots
+    /// to 30_000 USDC atoms.
+    pub fn quote_lots_to_quote_atoms(&self, quote_lots: u64) -> u64 {
         quote_lots * self.quote_lot_size
     }
 
-    /// Converts a base amount to a floating point number of base units. For example if the base currency
-    /// is a Widget where the token has 9 decimals and you wanted to convert a base amount of 1000000000 to
-    /// a floating point number of base units you would call sdk.base_amount_to_float(1_000_000_000). This
+    /// Converts a number of base atoms to a floating point number of base units. For example if the base currency
+    /// is a Widget where the token has 9 decimals and you wanted to convert 1_000_000_000 base atoms to
+    /// a floating point number of whole Widget tokens you would call sdk.base_amount_to_float(1_000_000_000). This
     /// would return 1.0. This is useful for displaying the base amount in a human readable format.
-    pub fn base_amount_to_base_unit_as_float(&self, base_amount: u64) -> f64 {
-        base_amount as f64 / self.base_multiplier as f64
+    pub fn base_atoms_to_base_unit_as_float(&self, base_atoms: u64) -> f64 {
+        base_atoms as f64 / self.base_multiplier as f64
     }
 
-    /// Converts a quote amount to a floating point number of quote units. For example if the quote currency
-    /// is USDC the token has 6 decimals and you wanted to convert a quote amount of 1000000 to
-    /// a floating point number of quote units you would call sdk.quote_amount_to_float(1_000_000). This
+    /// Converts a number of quote atoms to a floating point number of quote units. For example if the quote currency
+    /// is USDC the token has 6 decimals and you wanted to convert 1_000_000 USDC atoms to
+    /// a floating point number of whole USDC tokens you would call sdk.quote_amount_to_float(1_000_000). This
     /// would return 1.0. This is useful for displaying the quote amount in a human readable format.
-    pub fn quote_amount_to_quote_unit_as_float(&self, quote_amount: u64) -> f64 {
-        quote_amount as f64 / self.quote_multiplier as f64
+    pub fn quote_atoms_to_quote_unit_as_float(&self, quote_atoms: u64) -> f64 {
+        quote_atoms as f64 / self.quote_multiplier as f64
     }
 
-    /// Takes in a quote amount and prints it as a human readable string to the console
+    /// Takes in a number of quote atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
     pub fn print_quote_amount(&self, quote_amount: u64) {
         println!("{}", get_decimal_string(quote_amount, self.quote_decimals));
     }
 
-    /// Takes in a base amount and prints it as a human readable string to the console
+    /// Takes in a number of base atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
     pub fn print_base_amount(&self, base_amount: u64) {
         println!("{}", get_decimal_string(base_amount, self.base_decimals));
     }
