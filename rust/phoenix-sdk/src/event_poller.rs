@@ -71,7 +71,7 @@ impl EventPoller {
                     .sdk
                     .parse_events_from_transaction(&signature)
                     .await
-                    .unwrap();
+                    .unwrap_or_default();
                 if self
                     .event_sender
                     .send(
