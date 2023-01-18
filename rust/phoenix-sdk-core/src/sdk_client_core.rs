@@ -100,9 +100,9 @@ impl Deref for SDKClientCore {
 
 impl SDKClientCore {
     /// RECOMMENDED:
-    /// Converts base units to base lots. For example if the base currency was a Widget and you wanted to
-    /// convert 3 Widgets to base lots you would call sdk.base_unit_to_base_lots(3.0). This would return
-    /// the number of base lots that would be equivalent to 3 Widgets.
+    /// Converts raw base units (whole tokens) to base lots. For example if the base currency was a Widget and you wanted to
+    /// convert 3 Widget tokens to base lots you would call sdk.raw_base_units_to_base_lots(3.0). This would return
+    /// the number of base lots that would be equivalent to 3 Widget tokens.
     pub fn raw_base_units_to_base_lots(&self, raw_base_units: f64) -> u64 {
         // Convert to Phoenix BaseUnits
         let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
@@ -142,7 +142,7 @@ impl SDKClientCore {
 
     /// RECOMMENDED:
     /// Converts quote atoms to quote lots. For example if the quote currency was USDC with 6 decimals and you wanted to
-    /// convert 3 USDC, or 3_000_000 USDC atoms, to quote lots you would call sdk.quote_amount_to_quote_lots(3_000_000). This would return
+    /// convert 3 USDC, or 3_000_000 USDC atoms, to quote lots you would call sdk.quote_atoms_to_quote_lots(3_000_000). This would return
     /// the number of quote lots that would be equivalent to 3_000_000 USDC atoms.
     pub fn quote_atoms_to_quote_lots(&self, quote_atoms: u64) -> u64 {
         quote_atoms / self.quote_lot_size
