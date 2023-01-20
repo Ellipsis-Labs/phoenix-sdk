@@ -2,8 +2,16 @@
     "name": "phoenix-sdk",
     "version": "1.0.0",
     "description": "SDK for phoenix",
-    "main": "index.ts",
     "license": "MIT",
+    "scripts": {
+        "build": "tsc",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "main": "dist/index.js",
+    "files": [
+        "dist"
+    ],
+    "types": "dist/index.d.ts",
     "dependencies": {
         "@metaplex-foundation/beet": "^0.7.1",
         "@metaplex-foundation/rustbin": "^0.3.1",
