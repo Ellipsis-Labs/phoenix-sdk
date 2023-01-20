@@ -1,9 +1,14 @@
 {
     "name": "phoenix-sdk",
     "version": "1.0.0",
-    "description": "SDK for phoenix",
-    "main": "index.ts",
+    "description": "TypeScript SDK for Phoenix",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
     "license": "MIT",
+    "scripts": {
+        "build": "tsc",
+        "clean": "rm -rf dist"
+    },
     "dependencies": {
         "@metaplex-foundation/beet": "^0.7.1",
         "@metaplex-foundation/rustbin": "^0.3.1",
