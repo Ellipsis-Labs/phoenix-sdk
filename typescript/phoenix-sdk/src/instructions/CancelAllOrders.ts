@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as splToken from '@solana/spl-token'
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
 
 /**
  * @category Instructions
@@ -15,15 +15,15 @@ import * as web3 from "@solana/web3.js";
  * @category generated
  */
 export const CancelAllOrdersStruct = new beet.BeetArgsStruct<{
-  instructionDiscriminator: number;
-}>([["instructionDiscriminator", beet.u8]], "CancelAllOrdersInstructionArgs");
+  instructionDiscriminator: number
+}>([['instructionDiscriminator', beet.u8]], 'CancelAllOrdersInstructionArgs')
 /**
  * Accounts required by the _CancelAllOrders_ instruction
  *
  * @property [] phoenixProgram Phoenix program
  * @property [] logAuthority Phoenix log authority
  * @property [_writable_] market This account holds the market state
- * @property [_writable_, **signer**] trader
+ * @property [**signer**] trader
  * @property [_writable_] baseAccount Trader base token account
  * @property [_writable_] quoteAccount Trader quote token account
  * @property [_writable_] baseVault Base vault PDA, seeds are [b'vault', market_address, base_mint_address]
@@ -33,18 +33,18 @@ export const CancelAllOrdersStruct = new beet.BeetArgsStruct<{
  * @category generated
  */
 export type CancelAllOrdersInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-  baseAccount: web3.PublicKey;
-  quoteAccount: web3.PublicKey;
-  baseVault: web3.PublicKey;
-  quoteVault: web3.PublicKey;
-  tokenProgram?: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+  baseAccount: web3.PublicKey
+  quoteAccount: web3.PublicKey
+  baseVault: web3.PublicKey
+  quoteVault: web3.PublicKey
+  tokenProgram?: web3.PublicKey
+}
 
-export const cancelAllOrdersInstructionDiscriminator = 6;
+export const cancelAllOrdersInstructionDiscriminator = 6
 
 /**
  * Creates a _CancelAllOrders_ instruction.
@@ -56,11 +56,11 @@ export const cancelAllOrdersInstructionDiscriminator = 6;
  */
 export function createCancelAllOrdersInstruction(
   accounts: CancelAllOrdersInstructionAccounts,
-  programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
+  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
 ) {
   const [data] = CancelAllOrdersStruct.serialize({
     instructionDiscriminator: cancelAllOrdersInstructionDiscriminator,
-  });
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -79,7 +79,7 @@ export function createCancelAllOrdersInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: true,
+      isWritable: false,
       isSigner: true,
     },
     {
@@ -107,12 +107,12 @@ export function createCancelAllOrdersInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }

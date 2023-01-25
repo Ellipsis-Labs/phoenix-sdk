@@ -5,26 +5,42 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
+import * as splToken from '@solana/spl-token'
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
+import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
 
 /**
  * @category Instructions
  * @category Swap
  * @category generated
  */
-export const SwapStruct = new beet.FixableBeetArgsStruct<{
-  instructionDiscriminator: number;
-}>([["instructionDiscriminator", beet.u8]], "SwapInstructionArgs");
+export type SwapInstructionArgs = {
+  orderPacket: OrderPacket
+}
+/**
+ * @category Instructions
+ * @category Swap
+ * @category generated
+ */
+export const SwapStruct = new beet.FixableBeetArgsStruct<
+  SwapInstructionArgs & {
+    instructionDiscriminator: number
+  }
+>(
+  [
+    ['instructionDiscriminator', beet.u8],
+    ['orderPacket', orderPacketBeet],
+  ],
+  'SwapInstructionArgs'
+)
 /**
  * Accounts required by the _Swap_ instruction
  *
  * @property [] phoenixProgram Phoenix program
  * @property [] logAuthority Phoenix log authority
  * @property [_writable_] market This account holds the market state
- * @property [_writable_, **signer**] trader
+ * @property [**signer**] trader
  * @property [_writable_] baseAccount Trader base token account
  * @property [_writable_] quoteAccount Trader quote token account
  * @property [_writable_] baseVault Base vault PDA, seeds are [b'vault', market_address, base_mint_address]
@@ -34,40 +50,38 @@ export const SwapStruct = new beet.FixableBeetArgsStruct<{
  * @category generated
  */
 export type SwapInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-  baseAccount: web3.PublicKey;
-  quoteAccount: web3.PublicKey;
-  baseVault: web3.PublicKey;
-  quoteVault: web3.PublicKey;
-  tokenProgram?: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+  baseAccount: web3.PublicKey
+  quoteAccount: web3.PublicKey
+  baseVault: web3.PublicKey
+  quoteVault: web3.PublicKey
+  tokenProgram?: web3.PublicKey
+}
 
-export const swapInstructionDiscriminator = 0;
+export const swapInstructionDiscriminator = 0
 
 /**
  * Creates a _Swap_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
  * @category Swap
  * @category generated
  */
 export function createSwapInstruction(
   accounts: SwapInstructionAccounts,
-  orderPacket: OrderPacket,
-  programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
+  args: SwapInstructionArgs,
+  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
 ) {
-  const [ixEnum] = SwapStruct.serialize({
+  const [data] = SwapStruct.serialize({
     instructionDiscriminator: swapInstructionDiscriminator,
-  });
-
-  const paramData = orderPacketBeet.toFixedFromValue(orderPacket);
-  const data = Buffer.alloc(ixEnum.length + paramData.byteSize, ixEnum);
-  paramData.write(data, ixEnum.length, orderPacket);
-
+    ...args,
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -86,7 +100,7 @@ export function createSwapInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: true,
+      isWritable: false,
       isSigner: true,
     },
     {
@@ -114,12 +128,12 @@ export function createSwapInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }

@@ -8,24 +8,16 @@
 import * as splToken from "@solana/spl-token";
 import * as beet from "@metaplex-foundation/beet";
 import * as web3 from "@solana/web3.js";
-import {
-  CancelMultipleOrdersByIdParams,
-  cancelMultipleOrdersByIdParamsBeet,
-} from "../types/CancelMultipleOrdersByIdParams";
 
 /**
  * @category Instructions
  * @category CancelMultipleOrdersById
  * @category generated
  */
-export const CancelMultipleOrdersByIdStruct = new beet.FixableBeetArgsStruct<{
+export const CancelMultipleOrdersByIdStruct = new beet.BeetArgsStruct<{
   instructionDiscriminator: number;
-  params: CancelMultipleOrdersByIdParams;
 }>(
-  [
-    ["instructionDiscriminator", beet.u8],
-    ["params", cancelMultipleOrdersByIdParamsBeet],
-  ],
+  [["instructionDiscriminator", beet.u8]],
   "CancelMultipleOrdersByIdInstructionArgs"
 );
 /**
@@ -34,7 +26,7 @@ export const CancelMultipleOrdersByIdStruct = new beet.FixableBeetArgsStruct<{
  * @property [] phoenixProgram Phoenix program
  * @property [] logAuthority Phoenix log authority
  * @property [_writable_] market This account holds the market state
- * @property [_writable_, **signer**] trader
+ * @property [**signer**] trader
  * @property [_writable_] baseAccount Trader base token account
  * @property [_writable_] quoteAccount Trader quote token account
  * @property [_writable_] baseVault Base vault PDA, seeds are [b'vault', market_address, base_mint_address]
@@ -67,12 +59,10 @@ export const cancelMultipleOrdersByIdInstructionDiscriminator = 10;
  */
 export function createCancelMultipleOrdersByIdInstruction(
   accounts: CancelMultipleOrdersByIdInstructionAccounts,
-  params: CancelMultipleOrdersByIdParams,
   programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
 ) {
   const [data] = CancelMultipleOrdersByIdStruct.serialize({
     instructionDiscriminator: cancelMultipleOrdersByIdInstructionDiscriminator,
-    params,
   });
   const keys: web3.AccountMeta[] = [
     {
@@ -92,7 +82,7 @@ export function createCancelMultipleOrdersByIdInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: true,
+      isWritable: false,
       isSigner: true,
     },
     {

@@ -5,66 +5,77 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
+import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
 
+/**
+ * @category Instructions
+ * @category PlaceLimitOrderWithFreeFunds
+ * @category generated
+ */
+export type PlaceLimitOrderWithFreeFundsInstructionArgs = {
+  orderPacket: OrderPacket
+}
 /**
  * @category Instructions
  * @category PlaceLimitOrderWithFreeFunds
  * @category generated
  */
 export const PlaceLimitOrderWithFreeFundsStruct =
-  new beet.FixableBeetArgsStruct<{
-    instructionDiscriminator: number;
-  }>(
-    [["instructionDiscriminator", beet.u8]],
-    "PlaceLimitOrderWithFreeFundsInstructionArgs"
-  );
+  new beet.FixableBeetArgsStruct<
+    PlaceLimitOrderWithFreeFundsInstructionArgs & {
+      instructionDiscriminator: number
+    }
+  >(
+    [
+      ['instructionDiscriminator', beet.u8],
+      ['orderPacket', orderPacketBeet],
+    ],
+    'PlaceLimitOrderWithFreeFundsInstructionArgs'
+  )
 /**
  * Accounts required by the _PlaceLimitOrderWithFreeFunds_ instruction
  *
  * @property [] phoenixProgram Phoenix program
  * @property [] logAuthority Phoenix log authority
  * @property [_writable_] market This account holds the market state
- * @property [_writable_, **signer**] trader
+ * @property [**signer**] trader
  * @property [] seat
  * @category Instructions
  * @category PlaceLimitOrderWithFreeFunds
  * @category generated
  */
 export type PlaceLimitOrderWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-  seat: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+  seat: web3.PublicKey
+}
 
-export const placeLimitOrderWithFreeFundsInstructionDiscriminator = 3;
+export const placeLimitOrderWithFreeFundsInstructionDiscriminator = 3
 
 /**
  * Creates a _PlaceLimitOrderWithFreeFunds_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
  * @category PlaceLimitOrderWithFreeFunds
  * @category generated
  */
 export function createPlaceLimitOrderWithFreeFundsInstruction(
   accounts: PlaceLimitOrderWithFreeFundsInstructionAccounts,
-  orderPacket: Partial<OrderPacket>,
-  programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
+  args: PlaceLimitOrderWithFreeFundsInstructionArgs,
+  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
 ) {
-  const [ixEnum] = PlaceLimitOrderWithFreeFundsStruct.serialize({
+  const [data] = PlaceLimitOrderWithFreeFundsStruct.serialize({
     instructionDiscriminator:
       placeLimitOrderWithFreeFundsInstructionDiscriminator,
-  });
-
-  const paramData = orderPacketBeet.toFixedFromValue(orderPacket);
-  const data = Buffer.alloc(ixEnum.length + paramData.byteSize, ixEnum);
-  paramData.write(data, ixEnum.length, orderPacket);
-
+    ...args,
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -83,7 +94,7 @@ export function createPlaceLimitOrderWithFreeFundsInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: true,
+      isWritable: false,
       isSigner: true,
     },
     {
@@ -91,12 +102,12 @@ export function createPlaceLimitOrderWithFreeFundsInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }

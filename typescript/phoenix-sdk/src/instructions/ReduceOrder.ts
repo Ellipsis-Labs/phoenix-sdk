@@ -5,36 +5,45 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as splToken from '@solana/spl-token'
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
 import {
-  CancelOrderParams,
-  cancelOrderParamsBeet,
-} from "../types/CancelOrderParams";
+  ReduceOrderParams,
+  reduceOrderParamsBeet,
+} from '../types/ReduceOrderParams'
 
 /**
  * @category Instructions
  * @category ReduceOrder
  * @category generated
  */
-export const ReduceOrderStruct = new beet.FixableBeetArgsStruct<{
-  instructionDiscriminator: number;
-  params: CancelOrderParams;
-}>(
+export type ReduceOrderInstructionArgs = {
+  params: ReduceOrderParams
+}
+/**
+ * @category Instructions
+ * @category ReduceOrder
+ * @category generated
+ */
+export const ReduceOrderStruct = new beet.BeetArgsStruct<
+  ReduceOrderInstructionArgs & {
+    instructionDiscriminator: number
+  }
+>(
   [
-    ["instructionDiscriminator", beet.u8],
-    ["params", cancelOrderParamsBeet],
+    ['instructionDiscriminator', beet.u8],
+    ['params', reduceOrderParamsBeet],
   ],
-  "ReduceOrderInstructionArgs"
-);
+  'ReduceOrderInstructionArgs'
+)
 /**
  * Accounts required by the _ReduceOrder_ instruction
  *
  * @property [] phoenixProgram Phoenix program
  * @property [] logAuthority Phoenix log authority
  * @property [_writable_] market This account holds the market state
- * @property [_writable_, **signer**] trader
+ * @property [**signer**] trader
  * @property [_writable_] baseAccount Trader base token account
  * @property [_writable_] quoteAccount Trader quote token account
  * @property [_writable_] baseVault Base vault PDA, seeds are [b'vault', market_address, base_mint_address]
@@ -44,36 +53,38 @@ export const ReduceOrderStruct = new beet.FixableBeetArgsStruct<{
  * @category generated
  */
 export type ReduceOrderInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-  baseAccount: web3.PublicKey;
-  quoteAccount: web3.PublicKey;
-  baseVault: web3.PublicKey;
-  quoteVault: web3.PublicKey;
-  tokenProgram?: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+  baseAccount: web3.PublicKey
+  quoteAccount: web3.PublicKey
+  baseVault: web3.PublicKey
+  quoteVault: web3.PublicKey
+  tokenProgram?: web3.PublicKey
+}
 
-export const reduceOrderInstructionDiscriminator = 4;
+export const reduceOrderInstructionDiscriminator = 4
 
 /**
  * Creates a _ReduceOrder_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
  * @category ReduceOrder
  * @category generated
  */
 export function createReduceOrderInstruction(
   accounts: ReduceOrderInstructionAccounts,
-  params: CancelOrderParams,
-  programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
+  args: ReduceOrderInstructionArgs,
+  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
 ) {
   const [data] = ReduceOrderStruct.serialize({
     instructionDiscriminator: reduceOrderInstructionDiscriminator,
-    params,
-  });
+    ...args,
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -92,7 +103,7 @@ export function createReduceOrderInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: true,
+      isWritable: false,
       isSigner: true,
     },
     {
@@ -120,12 +131,12 @@ export function createReduceOrderInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }
