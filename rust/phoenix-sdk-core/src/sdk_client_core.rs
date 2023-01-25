@@ -200,13 +200,13 @@ impl SDKClientCore {
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded down)
     pub fn float_price_to_ticks(&self, price: f64) -> u64 {
-        ((price * self.quote_multiplier as f64)
+        ((price * self.raw_base_units_per_base_unit as f64 * self.quote_multiplier as f64)
             / self.tick_size_in_quote_atoms_per_base_unit as f64) as u64
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded up)
     pub fn float_price_to_ticks_rounded_up(&self, price: f64) -> u64 {
-        ((price * self.quote_multiplier as f64)
+        ((price * self.raw_base_units_per_base_unit as f64 * self.quote_multiplier as f64)
             / self.tick_size_in_quote_atoms_per_base_unit as f64)
             .ceil() as u64
     }
