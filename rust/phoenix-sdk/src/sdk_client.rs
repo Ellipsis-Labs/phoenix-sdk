@@ -47,19 +47,6 @@ impl DerefMut for SDKClient {
 
 impl SDKClient {
     pub async fn new_from_ellipsis_client(market_key: &Pubkey, client: EllipsisClient) -> Self {
-        SDKClient::new_from_ellipsis_client_with_custom_program_id(
-            market_key,
-            client,
-            &phoenix::id(),
-        )
-        .await
-    }
-
-    pub async fn new_from_ellipsis_client_with_custom_program_id(
-        market_key: &Pubkey,
-        client: EllipsisClient,
-        program_id: &Pubkey,
-    ) -> Self {
         let market_metadata = Self::get_market_metadata(&client, market_key).await;
         let mut markets = BTreeMap::new();
 
@@ -69,7 +56,6 @@ impl SDKClient {
             rng: Arc::new(Mutex::new(StdRng::from_entropy())),
             active_market_key: *market_key,
             trader: client.payer.pubkey(),
-            program_id: *program_id,
         };
         SDKClient { client, core }
     }
@@ -79,52 +65,16 @@ impl SDKClient {
         rt.block_on(Self::new_from_ellipsis_client(market_key, client))
     }
 
-    pub fn new_from_ellipsis_client_with_custom_program_id_sync(
-        market_key: &Pubkey,
-        client: EllipsisClient,
-        program_id: &Pubkey,
-    ) -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(Self::new_from_ellipsis_client_with_custom_program_id(
-            market_key, client, program_id,
-        ))
-    }
-
     pub async fn new(market_key: &Pubkey, payer: &Keypair, url: &str) -> Self {
         let rpc = RpcClient::new_with_commitment(url, CommitmentConfig::confirmed());
-        let client = EllipsisClient::from_rpc(rpc, payer).unwrap(); //fix error handling instead of panic
+        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client"); //fix error handling instead of panic
 
         SDKClient::new_from_ellipsis_client(market_key, client).await
-    }
-
-    pub async fn new_with_custom_program_id(
-        market_key: &Pubkey,
-        payer: &Keypair,
-        url: &str,
-        program_id: &Pubkey,
-    ) -> Self {
-        let rpc = RpcClient::new_with_commitment(url, CommitmentConfig::confirmed());
-        let client = EllipsisClient::from_rpc(rpc, payer).unwrap(); //fix error handling instead of panic
-
-        SDKClient::new_from_ellipsis_client_with_custom_program_id(market_key, client, program_id)
-            .await
     }
 
     pub fn new_sync(market_key: &Pubkey, payer: &Keypair, url: &str) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
         rt.block_on(Self::new(market_key, payer, url))
-    }
-
-    pub fn new_with_custom_program_id_sync(
-        market_key: &Pubkey,
-        payer: &Keypair,
-        url: &str,
-        program_id: &Pubkey,
-    ) -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
-        rt.block_on(Self::new_with_custom_program_id(
-            market_key, payer, url, program_id,
-        ))
     }
 
     pub fn set_payer(&mut self, payer: Keypair) {
@@ -154,13 +104,14 @@ impl SDKClient {
     }
 
     pub async fn get_market_ladder(&self, levels: u64) -> Ladder {
-        let mut market_account_data = (self.client.get_account_data(&self.active_market_key))
+        let market_account_data = (self.client.get_account_data(&self.active_market_key))
             .await
-            .unwrap();
-        let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_size_params, bytes)
-            .unwrap()
+            .expect("Failed to get market account data");
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let header = MarketHeader::try_from_slice(header_bytes)
+            .expect("Failed to deserialize market header");
+        let market = load_with_dispatch(&header.market_size_params, bytes)
+            .expect("Market configuration not found")
             .inner;
 
         market.get_ladder(levels)
@@ -172,7 +123,7 @@ impl SDKClient {
     }
 
     pub async fn get_market_orderbook(&self) -> Orderbook<FIFOOrderId, PhoenixOrder> {
-        let mut market_account_data = (self.client.get_account_data(&self.active_market_key))
+        let market_account_data = (self.client.get_account_data(&self.active_market_key))
             .await
             .unwrap_or_default();
         let default = Orderbook::<FIFOOrderId, PhoenixOrder> {
@@ -184,11 +135,11 @@ impl SDKClient {
         if market_account_data.is_empty() {
             return default;
         }
-        let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
         MarketHeader::try_from_slice(header_bytes)
             .ok()
             .map(|header| {
-                load_with_dispatch_mut(&header.market_size_params, bytes)
+                load_with_dispatch(&header.market_size_params, bytes)
                     .map(|market| {
                         Orderbook::from_market(
                             market.inner,
@@ -207,13 +158,16 @@ impl SDKClient {
     }
 
     pub async fn get_traders(&self) -> BTreeMap<Pubkey, TraderState> {
-        let mut market_account_data = (self.client.get_account_data(&self.active_market_key))
-            .await
-            .unwrap();
-        let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_size_params, bytes)
-            .unwrap()
+        let market_account_data =
+            match (self.client.get_account_data(&self.active_market_key)).await {
+                Ok(data) => data,
+                Err(_) => return BTreeMap::new(),
+            };
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let header = MarketHeader::try_from_slice(header_bytes)
+            .expect("Failed to deserialize market header");
+        let market = load_with_dispatch(&header.market_size_params, bytes)
+            .expect("Market configuration not found")
             .inner;
 
         market
@@ -229,13 +183,26 @@ impl SDKClient {
     }
 
     pub async fn get_market_state(&self) -> MarketState {
-        let mut market_account_data = (self.client.get_account_data(&self.active_market_key))
-            .await
-            .unwrap();
-        let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_size_params, bytes)
-            .unwrap()
+        let market_account_data =
+            match (self.client.get_account_data(&self.active_market_key)).await {
+                Ok(data) => data,
+                Err(_) => {
+                    return MarketState {
+                        orderbook: Orderbook {
+                            size_mult: 0.0,
+                            price_mult: 0.0,
+                            bids: BTreeMap::new(),
+                            asks: BTreeMap::new(),
+                        },
+                        traders: BTreeMap::new(),
+                    }
+                }
+            };
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let header = MarketHeader::try_from_slice(header_bytes)
+            .expect("Failed to deserialize market header");
+        let market = load_with_dispatch(&header.market_size_params, bytes)
+            .expect("Market configuration not found")
             .inner;
 
         let orderbook = Orderbook::from_market(
@@ -255,27 +222,30 @@ impl SDKClient {
 
     #[allow(clippy::useless_conversion)]
     async fn get_market_metadata(client: &EllipsisClient, market_key: &Pubkey) -> MarketMetadata {
-        let mut market_account_data = (client.get_account_data(market_key)).await.unwrap();
-        let (header_bytes, bytes) = market_account_data.split_at_mut(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes).unwrap();
-        let market = load_with_dispatch_mut(&header.market_size_params, bytes)
-            .unwrap()
+        let market_account_data = (client.get_account_data(market_key))
+            .await
+            .expect("Failed to find market account");
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let header = MarketHeader::try_from_slice(header_bytes)
+            .expect("Failed to deserialize market header");
+        let market = load_with_dispatch(&header.market_size_params, bytes)
+            .expect("Market configuration not found")
             .inner;
 
         let base_mint_acct = spl_token::state::Mint::unpack(
             &client
                 .get_account_data(&header.base_params.mint_key)
                 .await
-                .unwrap(),
+                .expect("Failed to find base mint account"),
         )
-        .unwrap();
+        .expect("Failed to deserialize base mint account");
         let quote_mint_acct = spl_token::state::Mint::unpack(
             &client
                 .get_account_data(&header.quote_params.mint_key)
                 .await
-                .unwrap(),
+                .expect("Failed to find quote mint account"),
         )
-        .unwrap();
+        .expect("Failed to deserialize quote mint account");
 
         let quote_lot_size = header.get_quote_lot_size().into();
         let base_lot_size = header.get_base_lot_size().into();
@@ -313,14 +283,17 @@ impl SDKClient {
         for inner_ixs in tx.inner_instructions.iter() {
             for inner_ix in inner_ixs.iter() {
                 let current_program_id = inner_ix.instruction.program_id.clone();
-                if current_program_id != self.program_id.to_string() {
+                if current_program_id != phoenix::id().to_string() {
                     continue;
                 }
                 if inner_ix.instruction.data.is_empty() {
                     continue;
                 }
-                let (tag, data) = inner_ix.instruction.data.split_first().unwrap();
-                let ix_enum = match PhoenixInstruction::try_from(*tag).ok() {
+                let (tag, data) = match inner_ix.instruction.data.split_first() {
+                    Some((tag, data)) => (*tag, data),
+                    None => continue,
+                };
+                let ix_enum = match PhoenixInstruction::try_from(tag).ok() {
                     Some(ix) => ix,
                     None => continue,
                 };

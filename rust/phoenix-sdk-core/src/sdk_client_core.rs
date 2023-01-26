@@ -87,7 +87,6 @@ pub struct SDKClientCore {
     pub rng: Arc<Mutex<StdRng>>,
     pub active_market_key: Pubkey,
     pub trader: Pubkey,
-    pub program_id: Pubkey,
 }
 
 impl Deref for SDKClientCore {
