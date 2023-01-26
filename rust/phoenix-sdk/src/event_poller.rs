@@ -30,7 +30,7 @@ impl EventPoller {
         Self::new(sdk, event_sender, 1000)
     }
 
-    pub async fn run(&self) {
+    pub async fn run(&self) -> anyhow::Result<()> {
         let mut until = None;
         // TODO: keep some state of signatures that have already been processed
         // TODO: make sure events are processed in order

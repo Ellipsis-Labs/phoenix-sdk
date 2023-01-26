@@ -16,7 +16,7 @@ impl TransactionExecutor {
         }
     }
 
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self) -> anyhow::Result<()> {
         loop {
             let instructions = match self.ix_receiver.recv().await {
                 Some(instructions) => instructions,
