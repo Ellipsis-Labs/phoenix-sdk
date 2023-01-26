@@ -7,8 +7,8 @@ import { Market } from "./market";
 export class Client {
   connection: Connection;
   trader?: PublicKey;
-  tokens: Record<string, Token>;
-  markets: Record<string, Market>;
+  tokens: Array<Token>;
+  markets: Array<Market>;
 
   private constructor({
     connection,
@@ -18,8 +18,8 @@ export class Client {
   }: {
     connection: Connection;
     trader?: PublicKey;
-    tokens: Record<string, Token>;
-    markets: Record<string, Market>;
+    tokens: Array<Token>;
+    markets: Array<Market>;
   }) {
     this.connection = connection;
     this.trader = trader;
@@ -41,8 +41,8 @@ export class Client {
       ? "devnet"
       : "mainnet-beta";
 
-    const markets = {};
-    const tokens = {};
+    const markets = [];
+    const tokens = [];
 
     // For every market:
     for (const marketAddress of CONFIG[cluster].markets) {
@@ -51,13 +51,13 @@ export class Client {
         connection,
         address: new PublicKey(marketAddress),
       });
-      markets[marketAddress] = market;
+      markets.push(market);
 
       // Set the tokens from the market
       for (const token of [market.baseToken, market.quoteToken]) {
         const mint = token.data.mintKey.toBase58();
-        if (tokens[mint]) continue;
-        tokens[mint] = token;
+        if (tokens.find((t) => t.data.mintKey.toBase58() === mint)) continue;
+        tokens.push(token);
 
         // If client provided a trader, get their balance of the token
         if (trader) {

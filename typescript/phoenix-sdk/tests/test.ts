@@ -9,21 +9,21 @@ import { FillSummaryEvent } from "../src/index";
 import { getEventsFromTransaction } from "../src/events";
 import { Side } from "../src/types";
 import { toNum } from "../src/utils";
-import { Client } from "../src/client";
+import * as Phoenix from "../src/client";
 
 async function main() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
-
-  const phoenix = await Client.create(connection);
-  const market =
-    phoenix.markets["5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8"];
-
-  // Don't use this keypair for anything in production.
   const traderKeypair = Keypair.fromSecretKey(
     base58.decode(
       "2PKwbVQ1YMFEexCmUDyxy8cuwb69VWcvoeodZCLegqof84DJSTiEd89Ak3so9CiHycZwynesTt1JUDFAPFWEzvVs"
     )
   );
+
+  const phoenix = await Phoenix.Client.create(connection);
+  const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
+  if (!market) {
+    throw Error("SOL/USDC market not found");
+  }
 
   const side = Math.random() > 0.5 ? Side.Ask : Side.Bid;
   const inAmount = side === Side.Ask ? 1 : 100;
