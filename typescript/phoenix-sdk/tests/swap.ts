@@ -5,13 +5,9 @@ import {
 } from "@solana/web3.js";
 import base58 from "bs58";
 
-import { FillSummaryEvent } from "../src/index";
-import { getEventsFromTransaction } from "../src/events";
-import { Side } from "../src/types";
-import { toNum } from "../src/utils";
-import * as Phoenix from "../src/client";
+import * as Phoenix from "../src";
 
-async function main() {
+export async function swap() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
   // DO NOT USE THIS KEYPAIR IN PRODUCTION
   const traderKeypair = Keypair.fromSecretKey(
@@ -26,10 +22,10 @@ async function main() {
     throw Error("SOL/USDC market not found");
   }
 
-  const side = Math.random() > 0.5 ? Side.Ask : Side.Bid;
-  const inAmount = side === Side.Ask ? 1 : 100;
+  const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
+  const inAmount = side === Phoenix.Side.Ask ? 1 : 100;
   console.log(
-    side === Side.Ask
+    side === Phoenix.Side.Ask
       ? `Selling ${inAmount} SOL`
       : `Market buy with ${inAmount} USDC`
   );
@@ -49,10 +45,10 @@ async function main() {
   console.log("Transaction ID: ", txId);
 
   // Retry until we get the transaction. We give up after 10 tries
-  let txResult = await getEventsFromTransaction(connection, txId);
+  let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
   let counter = 1;
   while (txResult.instructions.length == 0) {
-    txResult = await getEventsFromTransaction(connection, txId);
+    txResult = await Phoenix.getEventsFromTransaction(connection, txId);
     counter += 1;
     if (counter == 10) {
       throw Error("Failed to fetch tranxaction");
@@ -63,32 +59,33 @@ async function main() {
 
   let summary = fillEvents.events[
     fillEvents.events.length - 1
-  ] as FillSummaryEvent;
+  ] as Phoenix.FillSummaryEvent;
 
-  if (side == Side.Bid) {
+  if (side == Phoenix.Side.Bid) {
     console.log(
       "Filled",
-      toNum(summary.totalBaseLotsFilled) / market.data.baseLotsPerBaseUnit,
+      Phoenix.toNum(summary.totalBaseLotsFilled) /
+        market.data.baseLotsPerBaseUnit,
       "SOL"
     );
   } else {
     console.log(
       `Sold ${inAmount} SOL for`,
-      (toNum(summary.totalQuoteLotsFilled) *
-        toNum(market.data.header.quoteLotSize)) /
+      (Phoenix.toNum(summary.totalQuoteLotsFilled) *
+        Phoenix.toNum(market.data.header.quoteLotSize)) /
         10 ** market.data.header.quoteParams.decimals,
       "USDC"
     );
   }
   let fees =
-    (toNum(summary.totalFeeInQuoteLots) *
-      toNum(market.data.header.quoteLotSize)) /
+    (Phoenix.toNum(summary.totalFeeInQuoteLots) *
+      Phoenix.toNum(market.data.header.quoteLotSize)) /
     10 ** market.data.header.quoteParams.decimals;
 
   console.log(`Paid $${fees} in fees:`);
 }
 
-main()
+swap()
   .then((_) => {
     console.log("Done");
   })

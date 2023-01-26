@@ -320,6 +320,42 @@ export class Market {
   }
 
   /**
+   * Pretty prints the market's ladder of as a colored orderbook
+   */
+  printLadder() {
+    const ladder = this.getUiLadder();
+    const bids = ladder.bids;
+    const asks = ladder.asks;
+
+    const maxPrice = Math.max(
+      ...bids.map((b) => b[0]),
+      ...asks.map((a) => a[0])
+    );
+    const maxPriceLength = maxPrice.toString().length;
+    const maxBaseSize = Math.max(
+      ...bids.map((b) => b[1]),
+      ...asks.map((a) => a[1])
+    );
+    const maxBaseSizeLength = maxBaseSize.toString().length;
+
+    const printLine = (price: number, size: number) => {
+      const priceStr = price.toFixed(2).padStart(maxPriceLength, " ");
+      const sizeStr = size.toFixed(2).padStart(maxBaseSizeLength, " ");
+      console.log(`${priceStr} ${sizeStr}`);
+    };
+
+    console.log(`Bids`);
+    for (const [price, size] of bids) {
+      printLine(price, size);
+    }
+
+    console.log(`Asks`);
+    for (const [price, size] of asks) {
+      printLine(price, size);
+    }
+  }
+
+  /**
    * Returns a Phoenix swap transaction
    *
    * @param market The market to swap on
