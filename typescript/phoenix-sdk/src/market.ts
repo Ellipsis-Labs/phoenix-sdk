@@ -308,7 +308,7 @@ export class Market {
    * @param market The market to swap on
    * @param type The type of order to place (limit, ioc, postOnly)
    * @param side The side of the order to place (Bid, Ask)
-   * @param inAmount The amount of the input token to swap
+   * @param inAmount The amount (in whole tokens) of the input token to swap
    * @param trader The trader's wallet public key
    * @param clientOrderId The client order ID (optional)
    */
