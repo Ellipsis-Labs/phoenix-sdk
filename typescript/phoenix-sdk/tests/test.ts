@@ -36,7 +36,7 @@ async function main() {
   let marketAccount = await connection.getAccountInfo(marketKey, "confirmed");
   let market = deserializeMarket(marketAccount!.data);
 
-  console.log(market.getLadder(5));
+  console.log(market.getUiLadder(5));
   let events = await getEventsFromTransaction(
     connection,
     "455HXmYu2W96qkihAYqrqs7namgy5ajGWZe8HYMENyfxjc4bTHPeGNsxkQdUiUwBsox1VnCKifiF5LXTjMcyRWuJ"
