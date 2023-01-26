@@ -56,6 +56,7 @@ impl EventPoller {
                 .sdk
                 .client
                 .get_signatures_for_address_with_config(&self.sdk.core.active_market_key, config)
+                .await
                 .unwrap_or_default()
                 .iter()
                 .map(|tx| Signature::from_str(&tx.signature).unwrap())

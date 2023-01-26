@@ -6,7 +6,7 @@ use phoenix_sdk::sdk_client::SDKClient;
 use phoenix_types::dispatch::load_with_dispatch_mut;
 use phoenix_types::market::MarketHeader;
 use solana_account_decoder::UiAccountEncoding;
-use solana_client::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcAccountInfoConfig;
 use solana_client::rpc_config::RpcProgramAccountsConfig;
 use solana_client::rpc_filter::Memcmp;
@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     println!("RPC endpoint: {}", url);
 
     let client = EllipsisClient::from_rpc(
-        RpcClient::new_with_commitment(url, CommitmentConfig::confirmed()),
+        RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed()),
         &payer,
     )?;
 
@@ -65,23 +65,25 @@ async fn main() -> anyhow::Result<()> {
     // Fetch all markets
     // Memcmp encoding field is deprecated
     #[allow(deprecated)]
-    let program_accounts = client.get_program_accounts_with_config(
-        &phoenix_types::ID,
-        RpcProgramAccountsConfig {
-            filters: Some(vec![RpcFilterType::Memcmp(Memcmp {
-                offset: 0,
-                bytes: MemcmpEncodedBytes::Bytes(market_discriminant.to_le_bytes().to_vec()),
-                encoding: None,
-            })]),
-            account_config: RpcAccountInfoConfig {
-                encoding: Some(UiAccountEncoding::Base64),
-                commitment: Some(CommitmentConfig::confirmed()),
-                ..RpcAccountInfoConfig::default()
-            },
+    let program_accounts = client
+        .get_program_accounts_with_config(
+            &phoenix_types::ID,
+            RpcProgramAccountsConfig {
+                filters: Some(vec![RpcFilterType::Memcmp(Memcmp {
+                    offset: 0,
+                    bytes: MemcmpEncodedBytes::Bytes(market_discriminant.to_le_bytes().to_vec()),
+                    encoding: None,
+                })]),
+                account_config: RpcAccountInfoConfig {
+                    encoding: Some(UiAccountEncoding::Base64),
+                    commitment: Some(CommitmentConfig::confirmed()),
+                    ..RpcAccountInfoConfig::default()
+                },
 
-            ..RpcProgramAccountsConfig::default()
-        },
-    )?;
+                ..RpcProgramAccountsConfig::default()
+            },
+        )
+        .await?;
 
     println!("Found {} markets", program_accounts.len());
     let mut sol_usdc_market: Option<Pubkey> = None;
