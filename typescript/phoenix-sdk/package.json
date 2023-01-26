@@ -1,6 +1,6 @@
 {
   "name": "@jup-ag/phoenix-sdk",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "TypeScript SDK for Phoenix",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,10 +15,12 @@
     "@metaplex-foundation/solita": "^0.12.2",
     "@solana/spl-token": "0.1.8",
     "@types/node": "^18.11.13",
+    "bn.js": "^5.2.1",
     "borsh": "^0.7.0",
     "bs58": "^5.0.0"
   },
   "devDependencies": {
+    "@types/bn.js": "^5.1.1",
     "tsup": "^6.5.0",
     "typescript": "^4.9.4"
   }
