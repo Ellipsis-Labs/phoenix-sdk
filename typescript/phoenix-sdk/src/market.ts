@@ -148,7 +148,7 @@ export class Market {
         if (priceInTicks.eq(prev[0])) {
           prev[1] = prev[1].add(numBaseLots);
         } else {
-          if (asks.length == levels) {
+          if (asks.length === levels) {
             break;
           }
           asks.push([priceInTicks, numBaseLots]);
