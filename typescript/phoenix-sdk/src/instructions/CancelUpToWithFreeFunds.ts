@@ -5,65 +5,76 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
 import {
   CancelUpToParams,
   cancelUpToParamsBeet,
-} from "../types/CancelUpToParams";
+} from '../types/CancelUpToParams'
 
 /**
  * @category Instructions
  * @category CancelUpToWithFreeFunds
  * @category generated
  */
-export const CancelUpToWithFreeFundsStruct = new beet.FixableBeetArgsStruct<{
-  instructionDiscriminator: number;
-  params: CancelUpToParams;
-}>(
+export type CancelUpToWithFreeFundsInstructionArgs = {
+  params: CancelUpToParams
+}
+/**
+ * @category Instructions
+ * @category CancelUpToWithFreeFunds
+ * @category generated
+ */
+export const CancelUpToWithFreeFundsStruct = new beet.FixableBeetArgsStruct<
+  CancelUpToWithFreeFundsInstructionArgs & {
+    instructionDiscriminator: number
+  }
+>(
   [
-    ["instructionDiscriminator", beet.u8],
-    ["params", cancelUpToParamsBeet],
+    ['instructionDiscriminator', beet.u8],
+    ['params', cancelUpToParamsBeet],
   ],
-  "CancelUpToWithFreeFundsInstructionArgs"
-);
+  'CancelUpToWithFreeFundsInstructionArgs'
+)
 /**
  * Accounts required by the _CancelUpToWithFreeFunds_ instruction
  *
  * @property [] phoenixProgram Phoenix program
  * @property [] logAuthority Phoenix log authority
  * @property [_writable_] market This account holds the market state
- * @property [_writable_, **signer**] trader
+ * @property [**signer**] trader
  * @category Instructions
  * @category CancelUpToWithFreeFunds
  * @category generated
  */
 export type CancelUpToWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+}
 
-export const cancelUpToWithFreeFundsInstructionDiscriminator = 9;
+export const cancelUpToWithFreeFundsInstructionDiscriminator = 9
 
 /**
  * Creates a _CancelUpToWithFreeFunds_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
  * @category CancelUpToWithFreeFunds
  * @category generated
  */
 export function createCancelUpToWithFreeFundsInstruction(
   accounts: CancelUpToWithFreeFundsInstructionAccounts,
-  params: CancelUpToParams,
-  programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
+  args: CancelUpToWithFreeFundsInstructionArgs,
+  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
 ) {
   const [data] = CancelUpToWithFreeFundsStruct.serialize({
     instructionDiscriminator: cancelUpToWithFreeFundsInstructionDiscriminator,
-    params,
-  });
+    ...args,
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -82,15 +93,15 @@ export function createCancelUpToWithFreeFundsInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: true,
+      isWritable: false,
       isSigner: true,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }

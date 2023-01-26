@@ -5,37 +5,45 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as splToken from '@solana/spl-token'
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
 import {
   MultipleOrderPacket,
   multipleOrderPacketBeet,
-} from "../types/MultipleOrderPacket";
+} from '../types/MultipleOrderPacket'
 
 /**
  * @category Instructions
  * @category PlaceMultiplePostOnlyOrders
  * @category generated
  */
-export const PlaceMultiplePostOnlyOrdersStruct =
-  new beet.FixableBeetArgsStruct<{
-    instructionDiscriminator: number;
-    orders: MultipleOrderPacket;
-  }>(
-    [
-      ["instructionDiscriminator", beet.u8],
-      ["orders", multipleOrderPacketBeet],
-    ],
-    "PlaceMultiplePostOnlyOrdersInstructionArgs"
-  );
+export type PlaceMultiplePostOnlyOrdersInstructionArgs = {
+  multipleOrderPacket: MultipleOrderPacket
+}
+/**
+ * @category Instructions
+ * @category PlaceMultiplePostOnlyOrders
+ * @category generated
+ */
+export const PlaceMultiplePostOnlyOrdersStruct = new beet.FixableBeetArgsStruct<
+  PlaceMultiplePostOnlyOrdersInstructionArgs & {
+    instructionDiscriminator: number
+  }
+>(
+  [
+    ['instructionDiscriminator', beet.u8],
+    ['multipleOrderPacket', multipleOrderPacketBeet],
+  ],
+  'PlaceMultiplePostOnlyOrdersInstructionArgs'
+)
 /**
  * Accounts required by the _PlaceMultiplePostOnlyOrders_ instruction
  *
  * @property [] phoenixProgram Phoenix program
  * @property [] logAuthority Phoenix log authority
  * @property [_writable_] market This account holds the market state
- * @property [_writable_, **signer**] trader
+ * @property [**signer**] trader
  * @property [] seat
  * @property [_writable_] baseAccount Trader base token account
  * @property [_writable_] quoteAccount Trader quote token account
@@ -46,38 +54,40 @@ export const PlaceMultiplePostOnlyOrdersStruct =
  * @category generated
  */
 export type PlaceMultiplePostOnlyOrdersInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-  seat: web3.PublicKey;
-  baseAccount: web3.PublicKey;
-  quoteAccount: web3.PublicKey;
-  baseVault: web3.PublicKey;
-  quoteVault: web3.PublicKey;
-  tokenProgram?: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+  seat: web3.PublicKey
+  baseAccount: web3.PublicKey
+  quoteAccount: web3.PublicKey
+  baseVault: web3.PublicKey
+  quoteVault: web3.PublicKey
+  tokenProgram?: web3.PublicKey
+}
 
-export const placeMultiplePostOnlyOrdersInstructionDiscriminator = 16;
+export const placeMultiplePostOnlyOrdersInstructionDiscriminator = 16
 
 /**
  * Creates a _PlaceMultiplePostOnlyOrders_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
  * @category PlaceMultiplePostOnlyOrders
  * @category generated
  */
 export function createPlaceMultiplePostOnlyOrdersInstruction(
   accounts: PlaceMultiplePostOnlyOrdersInstructionAccounts,
-  orders: MultipleOrderPacket,
-  programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
+  args: PlaceMultiplePostOnlyOrdersInstructionArgs,
+  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
 ) {
   const [data] = PlaceMultiplePostOnlyOrdersStruct.serialize({
     instructionDiscriminator:
       placeMultiplePostOnlyOrdersInstructionDiscriminator,
-    orders,
-  });
+    ...args,
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -96,7 +106,7 @@ export function createPlaceMultiplePostOnlyOrdersInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: true,
+      isWritable: false,
       isSigner: true,
     },
     {
@@ -129,12 +139,12 @@ export function createPlaceMultiplePostOnlyOrdersInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }

@@ -5,33 +5,42 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
-import { DepositParams, depositParamsBeet } from "../types/DepositParams";
+import * as splToken from '@solana/spl-token'
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
+import { DepositParams, depositParamsBeet } from '../types/DepositParams'
 
 /**
  * @category Instructions
  * @category DepositFunds
  * @category generated
  */
-export const DepositFundsStruct = new beet.FixableBeetArgsStruct<{
-  instructionDiscriminator: number;
-  params: DepositParams;
-}>(
+export type DepositFundsInstructionArgs = {
+  depositFundsParams: DepositParams
+}
+/**
+ * @category Instructions
+ * @category DepositFunds
+ * @category generated
+ */
+export const DepositFundsStruct = new beet.BeetArgsStruct<
+  DepositFundsInstructionArgs & {
+    instructionDiscriminator: number
+  }
+>(
   [
-    ["instructionDiscriminator", beet.u8],
-    ["params", depositParamsBeet],
+    ['instructionDiscriminator', beet.u8],
+    ['depositFundsParams', depositParamsBeet],
   ],
-  "DepositFundsInstructionArgs"
-);
+  'DepositFundsInstructionArgs'
+)
 /**
  * Accounts required by the _DepositFunds_ instruction
  *
  * @property [] phoenixProgram Phoenix program
  * @property [] logAuthority Phoenix log authority
  * @property [_writable_] market This account holds the market state
- * @property [_writable_, **signer**] trader
+ * @property [**signer**] trader
  * @property [] seat
  * @property [_writable_] baseAccount Trader base token account
  * @property [_writable_] quoteAccount Trader quote token account
@@ -42,37 +51,39 @@ export const DepositFundsStruct = new beet.FixableBeetArgsStruct<{
  * @category generated
  */
 export type DepositFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-  seat: web3.PublicKey;
-  baseAccount: web3.PublicKey;
-  quoteAccount: web3.PublicKey;
-  baseVault: web3.PublicKey;
-  quoteVault: web3.PublicKey;
-  tokenProgram?: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+  seat: web3.PublicKey
+  baseAccount: web3.PublicKey
+  quoteAccount: web3.PublicKey
+  baseVault: web3.PublicKey
+  quoteVault: web3.PublicKey
+  tokenProgram?: web3.PublicKey
+}
 
-export const depositFundsInstructionDiscriminator = 13;
+export const depositFundsInstructionDiscriminator = 13
 
 /**
  * Creates a _DepositFunds_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
  * @category DepositFunds
  * @category generated
  */
 export function createDepositFundsInstruction(
   accounts: DepositFundsInstructionAccounts,
-  params: DepositParams,
-  programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
+  args: DepositFundsInstructionArgs,
+  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
 ) {
   const [data] = DepositFundsStruct.serialize({
     instructionDiscriminator: depositFundsInstructionDiscriminator,
-    params,
-  });
+    ...args,
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -91,7 +102,7 @@ export function createDepositFundsInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: true,
+      isWritable: false,
       isSigner: true,
     },
     {
@@ -124,12 +135,12 @@ export function createDepositFundsInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }

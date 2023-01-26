@@ -91,7 +91,7 @@ async function main() {
       quoteVault: market.header.quoteParams.vaultKey,
       baseVault: market.header.baseParams.vaultKey,
     },
-    { __kind: "ImmediateOrCancel", ...ioc }
+    { orderPacket: { __kind: "ImmediateOrCancel", ...ioc } }
   );
 
   let txId = await sendAndConfirmTransaction(
