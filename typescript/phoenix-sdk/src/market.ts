@@ -2,6 +2,7 @@ import * as beet from "@metaplex-foundation/beet";
 import { PublicKey } from "@solana/web3.js";
 import * as beetSolana from "@metaplex-foundation/beet-solana";
 import { MarketHeader, marketHeaderBeet } from "./types/MarketHeader";
+import BN from "bn.js";
 
 export const toNum = (n: beet.bignum) => {
   let target: number;
@@ -11,6 +12,14 @@ export const toNum = (n: beet.bignum) => {
     target = n.toNumber();
   }
   return target;
+};
+
+export const toBN = (n: beet.bignum) => {
+  if (typeof n === "number") {
+    return new BN(n);
+  } else {
+    return n.clone();
+  }
 };
 
 export type OrderId = {
@@ -102,91 +111,103 @@ export class Market {
   }
 
   getLadder(levels: number): Ladder {
-    let bids: Array<[number, number]> = [];
-    let asks: Array<[number, number]> = [];
-    const quoteAtomsPerQuoteUnit = 10 ** toNum(this.header.quoteParams.decimals);
+    let bids: Array<[BN, BN]> = [];
+    let asks: Array<[BN, BN]> = [];
     for (const [orderId, restingOrder] of this.bids) {
+      const priceInTicks = toBN(orderId.priceInTicks);
+      const numBaseLots = toBN(restingOrder.numBaseLots);
+
       if (bids.length === 0) {
-        let priceInTicks = toNum(orderId.priceInTicks);
-        bids.push([
-          (priceInTicks *
-            this.quoteLotsPerBaseUnitPerTick *
-            toNum(this.header.quoteLotSize)) /
-            quoteAtomsPerQuoteUnit,
-          toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
-        ]);
+        bids.push([priceInTicks, numBaseLots]);
       } else {
-        let prev = bids[bids.length - 1];
+        const prev = bids[bids.length - 1];
         if (!prev) {
           throw Error;
         }
-        let priceInTicks = toNum(orderId.priceInTicks);
-        let price =
-          (priceInTicks *
-            this.quoteLotsPerBaseUnitPerTick *
-            toNum(this.header.quoteLotSize)) /
-          quoteAtomsPerQuoteUnit;
-        if (price === prev[0]) {
-          prev[1] += toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit;
+        if (priceInTicks.eq(prev[0])) {
+          prev[1] = numBaseLots;
         } else {
-          if (bids.length == levels) {
+          if (bids.length === levels) {
             break;
           }
-          bids.push([
-            price,
-            toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
-          ]);
+          bids.push([priceInTicks, numBaseLots]);
         }
       }
     }
 
     for (const [orderId, restingOrder] of this.asks) {
+      const priceInTicks = toBN(orderId.priceInTicks);
+      const numBaseLots = toBN(restingOrder.numBaseLots);
       if (asks.length === 0) {
-        let priceInTicks = toNum(orderId.priceInTicks);
-        asks.push([
-          (priceInTicks *
-            this.quoteLotsPerBaseUnitPerTick *
-            toNum(this.header.quoteLotSize)) /
-            quoteAtomsPerQuoteUnit,
-          toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
-        ]);
+        asks.push([priceInTicks, numBaseLots]);
       } else {
-        let prev = asks[asks.length - 1];
+        const prev = asks[asks.length - 1];
         if (!prev) {
           throw Error;
         }
-        let priceInTicks = toNum(orderId.priceInTicks);
-        let price =
-          (priceInTicks *
-            this.quoteLotsPerBaseUnitPerTick *
-            toNum(this.header.quoteLotSize)) /
-          quoteAtomsPerQuoteUnit;
-        if (price === prev[0]) {
-          prev[1] += toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit;
+        if (priceInTicks.eq(prev[0])) {
+          prev[1] = prev[1].add(numBaseLots);
         } else {
-          if (asks.length == levels) {
+          if (asks.length === levels) {
             break;
           }
-          asks.push([
-            price,
-            toNum(restingOrder.numBaseLots) / this.baseLotsPerBaseUnit,
-          ]);
+          asks.push([priceInTicks, numBaseLots]);
         }
       }
     }
-    return new Ladder(asks.reverse().slice(0, levels), bids.slice(0, levels));
+    return {
+      asks: asks.reverse().slice(0, levels),
+      bids: bids.slice(0, levels),
+    };
+  }
+
+  private levelToUiLevel(
+    priceInTicks: BN,
+    sizeInBaseLots: BN,
+    quoteAtomsPerQuoteUnit: number
+  ): [number, number] {
+    return [
+      (toNum(priceInTicks) *
+        this.quoteLotsPerBaseUnitPerTick *
+        toNum(this.header.quoteLotSize)) /
+        quoteAtomsPerQuoteUnit,
+      toNum(sizeInBaseLots) / this.baseLotsPerBaseUnit,
+    ];
+  }
+
+  getUiLadder(levels: number): UiLadder {
+    const ladder = this.getLadder(levels);
+
+    const quoteAtomsPerQuoteUnit =
+      10 ** toNum(this.header.quoteParams.decimals);
+    return {
+      bids: ladder.bids.map(([priceInTicks, sizeInBaseLots]) =>
+        this.levelToUiLevel(
+          priceInTicks,
+          sizeInBaseLots,
+          quoteAtomsPerQuoteUnit
+        )
+      ),
+      asks: ladder.asks.map(([priceInTicks, sizeInBaseLots]) =>
+        this.levelToUiLevel(
+          priceInTicks,
+          sizeInBaseLots,
+          quoteAtomsPerQuoteUnit
+        )
+      ),
+    };
   }
 }
 
-export class Ladder {
+export type Ladder = {
+  bids: Array<[BN, BN]>;
+  asks: Array<[BN, BN]>;
+};
+
+export type UiLadder = {
   bids: Array<[number, number]>;
   asks: Array<[number, number]>;
-
-  constructor(asks: Array<[number, number]>, bids: Array<[number, number]>) {
-    this.asks = asks;
-    this.bids = bids;
-  }
-}
+};
 
 // This dserializes the market and returns a Market object
 // This struct is defined here: https://github.com/Ellipsis-Labs/phoenix-types/blob/ab8ecbf168cebbe157c77a2eb64598781b8d317b/src/market.rs#L198
