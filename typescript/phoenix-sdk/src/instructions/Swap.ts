@@ -16,7 +16,7 @@ import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
  * @category generated
  */
 export type SwapInstructionArgs = {
-	orderPacket: OrderPacket;
+  orderPacket: OrderPacket;
 };
 /**
  * @category Instructions
@@ -24,15 +24,15 @@ export type SwapInstructionArgs = {
  * @category generated
  */
 export const SwapStruct = new beet.FixableBeetArgsStruct<
-	SwapInstructionArgs & {
-		instructionDiscriminator: number;
-	}
+  SwapInstructionArgs & {
+    instructionDiscriminator: number;
+  }
 >(
-	[
-		["instructionDiscriminator", beet.u8],
-		["orderPacket", orderPacketBeet],
-	],
-	"SwapInstructionArgs"
+  [
+    ["instructionDiscriminator", beet.u8],
+    ["orderPacket", orderPacketBeet],
+  ],
+  "SwapInstructionArgs"
 );
 /**
  * Accounts required by the _Swap_ instruction
@@ -50,15 +50,15 @@ export const SwapStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type SwapInstructionAccounts = {
-	phoenixProgram: web3.PublicKey;
-	logAuthority: web3.PublicKey;
-	market: web3.PublicKey;
-	trader: web3.PublicKey;
-	baseAccount: web3.PublicKey;
-	quoteAccount: web3.PublicKey;
-	baseVault: web3.PublicKey;
-	quoteVault: web3.PublicKey;
-	tokenProgram?: web3.PublicKey;
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  baseAccount: web3.PublicKey;
+  quoteAccount: web3.PublicKey;
+  baseVault: web3.PublicKey;
+  quoteVault: web3.PublicKey;
+  tokenProgram?: web3.PublicKey;
 };
 
 export const swapInstructionDiscriminator = 0;
@@ -74,68 +74,66 @@ export const swapInstructionDiscriminator = 0;
  * @category generated
  */
 export function createSwapInstruction(
-	accounts: SwapInstructionAccounts,
-	args: SwapInstructionArgs,
-	programId = new web3.PublicKey(
-		"phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH"
-	)
+  accounts: SwapInstructionAccounts,
+  args: SwapInstructionArgs,
+  programId = new web3.PublicKey("phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH")
 ) {
-	const [data] = SwapStruct.serialize({
-		instructionDiscriminator: swapInstructionDiscriminator,
-		...args,
-	});
-	const keys: web3.AccountMeta[] = [
-		{
-			pubkey: accounts.phoenixProgram,
-			isWritable: false,
-			isSigner: false,
-		},
-		{
-			pubkey: accounts.logAuthority,
-			isWritable: false,
-			isSigner: false,
-		},
-		{
-			pubkey: accounts.market,
-			isWritable: true,
-			isSigner: false,
-		},
-		{
-			pubkey: accounts.trader,
-			isWritable: false,
-			isSigner: true,
-		},
-		{
-			pubkey: accounts.baseAccount,
-			isWritable: true,
-			isSigner: false,
-		},
-		{
-			pubkey: accounts.quoteAccount,
-			isWritable: true,
-			isSigner: false,
-		},
-		{
-			pubkey: accounts.baseVault,
-			isWritable: true,
-			isSigner: false,
-		},
-		{
-			pubkey: accounts.quoteVault,
-			isWritable: true,
-			isSigner: false,
-		},
-		{
-			pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
-			isWritable: false,
-			isSigner: false,
-		},
-	];
+  const [data] = SwapStruct.serialize({
+    instructionDiscriminator: swapInstructionDiscriminator,
+    ...args,
+  });
+  const keys: web3.AccountMeta[] = [
+    {
+      pubkey: accounts.phoenixProgram,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.logAuthority,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.market,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.trader,
+      isWritable: false,
+      isSigner: true,
+    },
+    {
+      pubkey: accounts.baseAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.quoteAccount,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.baseVault,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.quoteVault,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
+      isWritable: false,
+      isSigner: false,
+    },
+  ];
 
-	const ix = new web3.TransactionInstruction({
-		programId,
-		keys,
-		data,
-	});
-	return ix;
+  const ix = new web3.TransactionInstruction({
+    programId,
+    keys,
+    data,
+  });
+  return ix;
 }
