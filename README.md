@@ -33,7 +33,7 @@ async function exampleSwap() {
   const phoenix = await Phoenix.Client.create(connection);
   const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
 
-  // Example of a simple swap
+  // A simple swap
   const bidTx = market.getSwapTransaction({
     side: Phoenix.Side.Bid,
     inAmount: 1,
@@ -83,6 +83,11 @@ async function exampleSwap() {
   const orderPacket = market.getSwapOrderPacket({
     side,
     inAmount
+    slippage: Phoenix.DEFAULT_SLIPPAGE_PERCENT,
+    selfTradeBehavior: Phoenix.SelfTradeBehavior.Abort,
+    matchLimit: Phoenix.DEFAULT_SLIPPAGE_PERCENT,
+    clientOrderId: 0,
+    useOnlyDepositedFunds: false,
   });
 
   const expAmountOut = market.getExpectedOutAmount({
