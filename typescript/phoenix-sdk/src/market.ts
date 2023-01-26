@@ -94,6 +94,7 @@ export interface MarketData {
 }
 
 export class Market {
+  private connection: Connection;
   name: string;
   address: PublicKey;
   baseToken: Token;
@@ -101,18 +102,21 @@ export class Market {
   data: MarketData;
 
   private constructor({
+    connection,
     name,
     address,
     baseToken,
     quoteToken,
     data,
   }: {
+    connection: Connection;
     name: string;
     address: PublicKey;
     baseToken: Token;
     quoteToken: Token;
     data: MarketData;
   }) {
+    this.connection = connection;
     this.name = name;
     this.address = address;
     this.baseToken = baseToken;
@@ -169,6 +173,7 @@ export class Market {
 
     // Create the market object
     const market = new Market({
+      connection,
       name: `${baseToken.symbol}/${quoteToken.symbol}`,
       address,
       baseToken,
@@ -177,18 +182,30 @@ export class Market {
     });
 
     // Set up subscription to market updates
-    market.subscribeToMarketUpdates(connection);
+    market.subscribeToMarketUpdates();
 
     return market;
   }
 
   /**
-   * Subscribes to updates for the market's data account
-   *
-   * @param connection The Solana `Connection` object
+   * Refreshes the market data
    */
-  private subscribeToMarketUpdates(connection: Connection) {
-    connection.onAccountChange(this.address, (account) => {
+  async refresh() {
+    const account = await this.connection.getAccountInfo(this.address);
+    if (!account)
+      throw new Error(
+        "Account not found for market: " + this.address.toBase58()
+      );
+    const data = Buffer.from(account.data);
+    const marketData = deserializeMarketData(data);
+    this.data = marketData;
+  }
+
+  /**
+   * Subscribes to updates for the market's data account
+   */
+  private subscribeToMarketUpdates() {
+    this.connection.onAccountChange(this.address, (account) => {
       const buffer = Buffer.from(account.data);
       const marketData = deserializeMarketData(buffer);
       this.data = marketData;

@@ -13,6 +13,7 @@ import * as Phoenix from "../src/client";
 
 async function main() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
+  // DO NOT USE THIS KEYPAIR IN PRODUCTION
   const traderKeypair = Keypair.fromSecretKey(
     base58.decode(
       "2PKwbVQ1YMFEexCmUDyxy8cuwb69VWcvoeodZCLegqof84DJSTiEd89Ak3so9CiHycZwynesTt1JUDFAPFWEzvVs"

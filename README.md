@@ -22,7 +22,12 @@ import * as Phoenix from "@ellipsis-labs/phoenix-sdk";
 
 async function exampleSwap() {
   const connection = new Connection("https://api.devnet.solana.com/");
-  const trader = new Keypair();
+  // DO NOT USE THIS KEYPAIR IN PRODUCTION
+  const trader = Keypair.fromSecretKey(
+    base58.decode(
+      "2PKwbVQ1YMFEexCmUDyxy8cuwb69VWcvoeodZCLegqof84DJSTiEd89Ak3so9CiHycZwynesTt1JUDFAPFWEzvVs"
+    )
+  );
 
   // Creating a Phoenix client
   const phoenix = await Phoenix.Client.create(connection);
