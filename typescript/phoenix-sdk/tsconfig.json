@@ -5,6 +5,7 @@
         "target": "es2015",
         "esModuleInterop": true,
         "moduleResolution": "node",
+        "resolveJsonModule": true,
         "declaration": true,
         "paths": {
           "@instructions/*": ["instructions/*"],
