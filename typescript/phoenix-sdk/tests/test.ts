@@ -34,8 +34,8 @@ async function main() {
 		)
 	);
 
-	const side = Math.random() > 0.5 ? Side.Ask : Side.Bid;
-	const inAmount = side === Side.Ask ? 10 : 100;
+	const side = Math.random() > 0 ? Side.Ask : Side.Bid;
+	const inAmount = side === Side.Ask ? 1 : 100;
 	console.log(
 		side === Side.Ask
 			? `Selling ${inAmount} SOL`
@@ -44,7 +44,6 @@ async function main() {
 
 	const swapTransaction = getSwapTransaction({
 		market,
-		type: SwapOrderType.ioc,
 		side,
 		inAmount,
 		trader: traderKeypair.publicKey,

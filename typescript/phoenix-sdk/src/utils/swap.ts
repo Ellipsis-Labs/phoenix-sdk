@@ -31,13 +31,11 @@ export enum SwapOrderType {
  */
 export function getSwapTransaction({
 	market,
-	type,
 	side,
 	inAmount,
 	trader,
 }: {
 	market: Market;
-	type: SwapOrderType;
 	side: Side;
 	inAmount: number;
 	trader: PublicKey;
@@ -80,10 +78,12 @@ export function getSwapTransaction({
 		inAmount,
 	});
 
-	// @ts-ignore TODO gotta figure out what's wrong with __kind
 	const ix = createSwapInstruction(orderAccounts, {
-		__kind: type,
-		...orderPacket,
+		// @ts-ignore TODO why is __kind incompatible?
+		orderPacket: {
+			__kind: "ImmediateOrCancel",
+			...orderPacket,
+		},
 	});
 
 	return new Transaction().add(ix);
@@ -129,6 +129,7 @@ export function getSwapOrderPacket({
 	let minBaseLotsToFill = 0;
 	let numQuoteLots = 0;
 	let minQuoteLotsToFill = 0;
+
 	if (side === Side.Ask) {
 		numBaseLots =
 			(inAmount * baseMul) /
@@ -183,7 +184,8 @@ export function getExpectedOutAmount({
 }): number {
 	const numBids = toNum(market.data.header.marketSizeParams.bidsSize);
 	const numAsks = toNum(market.data.header.marketSizeParams.asksSize);
-	const ladder = market.getLadder(Math.max(numBids, numAsks));
+	const ladder = market.getUiLadder(Math.max(numBids, numAsks));
+
 	if (side === Side.Bid) {
 		let remainingQuoteUnits =
 			inAmount * (1 - market.data.takerFeeBps / 10000);
@@ -192,17 +194,16 @@ export function getExpectedOutAmount({
 			priceInQuoteUnitsPerBaseUnit,
 			sizeInBaseUnits,
 		] of ladder.asks) {
-			let totalQuoteUnitsAvailable = sizeInBaseUnits.mul(
-				priceInQuoteUnitsPerBaseUnit
-			);
-			if (totalQuoteUnitsAvailable.gtn(remainingQuoteUnits)) {
+			let totalQuoteUnitsAvailable =
+				sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
+			if (totalQuoteUnitsAvailable > remainingQuoteUnits) {
 				expectedBaseUnitsReceived +=
-					remainingQuoteUnits / toNum(priceInQuoteUnitsPerBaseUnit);
+					remainingQuoteUnits / priceInQuoteUnitsPerBaseUnit;
 				remainingQuoteUnits = 0;
 				break;
 			} else {
-				expectedBaseUnitsReceived += toNum(sizeInBaseUnits);
-				remainingQuoteUnits -= toNum(totalQuoteUnitsAvailable);
+				expectedBaseUnitsReceived += sizeInBaseUnits;
+				remainingQuoteUnits -= totalQuoteUnitsAvailable;
 			}
 		}
 		return expectedBaseUnitsReceived;
@@ -214,16 +215,15 @@ export function getExpectedOutAmount({
 			priceInQuoteUnitsPerBaseUnit,
 			sizeInBaseUnits,
 		] of ladder.bids) {
-			if (toNum(sizeInBaseUnits) > remainingBaseUnits) {
+			if (sizeInBaseUnits > remainingBaseUnits) {
 				expectedQuoteUnitsReceived +=
-					remainingBaseUnits * toNum(priceInQuoteUnitsPerBaseUnit);
+					remainingBaseUnits * priceInQuoteUnitsPerBaseUnit;
 				remainingBaseUnits = 0;
 				break;
 			} else {
-				expectedQuoteUnitsReceived += toNum(
-					sizeInBaseUnits.mul(priceInQuoteUnitsPerBaseUnit)
-				);
-				remainingBaseUnits -= toNum(sizeInBaseUnits);
+				expectedQuoteUnitsReceived +=
+					sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
+				remainingBaseUnits -= sizeInBaseUnits;
 			}
 		}
 

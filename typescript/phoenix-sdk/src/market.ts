@@ -376,19 +376,16 @@ export class Market {
 	async swap({
 		connection,
 		wallet,
-		type,
 		side,
 		inAmount,
 	}: {
 		connection: Connection;
 		wallet: WalletAdapter;
-		type: SwapOrderType;
 		side: Side;
 		inAmount: number;
 	}): Promise<string> {
 		const tx = getSwapTransaction({
 			market: this,
-			type,
 			side,
 			inAmount,
 			trader: wallet.publicKey,

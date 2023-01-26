@@ -32,7 +32,7 @@ export class PhoenixClient {
 	 * Creates a new `PhoenixClient`
 	 *
 	 * @param connection The Solana `Connection` to use for the client
-	 * @param wallet The `Wallet` to use for submitting transactions (optional)
+	 * @param wallet The `WalletAdapter` to use for submitting transactions (optional)
 	 */
 	async create() {
 		const cluster = this.connection.rpcEndpoint.includes("devnet")
