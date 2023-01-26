@@ -47,21 +47,21 @@ export class Client {
     // For every market:
     for (const marketAddress of CONFIG[cluster].markets) {
       // Load the market
-      const market = await Market.load(
+      const market = await Market.load({
         connection,
-        new PublicKey(marketAddress)
-      );
+        address: new PublicKey(marketAddress),
+      });
       markets[marketAddress] = market;
 
       // Set the tokens from the market
       for (const token of [market.baseToken, market.quoteToken]) {
-        if (tokens[token.data.mintKey.toBase58()]) continue;
-        tokens[token.data.mintKey.toBase58()] = token;
+        const mint = token.data.mintKey.toBase58();
+        if (tokens[mint]) continue;
+        tokens[mint] = token;
 
         // If client provided a trader, get their balance of the token
         if (trader) {
-          const balance = await token.getTokenBalance(connection, trader);
-          tokens[token.data.mintKey.toBase58()].balance = balance;
+          await token.setTokenBalanceAndSubcribe(connection, trader);
         }
       }
     }

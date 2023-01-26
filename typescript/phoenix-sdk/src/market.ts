@@ -121,148 +121,77 @@ export class Market {
   }
 
   /**
-   * Returns a `Market` for a given market address.
+   * Returns a `Market` for a given market address and subscribes to updates.
    *
    * @param connection The Solana `Connection` object
    * @param marketAddress The `PublicKey` of the market account
    */
-  static async load(
-    connection: Connection,
-    address: PublicKey
-  ): Promise<Market> {
+  static async load({
+    connection,
+    address,
+  }: {
+    connection: Connection;
+    address: PublicKey;
+  }): Promise<Market> {
     // Fetch the account data for the market
     const account = await connection.getAccountInfo(address);
     if (!account)
       throw new Error("Account not found for market: " + address.toBase58());
     const buffer = Buffer.from(account.data);
-
-    // Deserialize the market header
-    let offset = marketHeaderBeet.byteSize;
-    const [header] = marketHeaderBeet.deserialize(buffer.subarray(0, offset));
-
-    // Parse market data
-    let remaining = buffer.subarray(offset);
-    offset = 0;
-    const baseLotsPerBaseUnit = Number(remaining.readBigUInt64LE(offset));
-    offset += 8;
-    const quoteLotsPerBaseUnitPerTick = Number(
-      remaining.readBigUInt64LE(offset)
-    );
-    offset += 8;
-    const sequenceNumber = Number(remaining.readBigUInt64LE(offset));
-    offset += 8;
-    const takerFeeBps = Number(remaining.readBigUInt64LE(offset));
-    offset += 8;
-    const collectedAdjustedQuoteLotFees = Number(
-      remaining.readBigUInt64LE(offset)
-    );
-    offset += 8;
-    const unclaimedAdjustedQuoteLotFees = Number(
-      remaining.readBigUInt64LE(offset)
-    );
-    offset += 8;
-    remaining = remaining.subarray(offset);
-
-    // Parse bids, asks and traders
-    const numBids = toNum(header.marketSizeParams.bidsSize);
-    const numAsks = toNum(header.marketSizeParams.asksSize);
-    const numTraders = toNum(header.marketSizeParams.numSeats);
-    const bidsSize =
-      16 +
-      16 +
-      (16 + orderIdBeet.byteSize + restingOrderBeet.byteSize) * numBids;
-    const asksSize =
-      16 +
-      16 +
-      (16 + orderIdBeet.byteSize + restingOrderBeet.byteSize) * numAsks;
-    const tradersSize =
-      16 + 16 + (16 + 32 + traderStateBeet.byteSize) * numTraders;
-    offset = 0;
-
-    const bidBuffer = remaining.subarray(offset, offset + bidsSize);
-    offset += bidsSize;
-    const askBuffer = remaining.subarray(offset, offset + asksSize);
-    offset += asksSize;
-    const traderBuffer = remaining.subarray(offset, offset + tradersSize);
-
-    const bidsUnsorted = deserializeRedBlackTree(
-      bidBuffer,
-      orderIdBeet,
-      restingOrderBeet
-    );
-    const asksUnsorted = deserializeRedBlackTree(
-      askBuffer,
-      orderIdBeet,
-      restingOrderBeet
-    );
-
-    // TODO: Respect price-time ordering
-    const bids = [...bidsUnsorted].sort(
-      (a, b) => toNum(-a[0].priceInTicks) + toNum(b[0].priceInTicks)
-    );
-
-    // TODO: Respect price-time ordering
-    const asks = [...asksUnsorted].sort(
-      (a, b) => toNum(a[0].priceInTicks) - toNum(b[0].priceInTicks)
-    );
-
-    let traders = new Map<PublicKey, TraderState>();
-    for (const [k, traderState] of deserializeRedBlackTree(
-      traderBuffer,
-      publicKeyBeet,
-      traderStateBeet
-    )) {
-      traders.set(k.publicKey, traderState);
-    }
+    const marketData = deserializeMarketData(buffer);
 
     // Parse token config data
     const allTokens = Object.values(CONFIG)
       .map(({ tokens }) => tokens)
       .flat();
     const baseTokenConfig = allTokens.find(
-      (token) => token.mint === header.baseParams.mintKey.toBase58()
+      (token) => token.mint === marketData.header.baseParams.mintKey.toBase58()
     );
     const baseToken = new Token({
       name: baseTokenConfig.name,
       symbol: baseTokenConfig.symbol,
       logoUri: baseTokenConfig.logoUri,
       data: {
-        ...header.baseParams,
+        ...marketData.header.baseParams,
       },
     });
     const quoteTokenConfig = allTokens.find(
-      (token) => token.mint === header.quoteParams.mintKey.toBase58()
+      (token) => token.mint === marketData.header.quoteParams.mintKey.toBase58()
     );
     const quoteToken = new Token({
       name: quoteTokenConfig.name,
       symbol: quoteTokenConfig.symbol,
       logoUri: quoteTokenConfig.logoUri,
       data: {
-        ...header.quoteParams,
+        ...marketData.header.quoteParams,
       },
     });
 
-    // Parse market name and construct data object
-    const name = `${baseToken.symbol}/${quoteToken.symbol}`;
-    const data: MarketData = {
-      header,
-      baseLotsPerBaseUnit,
-      quoteLotsPerBaseUnitPerTick,
-      sequenceNumber,
-      takerFeeBps,
-      collectedAdjustedQuoteLotFees,
-      unclaimedAdjustedQuoteLotFees,
-      bids,
-      asks,
-      traders,
-    };
-
-    return new Market({
-      name,
+    // Create the market object
+    const market = new Market({
+      name: `${baseToken.symbol}/${quoteToken.symbol}`,
       address,
       baseToken,
       quoteToken,
-      data,
+      data: marketData,
+    });
+
+    // Set up subscription to market updates
+    market.subscribeToMarketUpdates(connection);
+
+    return market;
+  }
+
+  /**
+   * Subscribes to updates for the market's data account
+   *
+   * @param connection The Solana `Connection` object
+   */
+  private subscribeToMarketUpdates(connection: Connection) {
+    connection.onAccountChange(this.address, (account) => {
+      const buffer = Buffer.from(account.data);
+      const marketData = deserializeMarketData(buffer);
+      this.data = marketData;
     });
   }
 
@@ -381,15 +310,18 @@ export class Market {
    * @param side The side of the order to place (Bid, Ask)
    * @param inAmount The amount of the input token to swap
    * @param trader The trader's wallet public key
+   * @param clientOrderId The client order ID (optional)
    */
   getSwapTransaction({
     side,
     inAmount,
     trader,
+    clientOrderId = 0,
   }: {
     side: Side;
     inAmount: number;
     trader: PublicKey;
+    clientOrderId?: number;
   }): Transaction {
     const baseAccount = PublicKey.findProgramAddressSync(
       [
@@ -426,6 +358,7 @@ export class Market {
     const orderPacket = this.getSwapOrderPacket({
       side,
       inAmount,
+      clientOrderId,
     });
 
     const ix = createSwapInstruction(orderAccounts, {
@@ -445,10 +378,11 @@ export class Market {
    * @param market The market to submit the order to
    * @param side The side of the order
    * @param inAmount The amount of the input token
-   * @param slippage The slippage tolerance in bps
-   * @param selfTradeBehavior The self trade behavior
-   * @param matchLimit The match limit
-   * @param useOnlyDepositedFunds Whether to use only deposited funds
+   * @param slippage The slippage tolerance in bps (optional, default 0.5%)
+   * @param selfTradeBehavior The self trade behavior (optional, default Abort)
+   * @param matchLimit The match limit (optional)
+   * @param clientOrderId The client order ID (optional)
+   * @param useOnlyDepositedFunds Whether to use only deposited funds (optional)
    */
   getSwapOrderPacket({
     side,
@@ -456,6 +390,7 @@ export class Market {
     slippage = DEFAULT_SLIPPAGE_PERCENT,
     selfTradeBehavior = SelfTradeBehavior.Abort,
     matchLimit = DEFAULT_MATCH_LIMIT,
+    clientOrderId = 0,
     useOnlyDepositedFunds = false,
   }: {
     side: Side;
@@ -463,6 +398,7 @@ export class Market {
     slippage?: number;
     selfTradeBehavior?: SelfTradeBehavior;
     matchLimit?: number;
+    clientOrderId?: number;
     useOnlyDepositedFunds?: boolean;
   }): Partial<OrderPacket> {
     const expectedOutAmount = this.getExpectedOutAmount({
@@ -499,14 +435,14 @@ export class Market {
 
     const order: Partial<OrderPacket> = {
       side,
-      priceInTicks: null, // TODO what is this?
+      priceInTicks: null,
       numBaseLots,
       minBaseLotsToFill,
       numQuoteLots,
       minQuoteLotsToFill,
       selfTradeBehavior,
       matchLimit,
-      clientOrderId: 0, // TODO what is this?
+      clientOrderId,
       useOnlyDepositedFunds,
     };
 
@@ -576,15 +512,108 @@ export class Market {
 }
 
 /**
+ * Deserializes market data from a given buffer
+ *
+ * @param data The data buffer to deserialize
+ */
+function deserializeMarketData(data: Buffer): MarketData {
+  // Deserialize the market header
+  let offset = marketHeaderBeet.byteSize;
+  const [header] = marketHeaderBeet.deserialize(data.subarray(0, offset));
+
+  // Parse market data
+  let remaining = data.subarray(offset);
+  offset = 0;
+  const baseLotsPerBaseUnit = Number(remaining.readBigUInt64LE(offset));
+  offset += 8;
+  const quoteLotsPerBaseUnitPerTick = Number(remaining.readBigUInt64LE(offset));
+  offset += 8;
+  const sequenceNumber = Number(remaining.readBigUInt64LE(offset));
+  offset += 8;
+  const takerFeeBps = Number(remaining.readBigUInt64LE(offset));
+  offset += 8;
+  const collectedAdjustedQuoteLotFees = Number(
+    remaining.readBigUInt64LE(offset)
+  );
+  offset += 8;
+  const unclaimedAdjustedQuoteLotFees = Number(
+    remaining.readBigUInt64LE(offset)
+  );
+  offset += 8;
+  remaining = remaining.subarray(offset);
+
+  // Parse bids, asks and traders
+  const numBids = toNum(header.marketSizeParams.bidsSize);
+  const numAsks = toNum(header.marketSizeParams.asksSize);
+  const numTraders = toNum(header.marketSizeParams.numSeats);
+  const bidsSize =
+    16 + 16 + (16 + orderIdBeet.byteSize + restingOrderBeet.byteSize) * numBids;
+  const asksSize =
+    16 + 16 + (16 + orderIdBeet.byteSize + restingOrderBeet.byteSize) * numAsks;
+  const tradersSize =
+    16 + 16 + (16 + 32 + traderStateBeet.byteSize) * numTraders;
+  offset = 0;
+
+  const bidBuffer = remaining.subarray(offset, offset + bidsSize);
+  offset += bidsSize;
+  const askBuffer = remaining.subarray(offset, offset + asksSize);
+  offset += asksSize;
+  const traderBuffer = remaining.subarray(offset, offset + tradersSize);
+
+  const bidsUnsorted = deserializeRedBlackTree(
+    bidBuffer,
+    orderIdBeet,
+    restingOrderBeet
+  );
+  const asksUnsorted = deserializeRedBlackTree(
+    askBuffer,
+    orderIdBeet,
+    restingOrderBeet
+  );
+
+  // TODO: Respect price-time ordering
+  const bids = [...bidsUnsorted].sort(
+    (a, b) => toNum(-a[0].priceInTicks) + toNum(b[0].priceInTicks)
+  );
+
+  // TODO: Respect price-time ordering
+  const asks = [...asksUnsorted].sort(
+    (a, b) => toNum(a[0].priceInTicks) - toNum(b[0].priceInTicks)
+  );
+
+  let traders = new Map<PublicKey, TraderState>();
+  for (const [k, traderState] of deserializeRedBlackTree(
+    traderBuffer,
+    publicKeyBeet,
+    traderStateBeet
+  )) {
+    traders.set(k.publicKey, traderState);
+  }
+
+  return {
+    header,
+    baseLotsPerBaseUnit,
+    quoteLotsPerBaseUnitPerTick,
+    sequenceNumber,
+    takerFeeBps,
+    collectedAdjustedQuoteLotFees,
+    unclaimedAdjustedQuoteLotFees,
+    bids,
+    asks,
+    traders,
+  };
+}
+
+/**
  * Deserializes a RedBlackTree from a given buffer
  * @description This deserialized the RedBlackTree defined in the sokoban library: https://github.com/Ellipsis-Labs/sokoban/tree/master
  *
- * @param buffer The buffer to deserialize
+ * @param data The data buffer to deserialize
  * @param keyDeserializer The deserializer for the tree key
  * @param valueDeserializer The deserializer for the tree value
  */
 function deserializeRedBlackTree<Key, Value>(
-  buffer: Buffer,
+  data: Buffer,
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): Map<Key, Value> {
@@ -600,25 +629,25 @@ function deserializeRedBlackTree<Key, Value>(
 
   // Skip node allocator size
   offset += 8;
-  let bumpIndex = buffer.readInt32LE(offset);
+  let bumpIndex = data.readInt32LE(offset);
   offset += 4;
-  let freeListHead = buffer.readInt32LE(offset);
+  let freeListHead = data.readInt32LE(offset);
   offset += 4;
 
   let freeListPointers = new Array<[number, number]>();
 
-  for (let index = 0; offset < buffer.length && index < bumpIndex; index++) {
+  for (let index = 0; offset < data.length && index < bumpIndex; index++) {
     let registers = new Array<number>();
     for (let i = 0; i < 4; i++) {
-      registers.push(buffer.readInt32LE(offset)); // skip padding
+      registers.push(data.readInt32LE(offset)); // skip padding
       offset += 4;
     }
     let [key] = keyDeserializer.deserialize(
-      buffer.subarray(offset, offset + keySize)
+      data.subarray(offset, offset + keySize)
     );
     offset += keySize;
     let [value] = valueDeserializer.deserialize(
-      buffer.subarray(offset, offset + valueSize)
+      data.subarray(offset, offset + valueSize)
     );
     offset += valueSize;
     nodes.push([key, value]);
