@@ -455,7 +455,7 @@ export function getMarketSwapOrderPacket({
   clientOrderId?: number;
   useOnlyDepositedFunds?: boolean;
 }): Partial<OrderPacket> {
-  const expectedOutAmount = getExpectedOutAmount({
+  const expectedOutAmount = getMarketExpectedOutAmount({
     marketData,
     side,
     inAmount,
@@ -513,7 +513,7 @@ export function getMarketSwapOrderPacket({
  *
  * TODO this should use getMarketLadder and adjust its calculation
  */
-export function getExpectedOutAmount({
+export function getMarketExpectedOutAmount({
   marketData,
   side,
   inAmount,

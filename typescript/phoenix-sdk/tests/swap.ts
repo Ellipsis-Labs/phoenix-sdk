@@ -35,8 +35,11 @@ export async function swap() {
   );
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
-  const inAmount = side === Phoenix.Side.Ask ? 1 : 100;
-  const slippage = 0.08;
+  const inAmount =
+    side === Phoenix.Side.Ask
+      ? Math.floor(Math.random() * 4) + 1
+      : Math.floor(Math.random() * 100) + 50;
+  const slippage = 0.008;
   console.log(
     side === Phoenix.Side.Ask ? "Selling" : "Market buy",
     inAmount,
@@ -109,7 +112,7 @@ export async function swap() {
       "Manually created transaction does not match the one created by the SDK"
     );
 
-  const expectedOutAmount = Phoenix.getExpectedOutAmount({
+  const expectedOutAmount = Phoenix.getMarketExpectedOutAmount({
     marketData,
     side,
     inAmount,
@@ -124,7 +127,7 @@ export async function swap() {
     skipPreflight: true,
     commitment: "confirmed",
   });
-  console.log("Transaction ID: ", txId);
+  console.log("Transaction ID:", txId);
 
   // Wait for transaction to be confirmed (up to 10 tries)
   let txResult = await Phoenix.getEventsFromTransaction(connection, txId);

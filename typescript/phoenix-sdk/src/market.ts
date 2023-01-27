@@ -10,6 +10,7 @@ import {
   getMarketUiLadder,
   printUiLadder,
   getMarketSwapTransaction,
+  getMarketExpectedOutAmount,
 } from "./utils";
 import { Token } from "./token";
 
@@ -211,6 +212,26 @@ export class Market {
       side,
       inAmount,
       clientOrderId,
+    });
+  }
+
+  /**
+   * Returns the expected amount out for a given swap order
+   *
+   * @param side The side of the order (Bid or Ask)
+   * @param inAmount The amount of the input token
+   */
+  getExpectedOutAmount({
+    side,
+    inAmount,
+  }: {
+    side: Side;
+    inAmount: number;
+  }): number {
+    return getMarketExpectedOutAmount({
+      marketData: this.data,
+      side,
+      inAmount,
     });
   }
 }
