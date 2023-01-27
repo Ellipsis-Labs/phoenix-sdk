@@ -10,7 +10,7 @@ import * as Phoenix from "../src";
 export async function swap() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
   // DO NOT USE THIS KEYPAIR IN PRODUCTION
-  const traderKeypair = Keypair.fromSecretKey(
+  const trader = Keypair.fromSecretKey(
     base58.decode(
       "2PKwbVQ1YMFEexCmUDyxy8cuwb69VWcvoeodZCLegqof84DJSTiEd89Ak3so9CiHycZwynesTt1JUDFAPFWEzvVs"
     )
@@ -18,46 +18,43 @@ export async function swap() {
 
   const phoenix = await Phoenix.Client.create(connection);
   const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
-  if (!market) {
-    throw Error("SOL/USDC market not found");
-  }
+  if (!market) throw Error("SOL/USDC market not found");
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
   const inAmount = side === Phoenix.Side.Ask ? 1 : 100;
   console.log(
-    side === Phoenix.Side.Ask
-      ? `Selling ${inAmount} SOL`
-      : `Market buy with ${inAmount} USDC`
+    side === Phoenix.Side.Ask ? "Selling" : "Market buy",
+    inAmount,
+    side === Phoenix.Side.Ask ? "SOL" : "USDC"
   );
 
   const swapTransaction = market.getSwapTransaction({
     side,
     inAmount,
-    trader: traderKeypair.publicKey,
+    trader: trader.publicKey,
   });
 
   const txId = await sendAndConfirmTransaction(
     connection,
     swapTransaction,
-    [traderKeypair],
+    [trader],
     { skipPreflight: true, commitment: "confirmed" }
   );
   console.log("Transaction ID: ", txId);
 
-  // Retry until we get the transaction. We give up after 10 tries
+  // Wait for transaction to be confirmed (up to 10 tries)
   let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
   let counter = 1;
   while (txResult.instructions.length == 0) {
     txResult = await Phoenix.getEventsFromTransaction(connection, txId);
     counter += 1;
     if (counter == 10) {
-      throw Error("Failed to fetch tranxaction");
+      throw Error("Failed to fetch transaction");
     }
   }
-  console.log("Fetched transaction after", counter, "attempt(s)");
   const fillEvents = txResult.instructions[0];
 
-  let summary = fillEvents.events[
+  const summary = fillEvents.events[
     fillEvents.events.length - 1
   ] as Phoenix.FillSummaryEvent;
 
@@ -70,25 +67,34 @@ export async function swap() {
     );
   } else {
     console.log(
-      `Sold ${inAmount} SOL for`,
+      "Sold",
+      inAmount,
+      "SOL for",
       (Phoenix.toNum(summary.totalQuoteLotsFilled) *
         Phoenix.toNum(market.data.header.quoteLotSize)) /
         10 ** market.data.header.quoteParams.decimals,
       "USDC"
     );
   }
-  let fees =
+
+  const fees =
     (Phoenix.toNum(summary.totalFeeInQuoteLots) *
       Phoenix.toNum(market.data.header.quoteLotSize)) /
     10 ** market.data.header.quoteParams.decimals;
-
-  console.log(`Paid $${fees} in fees:`);
+  console.log(`Paid $${fees} in fees`);
 }
 
-swap()
-  .then((_) => {
-    console.log("Done");
-  })
-  .catch((err) => {
-    console.log(err);
-  });
+(async function () {
+  for (let i = 0; i < 10; i++) {
+    console.log("Swap", i + 1, "of", 10);
+    try {
+      await swap();
+      console.log("Done \n");
+    } catch (err) {
+      console.log("Error: ", err);
+      process.exit(1);
+    }
+  }
+
+  process.exit(0);
+})();

@@ -338,20 +338,25 @@ export class Market {
     );
     const maxBaseSizeLength = maxBaseSize.toString().length;
 
-    const printLine = (price: number, size: number) => {
-      const priceStr = price.toFixed(2).padStart(maxPriceLength, " ");
+    const printLine = (price: number, size: number, color: "red" | "green") => {
+      const priceStr = price.toFixed(2);
       const sizeStr = size.toFixed(2).padStart(maxBaseSizeLength, " ");
-      console.log(`${priceStr} ${sizeStr}`);
+      console.log(
+        priceStr +
+          `\u001b[3${color === "green" ? 2 : 1}m` +
+          sizeStr +
+          "\u001b[0m"
+      );
     };
 
-    console.log(`Bids`);
+    console.log("\u001b[30mBids\u001b[0m");
     for (const [price, size] of bids) {
-      printLine(price, size);
+      printLine(price, size, "green");
     }
 
-    console.log(`Asks`);
+    console.log("\u001b[30mAsks\u001b[0m");
     for (const [price, size] of asks) {
-      printLine(price, size);
+      printLine(price, size, "red");
     }
   }
 
@@ -384,7 +389,6 @@ export class Market {
       ],
       ASSOCIATED_TOKEN_PROGRAM_ID
     )[0];
-
     const quoteAccount = PublicKey.findProgramAddressSync(
       [
         trader.toBuffer(),
@@ -393,13 +397,14 @@ export class Market {
       ],
       ASSOCIATED_TOKEN_PROGRAM_ID
     )[0];
+    const logAuthority = PublicKey.findProgramAddressSync(
+      [Buffer.from("log")],
+      PROGRAM_ID
+    )[0];
 
     const orderAccounts = {
       phoenixProgram: PROGRAM_ID,
-      logAuthority: PublicKey.findProgramAddressSync(
-        [Buffer.from("log")],
-        PROGRAM_ID
-      )[0],
+      logAuthority,
       market: this.address,
       trader,
       baseAccount,
@@ -486,7 +491,7 @@ export class Market {
       );
     }
 
-    const order: Partial<OrderPacket> = {
+    const orderPacket: Partial<OrderPacket> = {
       side,
       priceInTicks: null,
       numBaseLots,
@@ -499,7 +504,7 @@ export class Market {
       useOnlyDepositedFunds,
     };
 
-    return order;
+    return orderPacket;
   }
 
   /**
@@ -518,58 +523,60 @@ export class Market {
   }): number {
     const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
     const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
-    const ladder = this.getUiLadder(Math.max(numBids, numAsks));
+    const ladder = this.getLadder(Math.max(numBids, numAsks));
 
+    let remainingUnits = toBN(inAmount * (1 - this.data.takerFeeBps / 10000));
+    let expectedUnitsReceived = toBN(0);
     if (side === Side.Bid) {
-      let remainingQuoteUnits = inAmount * (1 - this.data.takerFeeBps / 10000);
-      let expectedBaseUnitsReceived = 0;
       for (const [
         priceInQuoteUnitsPerBaseUnit,
         sizeInBaseUnits,
       ] of ladder.asks) {
-        let totalQuoteUnitsAvailable =
-          sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
-        if (totalQuoteUnitsAvailable > remainingQuoteUnits) {
-          expectedBaseUnitsReceived +=
-            remainingQuoteUnits / priceInQuoteUnitsPerBaseUnit;
-          remainingQuoteUnits = 0;
+        const totalQuoteUnitsAvailable = sizeInBaseUnits.mul(
+          priceInQuoteUnitsPerBaseUnit
+        );
+
+        if (totalQuoteUnitsAvailable.gt(remainingUnits)) {
+          expectedUnitsReceived.iadd(
+            remainingUnits.div(priceInQuoteUnitsPerBaseUnit)
+          );
+          remainingUnits = toBN(0);
           break;
         } else {
-          expectedBaseUnitsReceived += sizeInBaseUnits;
-          remainingQuoteUnits -= totalQuoteUnitsAvailable;
+          expectedUnitsReceived.iadd(sizeInBaseUnits);
+          remainingUnits.isub(totalQuoteUnitsAvailable);
         }
       }
-      return expectedBaseUnitsReceived;
     } else {
-      let remainingBaseUnits = inAmount * (1 - this.data.takerFeeBps / 10000);
-      let expectedQuoteUnitsReceived = 0;
       for (const [
         priceInQuoteUnitsPerBaseUnit,
         sizeInBaseUnits,
       ] of ladder.bids) {
-        if (sizeInBaseUnits > remainingBaseUnits) {
-          expectedQuoteUnitsReceived +=
-            remainingBaseUnits * priceInQuoteUnitsPerBaseUnit;
-          remainingBaseUnits = 0;
+        if (sizeInBaseUnits.gt(remainingUnits)) {
+          expectedUnitsReceived.iadd(
+            remainingUnits.mul(priceInQuoteUnitsPerBaseUnit)
+          );
+          remainingUnits = toBN(0);
           break;
         } else {
-          expectedQuoteUnitsReceived +=
-            sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
-          remainingBaseUnits -= sizeInBaseUnits;
+          expectedUnitsReceived.iadd(
+            sizeInBaseUnits.mul(priceInQuoteUnitsPerBaseUnit)
+          );
+          remainingUnits.isub(sizeInBaseUnits);
         }
       }
-
-      return expectedQuoteUnitsReceived;
     }
+
+    return toNum(expectedUnitsReceived);
   }
 }
 
 /**
- * Deserializes market data from a given buffer
+ * Deserializes market data from a given buffer and returns a `MarketData` object
  *
  * @param data The data buffer to deserialize
  */
-function deserializeMarketData(data: Buffer): MarketData {
+export function deserializeMarketData(data: Buffer): MarketData {
   // Deserialize the market header
   let offset = marketHeaderBeet.byteSize;
   const [header] = marketHeaderBeet.deserialize(data.subarray(0, offset));
@@ -665,7 +672,7 @@ function deserializeMarketData(data: Buffer): MarketData {
  * @param keyDeserializer The deserializer for the tree key
  * @param valueDeserializer The deserializer for the tree value
  */
-function deserializeRedBlackTree<Key, Value>(
+export function deserializeRedBlackTree<Key, Value>(
   data: Buffer,
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
