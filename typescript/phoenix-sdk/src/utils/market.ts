@@ -362,6 +362,7 @@ export function getMarketSwapTransaction({
   trader,
   side,
   inAmount,
+  slippage = DEFAULT_SLIPPAGE_PERCENT,
   clientOrderId = 0,
 }: {
   marketAddress: PublicKey;
@@ -369,6 +370,7 @@ export function getMarketSwapTransaction({
   trader: PublicKey;
   side: Side;
   inAmount: number;
+  slippage?: number;
   clientOrderId?: number;
 }): Transaction {
   const baseAccount = PublicKey.findProgramAddressSync(
@@ -407,6 +409,7 @@ export function getMarketSwapTransaction({
     marketData,
     side,
     inAmount,
+    slippage,
     clientOrderId,
   });
 

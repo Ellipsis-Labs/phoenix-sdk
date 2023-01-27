@@ -36,10 +36,14 @@ export async function swap() {
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
   const inAmount = side === Phoenix.Side.Ask ? 1 : 100;
+  const slippage = 0.08;
   console.log(
     side === Phoenix.Side.Ask ? "Selling" : "Market buy",
     inAmount,
-    side === Phoenix.Side.Ask ? "SOL" : "USDC"
+    side === Phoenix.Side.Ask ? "SOL" : "USDC",
+    "with",
+    slippage * 100,
+    "% slippage"
   );
 
   const baseAccount = PublicKey.findProgramAddressSync(
@@ -78,6 +82,7 @@ export async function swap() {
     marketData,
     side,
     inAmount,
+    slippage,
   });
 
   const swapIx = Phoenix.createSwapInstruction(orderAccounts, {
@@ -96,6 +101,7 @@ export async function swap() {
     trader: trader.publicKey,
     side,
     inAmount,
+    slippage,
   });
 
   if (JSON.stringify(controlTx) !== JSON.stringify(swapTx))
