@@ -1,54 +1,27 @@
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
-import * as beetSolana from "@metaplex-foundation/beet-solana";
 import BN from "bn.js";
 
 import CONFIG from "../config.json";
-import { PROGRAM_ID } from "./";
+import { MarketHeader, Side } from "./types";
 import {
-  MarketHeader,
-  marketHeaderBeet,
-  OrderPacket,
-  SelfTradeBehavior,
-  Side,
-} from "./types";
-import { toNum, toBN } from "./utils";
-import { createSwapInstruction } from "./instructions";
+  deserializeMarketData,
+  getMarketLadder,
+  getMarketUiLadder,
+  printUiLadder,
+  getSwapTransaction as getMarketSwapTransaction,
+} from "./utils";
 import { Token } from "./token";
-
-export const DEFAULT_LADDER_DEPTH = 10;
-export const DEFAULT_MATCH_LIMIT = 2048;
-export const DEFAULT_SLIPPAGE_PERCENT = 0.005;
 
 export type OrderId = {
   priceInTicks: beet.bignum;
   orderSequenceNumber: beet.bignum;
 };
 
-export const orderIdBeet = new beet.BeetArgsStruct<OrderId>(
-  [
-    ["priceInTicks", beet.u64],
-    ["orderSequenceNumber", beet.u64],
-  ],
-  "fIFOOrderId"
-);
-
 export type RestingOrder = {
   traderIndex: beet.bignum;
   numBaseLots: beet.bignum;
 };
-
-export const restingOrderBeet = new beet.BeetArgsStruct<RestingOrder>(
-  [
-    ["traderIndex", beet.u64],
-    ["numBaseLots", beet.u64],
-  ],
-  "fIFORestingOrder"
-);
 
 export type TraderState = {
   quoteLotsLocked: beet.bignum;
@@ -56,20 +29,6 @@ export type TraderState = {
   baseLotsLocked: beet.bignum;
   baseLotsFree: beet.bignum;
 };
-
-export const traderStateBeet = new beet.BeetArgsStruct<TraderState>(
-  [
-    ["quoteLotsLocked", beet.u64],
-    ["quoteLotsFree", beet.u64],
-    ["baseLotsLocked", beet.u64],
-    ["baseLotsFree", beet.u64],
-  ],
-  "TraderState"
-);
-
-const publicKeyBeet = new beet.BeetArgsStruct<{
-  publicKey: PublicKey;
-}>([["publicKey", beetSolana.publicKey]], "PubkeyWrapper");
 
 export type Ladder = {
   bids: Array<[BN, BN]>;
@@ -181,8 +140,12 @@ export class Market {
       data: marketData,
     });
 
-    // Set up subscription to market updates
-    market.subscribeToMarketUpdates();
+    // Subscription to market updates
+    connection.onAccountChange(address, (account) => {
+      const buffer = Buffer.from(account.data);
+      const marketData = deserializeMarketData(buffer);
+      market.data = marketData;
+    });
 
     return market;
   }
@@ -202,538 +165,52 @@ export class Market {
   }
 
   /**
-   * Subscribes to updates for the market's data account
-   */
-  private subscribeToMarketUpdates() {
-    this.connection.onAccountChange(this.address, (account) => {
-      const buffer = Buffer.from(account.data);
-      const marketData = deserializeMarketData(buffer);
-      this.data = marketData;
-    });
-  }
-
-  /**
    * Returns the market's ladder of bids and asks
-   *
-   * @param levels The number of book levels to return
-   * @param asUiLadder Whether to return bids and asks as JS numbers
    */
-  getLadder(levels: number = DEFAULT_LADDER_DEPTH): Ladder {
-    let bids: Array<[BN, BN]> = [];
-    let asks: Array<[BN, BN]> = [];
-    for (const [orderId, restingOrder] of this.data.bids) {
-      const priceInTicks = toBN(orderId.priceInTicks);
-      const numBaseLots = toBN(restingOrder.numBaseLots);
-
-      if (bids.length === 0) {
-        bids.push([priceInTicks, numBaseLots]);
-      } else {
-        const prev = bids[bids.length - 1];
-        if (!prev) {
-          throw Error;
-        }
-        if (priceInTicks.eq(prev[0])) {
-          prev[1] = numBaseLots;
-        } else {
-          if (bids.length === levels) {
-            break;
-          }
-          bids.push([priceInTicks, numBaseLots]);
-        }
-      }
-    }
-
-    for (const [orderId, restingOrder] of this.data.asks) {
-      const priceInTicks = toBN(orderId.priceInTicks);
-      const numBaseLots = toBN(restingOrder.numBaseLots);
-      if (asks.length === 0) {
-        asks.push([priceInTicks, numBaseLots]);
-      } else {
-        const prev = asks[asks.length - 1];
-        if (!prev) {
-          throw Error;
-        }
-        if (priceInTicks.eq(prev[0])) {
-          prev[1] = prev[1].add(numBaseLots);
-        } else {
-          if (asks.length === levels) {
-            break;
-          }
-          asks.push([priceInTicks, numBaseLots]);
-        }
-      }
-    }
-
-    return {
-      asks: asks.reverse().slice(0, levels),
-      bids: bids.slice(0, levels),
-    };
+  getLadder(): Ladder {
+    return getMarketLadder(this.data);
   }
 
   /**
-   * Converts a ladder level from BN to JS number representation
-   *
-   * @param priceInTicks The price of the level in ticks
-   * @param sizeInBaseLots The size of the level in base lots
-   * @param quoteAtomsPerQuoteUnit The number of quote atoms per quote unit
+   * Returns the market's ladder of bids and asks  as JS numbers
    */
-  private levelToUiLevel(
-    priceInTicks: BN,
-    sizeInBaseLots: BN,
-    quoteAtomsPerQuoteUnit: number
-  ): [number, number] {
-    return [
-      (toNum(priceInTicks) *
-        this.data.quoteLotsPerBaseUnitPerTick *
-        toNum(this.data.header.quoteLotSize)) /
-        quoteAtomsPerQuoteUnit,
-      toNum(sizeInBaseLots) / this.data.baseLotsPerBaseUnit,
-    ];
+  getUiLadder(): UiLadder {
+    return getMarketUiLadder(this.data);
   }
 
   /**
-   * Returns the market's ladder of bids and asks as JS numbers
-   *
-   * @param levels The number of book levels to return
-   */
-  getUiLadder(levels: number = DEFAULT_LADDER_DEPTH): UiLadder {
-    const ladder = this.getLadder(levels);
-
-    const quoteAtomsPerQuoteUnit =
-      10 ** toNum(this.data.header.quoteParams.decimals);
-    return {
-      bids: ladder.bids.map(([priceInTicks, sizeInBaseLots]) =>
-        this.levelToUiLevel(
-          priceInTicks,
-          sizeInBaseLots,
-          quoteAtomsPerQuoteUnit
-        )
-      ),
-      asks: ladder.asks.map(([priceInTicks, sizeInBaseLots]) =>
-        this.levelToUiLevel(
-          priceInTicks,
-          sizeInBaseLots,
-          quoteAtomsPerQuoteUnit
-        )
-      ),
-    };
-  }
-
-  /**
-   * Pretty prints the market's ladder of as a colored orderbook
+   * Pretty prints the market's current ladder of bids and asks
    */
   printLadder() {
-    const ladder = this.getUiLadder();
-    const bids = ladder.bids;
-    const asks = ladder.asks;
-
-    const maxPrice = Math.max(
-      ...bids.map((b) => b[0]),
-      ...asks.map((a) => a[0])
-    );
-    const maxPriceLength = maxPrice.toString().length;
-    const maxBaseSize = Math.max(
-      ...bids.map((b) => b[1]),
-      ...asks.map((a) => a[1])
-    );
-    const maxBaseSizeLength = maxBaseSize.toString().length;
-
-    const printLine = (price: number, size: number, color: "red" | "green") => {
-      const priceStr = price.toFixed(2);
-      const sizeStr = size.toFixed(2).padStart(maxBaseSizeLength, " ");
-      console.log(
-        priceStr +
-          `\u001b[3${color === "green" ? 2 : 1}m` +
-          sizeStr +
-          "\u001b[0m"
-      );
-    };
-
-    console.log("\u001b[30mBids\u001b[0m");
-    for (const [price, size] of bids) {
-      printLine(price, size, "green");
-    }
-
-    console.log("\u001b[30mAsks\u001b[0m");
-    for (const [price, size] of asks) {
-      printLine(price, size, "red");
-    }
+    printUiLadder(this.getUiLadder());
   }
 
   /**
    * Returns a Phoenix swap transaction
    *
-   * @param market The market to swap on
-   * @param type The type of order to place (limit, ioc, postOnly)
    * @param side The side of the order to place (Bid, Ask)
    * @param inAmount The amount (in whole tokens) of the input token to swap
    * @param trader The trader's wallet public key
    * @param clientOrderId The client order ID (optional)
    */
   getSwapTransaction({
-    side,
-    inAmount,
     trader,
+    side,
+    inAmount,
     clientOrderId = 0,
   }: {
-    side: Side;
-    inAmount: number;
     trader: PublicKey;
+    side: Side;
+    inAmount: number;
     clientOrderId?: number;
-  }): Transaction {
-    const baseAccount = PublicKey.findProgramAddressSync(
-      [
-        trader.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        this.baseToken.data.mintKey.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
-    const quoteAccount = PublicKey.findProgramAddressSync(
-      [
-        trader.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        this.quoteToken.data.mintKey.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
-    const logAuthority = PublicKey.findProgramAddressSync(
-      [Buffer.from("log")],
-      PROGRAM_ID
-    )[0];
-
-    const orderAccounts = {
-      phoenixProgram: PROGRAM_ID,
-      logAuthority,
-      market: this.address,
+  }) {
+    return getMarketSwapTransaction({
+      marketAddress: this.address,
+      marketData: this.data,
       trader,
-      baseAccount,
-      quoteAccount,
-      quoteVault: this.data.header.quoteParams.vaultKey,
-      baseVault: this.data.header.baseParams.vaultKey,
-    };
-
-    const orderPacket = this.getSwapOrderPacket({
       side,
       inAmount,
       clientOrderId,
     });
-
-    const ix = createSwapInstruction(orderAccounts, {
-      // @ts-ignore TODO why is __kind incompatible?
-      orderPacket: {
-        __kind: "ImmediateOrCancel",
-        ...orderPacket,
-      },
-    });
-
-    return new Transaction().add(ix);
   }
-
-  /**
-   * Returns a Phoenix swap order packet
-   *
-   * @param market The market to submit the order to
-   * @param side The side of the order
-   * @param inAmount The amount of the input token
-   * @param slippage The slippage tolerance in bps (optional, default 0.5%)
-   * @param selfTradeBehavior The self trade behavior (optional, default Abort)
-   * @param matchLimit The match limit (optional)
-   * @param clientOrderId The client order ID (optional)
-   * @param useOnlyDepositedFunds Whether to use only deposited funds (optional)
-   */
-  getSwapOrderPacket({
-    side,
-    inAmount,
-    slippage = DEFAULT_SLIPPAGE_PERCENT,
-    selfTradeBehavior = SelfTradeBehavior.Abort,
-    matchLimit = DEFAULT_MATCH_LIMIT,
-    clientOrderId = 0,
-    useOnlyDepositedFunds = false,
-  }: {
-    side: Side;
-    inAmount: number;
-    slippage?: number;
-    selfTradeBehavior?: SelfTradeBehavior;
-    matchLimit?: number;
-    clientOrderId?: number;
-    useOnlyDepositedFunds?: boolean;
-  }): Partial<OrderPacket> {
-    const expectedOutAmount = this.getExpectedOutAmount({
-      side,
-      inAmount,
-    });
-    const baseMul = 10 ** this.baseToken.data.decimals;
-    const quoteMul = 10 ** this.quoteToken.data.decimals;
-    const slippageDenom = 1 - slippage;
-    let numBaseLots = 0;
-    let minBaseLotsToFill = 0;
-    let numQuoteLots = 0;
-    let minQuoteLotsToFill = 0;
-
-    if (side === Side.Ask) {
-      numBaseLots =
-        (inAmount * baseMul) /
-        parseFloat(this.data.header.baseLotSize.toString());
-      minQuoteLotsToFill = Math.ceil(
-        ((expectedOutAmount * quoteMul) /
-          parseFloat(this.data.header.quoteLotSize.toString())) *
-          slippageDenom
-      );
-    } else {
-      numQuoteLots =
-        (inAmount * quoteMul) /
-        parseFloat(this.data.header.quoteLotSize.toString());
-      minBaseLotsToFill = Math.ceil(
-        ((expectedOutAmount * baseMul) /
-          parseFloat(this.data.header.baseLotSize.toString())) *
-          slippageDenom
-      );
-    }
-
-    const orderPacket: Partial<OrderPacket> = {
-      side,
-      priceInTicks: null,
-      numBaseLots,
-      minBaseLotsToFill,
-      numQuoteLots,
-      minQuoteLotsToFill,
-      selfTradeBehavior,
-      matchLimit,
-      clientOrderId,
-      useOnlyDepositedFunds,
-    };
-
-    return orderPacket;
-  }
-
-  /**
-   * Returns the expected amount out for a given swap order
-   *
-   * @param market The market to calculate the amount out for
-   * @param side The side of the order (Bid or Ask)
-   * @param inAmount The amount of the input token
-   */
-  getExpectedOutAmount({
-    side,
-    inAmount,
-  }: {
-    side: Side;
-    inAmount: number;
-  }): number {
-    const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
-    const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
-    const ladder = this.getLadder(Math.max(numBids, numAsks));
-
-    let remainingUnits = toBN(inAmount * (1 - this.data.takerFeeBps / 10000));
-    let expectedUnitsReceived = toBN(0);
-    if (side === Side.Bid) {
-      for (const [
-        priceInQuoteUnitsPerBaseUnit,
-        sizeInBaseUnits,
-      ] of ladder.asks) {
-        const totalQuoteUnitsAvailable = sizeInBaseUnits.mul(
-          priceInQuoteUnitsPerBaseUnit
-        );
-
-        if (totalQuoteUnitsAvailable.gt(remainingUnits)) {
-          expectedUnitsReceived.iadd(
-            remainingUnits.div(priceInQuoteUnitsPerBaseUnit)
-          );
-          remainingUnits = toBN(0);
-          break;
-        } else {
-          expectedUnitsReceived.iadd(sizeInBaseUnits);
-          remainingUnits.isub(totalQuoteUnitsAvailable);
-        }
-      }
-    } else {
-      for (const [
-        priceInQuoteUnitsPerBaseUnit,
-        sizeInBaseUnits,
-      ] of ladder.bids) {
-        if (sizeInBaseUnits.gt(remainingUnits)) {
-          expectedUnitsReceived.iadd(
-            remainingUnits.mul(priceInQuoteUnitsPerBaseUnit)
-          );
-          remainingUnits = toBN(0);
-          break;
-        } else {
-          expectedUnitsReceived.iadd(
-            sizeInBaseUnits.mul(priceInQuoteUnitsPerBaseUnit)
-          );
-          remainingUnits.isub(sizeInBaseUnits);
-        }
-      }
-    }
-
-    return toNum(expectedUnitsReceived);
-  }
-}
-
-/**
- * Deserializes market data from a given buffer and returns a `MarketData` object
- *
- * @param data The data buffer to deserialize
- */
-export function deserializeMarketData(data: Buffer): MarketData {
-  // Deserialize the market header
-  let offset = marketHeaderBeet.byteSize;
-  const [header] = marketHeaderBeet.deserialize(data.subarray(0, offset));
-
-  // Parse market data
-  let remaining = data.subarray(offset);
-  offset = 0;
-  const baseLotsPerBaseUnit = Number(remaining.readBigUInt64LE(offset));
-  offset += 8;
-  const quoteLotsPerBaseUnitPerTick = Number(remaining.readBigUInt64LE(offset));
-  offset += 8;
-  const sequenceNumber = Number(remaining.readBigUInt64LE(offset));
-  offset += 8;
-  const takerFeeBps = Number(remaining.readBigUInt64LE(offset));
-  offset += 8;
-  const collectedAdjustedQuoteLotFees = Number(
-    remaining.readBigUInt64LE(offset)
-  );
-  offset += 8;
-  const unclaimedAdjustedQuoteLotFees = Number(
-    remaining.readBigUInt64LE(offset)
-  );
-  offset += 8;
-  remaining = remaining.subarray(offset);
-
-  // Parse bids, asks and traders
-  const numBids = toNum(header.marketSizeParams.bidsSize);
-  const numAsks = toNum(header.marketSizeParams.asksSize);
-  const numTraders = toNum(header.marketSizeParams.numSeats);
-  const bidsSize =
-    16 + 16 + (16 + orderIdBeet.byteSize + restingOrderBeet.byteSize) * numBids;
-  const asksSize =
-    16 + 16 + (16 + orderIdBeet.byteSize + restingOrderBeet.byteSize) * numAsks;
-  const tradersSize =
-    16 + 16 + (16 + 32 + traderStateBeet.byteSize) * numTraders;
-  offset = 0;
-
-  const bidBuffer = remaining.subarray(offset, offset + bidsSize);
-  offset += bidsSize;
-  const askBuffer = remaining.subarray(offset, offset + asksSize);
-  offset += asksSize;
-  const traderBuffer = remaining.subarray(offset, offset + tradersSize);
-
-  const bidsUnsorted = deserializeRedBlackTree(
-    bidBuffer,
-    orderIdBeet,
-    restingOrderBeet
-  );
-  const asksUnsorted = deserializeRedBlackTree(
-    askBuffer,
-    orderIdBeet,
-    restingOrderBeet
-  );
-
-  // TODO: Respect price-time ordering
-  const bids = [...bidsUnsorted].sort(
-    (a, b) => toNum(-a[0].priceInTicks) + toNum(b[0].priceInTicks)
-  );
-
-  // TODO: Respect price-time ordering
-  const asks = [...asksUnsorted].sort(
-    (a, b) => toNum(a[0].priceInTicks) - toNum(b[0].priceInTicks)
-  );
-
-  let traders = new Map<PublicKey, TraderState>();
-  for (const [k, traderState] of deserializeRedBlackTree(
-    traderBuffer,
-    publicKeyBeet,
-    traderStateBeet
-  )) {
-    traders.set(k.publicKey, traderState);
-  }
-
-  return {
-    header,
-    baseLotsPerBaseUnit,
-    quoteLotsPerBaseUnitPerTick,
-    sequenceNumber,
-    takerFeeBps,
-    collectedAdjustedQuoteLotFees,
-    unclaimedAdjustedQuoteLotFees,
-    bids,
-    asks,
-    traders,
-  };
-}
-
-/**
- * Deserializes a RedBlackTree from a given buffer
- * @description This deserialized the RedBlackTree defined in the sokoban library: https://github.com/Ellipsis-Labs/sokoban/tree/master
- *
- * @param data The data buffer to deserialize
- * @param keyDeserializer The deserializer for the tree key
- * @param valueDeserializer The deserializer for the tree value
- */
-export function deserializeRedBlackTree<Key, Value>(
-  data: Buffer,
-  keyDeserializer: beet.BeetArgsStruct<Key>,
-  valueDeserializer: beet.BeetArgsStruct<Value>
-): Map<Key, Value> {
-  let tree = new Map<Key, Value>();
-  let offset = 0;
-  let keySize = keyDeserializer.byteSize;
-  let valueSize = valueDeserializer.byteSize;
-
-  let nodes = new Array<[Key, Value]>();
-
-  // skip RBTree header
-  offset += 16;
-
-  // Skip node allocator size
-  offset += 8;
-  let bumpIndex = data.readInt32LE(offset);
-  offset += 4;
-  let freeListHead = data.readInt32LE(offset);
-  offset += 4;
-
-  let freeListPointers = new Array<[number, number]>();
-
-  for (let index = 0; offset < data.length && index < bumpIndex; index++) {
-    let registers = new Array<number>();
-    for (let i = 0; i < 4; i++) {
-      registers.push(data.readInt32LE(offset)); // skip padding
-      offset += 4;
-    }
-    let [key] = keyDeserializer.deserialize(
-      data.subarray(offset, offset + keySize)
-    );
-    offset += keySize;
-    let [value] = valueDeserializer.deserialize(
-      data.subarray(offset, offset + valueSize)
-    );
-    offset += valueSize;
-    nodes.push([key, value]);
-    freeListPointers.push([index, registers[0]]);
-  }
-
-  let freeNodes = new Set<number>();
-  let indexToRemove = freeListHead - 1;
-  let counter = 0;
-  // If there's an infinite loop here, that means that the state is corrupted
-  while (freeListHead !== 0) {
-    // We need to subtract 1 because the node allocator is 1-indexed
-    let next = freeListPointers[freeListHead - 1];
-    [indexToRemove, freeListHead] = next;
-    freeNodes.add(indexToRemove);
-    counter += 1;
-    if (counter > bumpIndex) {
-      throw new Error("Infinite loop detected");
-    }
-  }
-
-  for (let [index, [key, value]] of nodes.entries()) {
-    if (!freeNodes.has(index)) {
-      tree.set(key, value);
-    }
-  }
-
-  return tree;
 }

@@ -3,28 +3,29 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import CONFIG from "../config.json";
 import { Token } from "./token";
 import { Market } from "./market";
+import { Trader } from "./trader";
 
 export class Client {
   connection: Connection;
-  trader?: PublicKey;
+  trader: Trader;
   tokens: Array<Token>;
   markets: Array<Market>;
 
   private constructor({
     connection,
-    trader,
     tokens,
     markets,
+    trader,
   }: {
     connection: Connection;
-    trader?: PublicKey;
     tokens: Array<Token>;
     markets: Array<Market>;
+    trader?: Trader;
   }) {
     this.connection = connection;
-    this.trader = trader;
     this.tokens = tokens;
     this.markets = markets;
+    this.trader = trader;
   }
 
   /**
@@ -58,19 +59,20 @@ export class Client {
         const mint = token.data.mintKey.toBase58();
         if (tokens.find((t) => t.data.mintKey.toBase58() === mint)) continue;
         tokens.push(token);
-
-        // If client provided a trader, get their balance of the token
-        if (trader) {
-          await token.setTokenBalanceAndSubcribe(connection, trader);
-        }
       }
     }
 
     return new Client({
       connection,
-      trader,
       tokens,
       markets,
+      trader: trader
+        ? await Trader.create({
+            connection,
+            pubkey: trader,
+            tokens,
+          })
+        : undefined,
     });
   }
 }

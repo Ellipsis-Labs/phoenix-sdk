@@ -29,9 +29,9 @@ export async function swap() {
   );
 
   const swapTransaction = market.getSwapTransaction({
+    trader: trader.publicKey,
     side,
     inAmount,
-    trader: trader.publicKey,
   });
 
   const txId = await sendAndConfirmTransaction(
