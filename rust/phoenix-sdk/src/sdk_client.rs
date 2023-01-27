@@ -11,7 +11,7 @@ use phoenix_types::enums::*;
 use phoenix_types::instructions::PhoenixInstruction;
 use phoenix_types::market::*;
 use rand::{rngs::StdRng, SeedableRng};
-use solana_client::rpc_client::RpcClient;
+use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_program::instruction::Instruction;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
@@ -66,7 +66,7 @@ impl SDKClient {
     }
 
     pub async fn new(market_key: &Pubkey, payer: &Keypair, url: &str) -> Self {
-        let rpc = RpcClient::new_with_commitment(url, CommitmentConfig::confirmed());
+        let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
         let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client"); //fix error handling instead of panic
 
         SDKClient::new_from_ellipsis_client(market_key, client).await
