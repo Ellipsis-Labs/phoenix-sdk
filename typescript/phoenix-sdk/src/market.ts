@@ -9,7 +9,7 @@ import {
   getMarketLadder,
   getMarketUiLadder,
   printUiLadder,
-  getSwapTransaction as getMarketSwapTransaction,
+  getMarketSwapTransaction,
 } from "./utils";
 import { Token } from "./token";
 

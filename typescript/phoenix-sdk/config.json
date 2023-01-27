@@ -1,7 +1,5 @@
 {
   "devnet": {
-    "programId": "phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH",
-    "wrapperProgramId": "WRAPYChf58WFCnyjXKJHtrPgzKXgHp6MD9aVDqJBbGh",
     "tokens": [
       {
         "name": "USD Coin",
@@ -25,8 +23,6 @@
     "markets": ["5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8", "87dvn2VMw3zjsyiR5i9LNKnaxXNdB7dJUjpp3QMC77Xw"]
   },
   "mainnet-beta": {
-    "programId": "",
-    "wrapperProgramId": "",
     "tokens": [
       {
         "name": "USD Coin",

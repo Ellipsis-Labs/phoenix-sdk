@@ -1,6 +1,12 @@
 import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import {
   Connection,
+  PublicKey,
   Keypair,
+  Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import base58 from "bs58";
@@ -16,9 +22,17 @@ export async function swap() {
     )
   );
 
-  const phoenix = await Phoenix.Client.create(connection);
-  const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
-  if (!market) throw Error("SOL/USDC market not found");
+  const marketAddress = new PublicKey(
+    "5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8"
+  );
+  const marketAccount = await connection.getAccountInfo(marketAddress);
+  if (!marketAccount)
+    throw Error(
+      "Market account not found for address: " + marketAddress.toBase58()
+    );
+  const marketData = Phoenix.deserializeMarketData(
+    Buffer.from(marketAccount.data)
+  );
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
   const inAmount = side === Phoenix.Side.Ask ? 1 : 100;
@@ -28,18 +42,82 @@ export async function swap() {
     side === Phoenix.Side.Ask ? "SOL" : "USDC"
   );
 
-  const swapTransaction = market.getSwapTransaction({
+  const baseAccount = PublicKey.findProgramAddressSync(
+    [
+      trader.publicKey.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      marketData.header.baseParams.mintKey.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  )[0];
+  const quoteAccount = PublicKey.findProgramAddressSync(
+    [
+      trader.publicKey.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      marketData.header.quoteParams.mintKey.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  )[0];
+  const logAuthority = PublicKey.findProgramAddressSync(
+    [Buffer.from("log")],
+    Phoenix.PROGRAM_ID
+  )[0];
+
+  const orderAccounts = {
+    phoenixProgram: Phoenix.PROGRAM_ID,
+    logAuthority,
+    market: marketAddress,
+    trader: trader.publicKey,
+    baseAccount,
+    quoteAccount,
+    quoteVault: marketData.header.quoteParams.vaultKey,
+    baseVault: marketData.header.baseParams.vaultKey,
+  };
+
+  const orderPacket = Phoenix.getMarketSwapOrderPacket({
+    marketData,
+    side,
+    inAmount,
+  });
+
+  const swapIx = Phoenix.createSwapInstruction(orderAccounts, {
+    // @ts-ignore TODO why is __kind incompatible?
+    orderPacket: {
+      __kind: "ImmediateOrCancel",
+      ...orderPacket,
+    },
+  });
+
+  const controlTx = new Transaction().add(swapIx);
+
+  const swapTx = Phoenix.getMarketSwapTransaction({
+    marketAddress,
+    marketData,
     trader: trader.publicKey,
     side,
     inAmount,
   });
 
-  const txId = await sendAndConfirmTransaction(
-    connection,
-    swapTransaction,
-    [trader],
-    { skipPreflight: true, commitment: "confirmed" }
+  if (JSON.stringify(controlTx) !== JSON.stringify(swapTx))
+    throw Error(
+      "Manually created transaction does not match the one created by the SDK"
+    );
+
+  const expectedOutAmount = Phoenix.getExpectedOutAmount({
+    marketData,
+    side,
+    inAmount,
+  });
+  console.log(
+    "Expected out amount:",
+    expectedOutAmount,
+    side === Phoenix.Side.Ask ? "USDC" : "SOL"
   );
+
+  const txId = await sendAndConfirmTransaction(connection, swapTx, [trader], {
+    skipPreflight: true,
+    commitment: "confirmed",
+  });
   console.log("Transaction ID: ", txId);
 
   // Wait for transaction to be confirmed (up to 10 tries)
@@ -62,7 +140,7 @@ export async function swap() {
     console.log(
       "Filled",
       Phoenix.toNum(summary.totalBaseLotsFilled) /
-        market.data.baseLotsPerBaseUnit,
+        marketData.baseLotsPerBaseUnit,
       "SOL"
     );
   } else {
@@ -71,16 +149,16 @@ export async function swap() {
       inAmount,
       "SOL for",
       (Phoenix.toNum(summary.totalQuoteLotsFilled) *
-        Phoenix.toNum(market.data.header.quoteLotSize)) /
-        10 ** market.data.header.quoteParams.decimals,
+        Phoenix.toNum(marketData.header.quoteLotSize)) /
+        10 ** marketData.header.quoteParams.decimals,
       "USDC"
     );
   }
 
   const fees =
     (Phoenix.toNum(summary.totalFeeInQuoteLots) *
-      Phoenix.toNum(market.data.header.quoteLotSize)) /
-    10 ** market.data.header.quoteParams.decimals;
+      Phoenix.toNum(marketData.header.quoteLotSize)) /
+    10 ** marketData.header.quoteParams.decimals;
   console.log(`Paid $${fees} in fees`);
 }
 

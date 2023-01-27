@@ -195,7 +195,7 @@ export function deserializeRedBlackTree<Key, Value>(
 }
 
 /**
- * Returns a market's ladder of bids and asks
+ * Returns a ladder of bids and asks for given `MarketData`
  *
  * @param marketData The `MarketData` to get the ladder from
  * @param levels The number of book levels to return
@@ -279,7 +279,7 @@ function levelToUiLevel(
 }
 
 /**
- * Returns the market's ladder of bids and asks as JS numbers
+ * Returns the ladder of bids and asks as JS numbers for given `MarketData`
  *
  * @param marketData The `MarketData` to get the ladder from
  * @param levels The number of book levels to return
@@ -356,7 +356,7 @@ export function printUiLadder(uiLadder: UiLadder) {
  * @param trader The trader's wallet public key
  * @param clientOrderId The client order ID (optional)
  */
-export function getSwapTransaction({
+export function getMarketSwapTransaction({
   marketAddress,
   marketData,
   trader,
@@ -403,7 +403,7 @@ export function getSwapTransaction({
     baseVault: marketData.header.baseParams.vaultKey,
   };
 
-  const orderPacket = getSwapOrderPacket({
+  const orderPacket = getMarketSwapOrderPacket({
     marketData,
     side,
     inAmount,
@@ -433,7 +433,7 @@ export function getSwapTransaction({
  * @param clientOrderId The client order ID (optional)
  * @param useOnlyDepositedFunds Whether to use only deposited funds (optional)
  */
-export function getSwapOrderPacket({
+export function getMarketSwapOrderPacket({
   marketData,
   side,
   inAmount,
@@ -507,6 +507,8 @@ export function getSwapOrderPacket({
  * @param market The market to calculate the amount out for
  * @param side The side of the order (Bid or Ask)
  * @param inAmount The amount of the input token
+ *
+ * TODO this should use getMarketLadder and adjust its calculation
  */
 export function getExpectedOutAmount({
   marketData,
@@ -519,43 +521,35 @@ export function getExpectedOutAmount({
 }): number {
   const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
   const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
-  const ladder = getMarketLadder(marketData, Math.max(numBids, numAsks));
+  const ladder = getMarketUiLadder(marketData, Math.max(numBids, numAsks));
 
-  let remainingUnits = toBN(inAmount * (1 - marketData.takerFeeBps / 10000));
-  let expectedUnitsReceived = toBN(0);
+  let remainingUnits = inAmount * (1 - marketData.takerFeeBps / 10000);
+  let expectedUnitsReceived = 0;
   if (side === Side.Bid) {
     for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.asks) {
-      const totalQuoteUnitsAvailable = sizeInBaseUnits.mul(
-        priceInQuoteUnitsPerBaseUnit
-      );
-
-      if (totalQuoteUnitsAvailable.gt(remainingUnits)) {
-        expectedUnitsReceived.iadd(
-          remainingUnits.div(priceInQuoteUnitsPerBaseUnit)
-        );
-        remainingUnits = toBN(0);
+      let totalQuoteUnitsAvailable =
+        sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
+      if (totalQuoteUnitsAvailable > remainingUnits) {
+        expectedUnitsReceived += remainingUnits / priceInQuoteUnitsPerBaseUnit;
+        remainingUnits = 0;
         break;
       } else {
-        expectedUnitsReceived.iadd(sizeInBaseUnits);
-        remainingUnits.isub(totalQuoteUnitsAvailable);
+        expectedUnitsReceived += sizeInBaseUnits;
+        remainingUnits -= totalQuoteUnitsAvailable;
       }
     }
   } else {
     for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.bids) {
-      if (sizeInBaseUnits.gt(remainingUnits)) {
-        expectedUnitsReceived.iadd(
-          remainingUnits.mul(priceInQuoteUnitsPerBaseUnit)
-        );
-        remainingUnits = toBN(0);
+      if (sizeInBaseUnits > remainingUnits) {
+        expectedUnitsReceived += remainingUnits * priceInQuoteUnitsPerBaseUnit;
+        remainingUnits = 0;
         break;
       } else {
-        expectedUnitsReceived.iadd(
-          sizeInBaseUnits.mul(priceInQuoteUnitsPerBaseUnit)
-        );
-        remainingUnits.isub(sizeInBaseUnits);
+        expectedUnitsReceived += sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
+        remainingUnits -= sizeInBaseUnits;
       }
     }
   }
 
-  return toNum(expectedUnitsReceived);
+  return expectedUnitsReceived;
 }
