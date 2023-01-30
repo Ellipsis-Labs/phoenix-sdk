@@ -55,7 +55,7 @@ export class Trader {
       // Set current token balance
       const tokenAccount = tokenAccounts.value[0];
       trader.tokenBalances[token.data.mintKey.toBase58()] =
-        getTokenAmountFromRawAccount(
+        getTokenAmountFromBuffer(
           tokenAccount.account.data,
           token.data.decimals
         );
@@ -63,7 +63,7 @@ export class Trader {
       // Subscribe to token balance updates
       connection.onAccountChange(tokenAccount.pubkey, (accountInfo) => {
         trader.tokenBalances[token.data.mintKey.toBase58()] =
-          getTokenAmountFromRawAccount(accountInfo.data, token.data.decimals);
+          getTokenAmountFromBuffer(accountInfo.data, token.data.decimals);
       });
     }
 
@@ -86,7 +86,7 @@ export class Trader {
       );
 
       const tokenAccount = tokenAccounts.value[0];
-      this.tokenBalances[tokenMint] = getTokenAmountFromRawAccount(
+      this.tokenBalances[tokenMint] = getTokenAmountFromBuffer(
         tokenAccount.account.data,
         this.tokenBalances[tokenMint].decimals
       );
@@ -100,10 +100,7 @@ export class Trader {
  * @param data The token account data buffer
  * @param decimals The number of decimals for the token
  */
-function getTokenAmountFromRawAccount(
-  data: Buffer,
-  decimals: number
-): TokenAmount {
+function getTokenAmountFromBuffer(data: Buffer, decimals: number): TokenAmount {
   const tokenAccountRaw = AccountLayout.decode(data);
   const amount = tokenAccountRaw.amount.toString();
   return {
