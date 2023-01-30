@@ -86,12 +86,10 @@ export class Trader {
       );
 
       const tokenAccount = tokenAccounts.value[0];
-      const tokenAccountData = AccountLayout.decode(tokenAccount.account.data);
-      this.tokenBalances[tokenMint] = {
-        amount: tokenAccountData.amount.toString(),
-        decimals: 6,
-        uiAmount: parseInt(tokenAccountData.amount.toString()) / 10 ** 6,
-      };
+      this.tokenBalances[tokenMint] = getTokenAmountFromRawAccount(
+        tokenAccount.account.data,
+        this.tokenBalances[tokenMint].decimals
+      );
     }
   }
 }
