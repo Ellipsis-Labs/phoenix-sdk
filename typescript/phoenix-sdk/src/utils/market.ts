@@ -529,7 +529,10 @@ export function getMarketExpectedOutAmount({
   let remainingUnits = inAmount * (1 - marketData.takerFeeBps / 10000);
   let expectedUnitsReceived = 0;
   if (side === Side.Bid) {
-    for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.asks) {
+    for (const [
+      priceInQuoteUnitsPerBaseUnit,
+      sizeInBaseUnits,
+    ] of ladder.asks.reverse()) {
       let totalQuoteUnitsAvailable =
         sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
       if (totalQuoteUnitsAvailable > remainingUnits) {
