@@ -196,6 +196,7 @@ export function deserializeRedBlackTree<Key, Value>(
 
 /**
  * Returns a ladder of bids and asks for given `MarketData`
+ * @description Bids are ordered in descending order by price, and asks are ordered in ascending order by price
  *
  * @param marketData The `MarketData` to get the ladder from
  * @param levels The number of book levels to return
@@ -250,7 +251,7 @@ export function getMarketLadder(
   }
 
   return {
-    asks: asks.reverse().slice(0, levels),
+    asks: asks.slice(0, levels),
     bids: bids.slice(0, levels),
   };
 }
@@ -319,7 +320,7 @@ export function getMarketUiLadder(
  */
 export function printUiLadder(uiLadder: UiLadder) {
   const bids = uiLadder.bids;
-  const asks = uiLadder.asks;
+  const asks = uiLadder.asks.reverse();
 
   const maxBaseSize = Math.max(
     ...bids.map((b) => b[1]),
@@ -529,10 +530,7 @@ export function getMarketExpectedOutAmount({
   let remainingUnits = inAmount * (1 - marketData.takerFeeBps / 10000);
   let expectedUnitsReceived = 0;
   if (side === Side.Bid) {
-    for (const [
-      priceInQuoteUnitsPerBaseUnit,
-      sizeInBaseUnits,
-    ] of ladder.asks.reverse()) {
+    for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.asks) {
       let totalQuoteUnitsAvailable =
         sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
       if (totalQuoteUnitsAvailable > remainingUnits) {
