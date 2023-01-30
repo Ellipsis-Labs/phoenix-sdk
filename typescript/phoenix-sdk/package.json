@@ -13,7 +13,7 @@
     "@metaplex-foundation/beet": "^0.7.1",
     "@metaplex-foundation/rustbin": "^0.3.1",
     "@metaplex-foundation/solita": "^0.12.2",
-    "@solana/spl-token": "0.1.8",
+    "@solana/spl-token": "^0.3.7",
     "@types/node": "^18.11.13",
     "bn.js": "^5.2.1",
     "borsh": "^0.7.0",

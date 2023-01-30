@@ -54,27 +54,16 @@ export class Trader {
 
       // Set current token balance
       const tokenAccount = tokenAccounts.value[0];
-      const tokenAccountData = AccountLayout.decode(tokenAccount.account.data);
-      trader.tokenBalances[token.data.mintKey.toBase58()] = {
-        amount: tokenAccountData.amount.toString(),
-        decimals: tokenAccountData.decimals,
-        uiAmount:
-          parseInt(tokenAccountData.amount.toString()) /
-          10 ** tokenAccountData.decimals,
-      };
+      trader.tokenBalances[token.data.mintKey.toBase58()] =
+        getTokenAmountFromBuffer(
+          tokenAccount.account.data,
+          token.data.decimals
+        );
 
       // Subscribe to token balance updates
       connection.onAccountChange(tokenAccount.pubkey, (accountInfo) => {
-        const tokenAccountData = AccountLayout.decode(accountInfo.data);
-        const balance: TokenAmount = {
-          amount: tokenAccountData.amount.toString(),
-          decimals: tokenAccountData.decimals,
-          uiAmount:
-            parseInt(tokenAccountData.amount.toString()) /
-            10 ** tokenAccountData.decimals,
-        };
-
-        trader.tokenBalances[token.data.mintKey.toBase58()] = balance;
+        trader.tokenBalances[token.data.mintKey.toBase58()] =
+          getTokenAmountFromBuffer(accountInfo.data, token.data.decimals);
       });
     }
 
@@ -97,14 +86,26 @@ export class Trader {
       );
 
       const tokenAccount = tokenAccounts.value[0];
-      const tokenAccountData = AccountLayout.decode(tokenAccount.account.data);
-      this.tokenBalances[tokenMint] = {
-        amount: tokenAccountData.amount.toString(),
-        decimals: tokenAccountData.decimals,
-        uiAmount:
-          parseInt(tokenAccountData.amount.toString()) /
-          10 ** tokenAccountData.decimals,
-      };
+      this.tokenBalances[tokenMint] = getTokenAmountFromBuffer(
+        tokenAccount.account.data,
+        this.tokenBalances[tokenMint].decimals
+      );
     }
   }
+}
+
+/**
+ * Returns a `TokenAmount` object from a token account data buffer
+ *
+ * @param data The token account data buffer
+ * @param decimals The number of decimals for the token
+ */
+function getTokenAmountFromBuffer(data: Buffer, decimals: number): TokenAmount {
+  const tokenAccountRaw = AccountLayout.decode(data);
+  const amount = tokenAccountRaw.amount.toString();
+  return {
+    amount,
+    decimals,
+    uiAmount: parseInt(amount) / 10 ** decimals,
+  };
 }
