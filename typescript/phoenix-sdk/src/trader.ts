@@ -1,4 +1,4 @@
-import { TOKEN_PROGRAM_ID, AccountLayout, RawAccount } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token";
 import { Connection, PublicKey, TokenAmount } from "@solana/web3.js";
 
 import { Token } from "./token";
