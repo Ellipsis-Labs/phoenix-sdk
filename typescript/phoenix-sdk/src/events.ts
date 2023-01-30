@@ -4,8 +4,10 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import { BinaryReader } from "borsh";
-import { PROGRAM_ID } from "./index";
 import base58 from "bs58";
+import BN from "bn.js";
+
+import { PROGRAM_ID } from "./index";
 import {
   AuditLogHeader,
   EvictEvent,
@@ -16,7 +18,7 @@ import {
   ReduceEvent,
   PhoenixMarketEvent,
 } from "./types";
-import { logInstructionDiscriminator } from "./instructions/Log";
+import { logInstructionDiscriminator } from "./instructions";
 
 export type PhoenixTransaction = {
   instructions: Array<PhoenixEvent>;
@@ -101,7 +103,7 @@ export async function getEventsFromTransaction(
           tradeEvents.push({
             index: reader.readU16(),
             makerId: readPublicKey(reader),
-            orderSequenceNumber: reader.readFixedArray(8),
+            orderSequenceNumber: new BN(reader.readFixedArray(8)),
             priceInTicks: reader.readU64(),
             baseLotsFilled: reader.readU64(),
             baseLotsRemaining: reader.readU64(),
@@ -110,7 +112,7 @@ export async function getEventsFromTransaction(
         case PhoenixMarketEvent.Place:
           tradeEvents.push({
             index: reader.readU16(),
-            orderSequenceNumber: reader.readFixedArray(8),
+            orderSequenceNumber: new BN(reader.readFixedArray(8)),
             clientOrderId: reader.readU64(),
             priceInTicks: reader.readU64(),
             baseLotsPlaced: reader.readU64(),
