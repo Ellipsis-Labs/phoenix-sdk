@@ -94,11 +94,11 @@ export class Client {
    */
   async unsubscribe() {
     for (const market of this.markets) {
-      market.unsubscribe(this.connection);
+      await market.unsubscribe(this.connection);
     }
 
     if (this.trader) {
-      this.trader.unsubscribe(this.connection);
+      await this.trader.unsubscribe(this.connection);
     }
   }
 }
