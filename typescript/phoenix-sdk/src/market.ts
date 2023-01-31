@@ -22,22 +22,65 @@ export type OrderId = {
 export type RestingOrder = {
   traderIndex: beet.bignum;
   numBaseLots: beet.bignum;
+  padding_1: beet.bignum;
+  padding_2: beet.bignum;
 };
+
+export const restingOrderBeet = new beet.BeetArgsStruct<RestingOrder>(
+  [
+    ["traderIndex", beet.u64],
+    ["numBaseLots", beet.u64],
+    ["padding_1", beet.u64],
+    ["padding_2", beet.u64],
+  ],
+  "fIFORestingOrder"
+);
 
 export type TraderState = {
   quoteLotsLocked: beet.bignum;
   quoteLotsFree: beet.bignum;
   baseLotsLocked: beet.bignum;
   baseLotsFree: beet.bignum;
+  padding_1: beet.bignum;
+  padding_2: beet.bignum;
+  padding_3: beet.bignum;
+  padding_4: beet.bignum;
+  padding_5: beet.bignum;
+  padding_6: beet.bignum;
+  padding_7: beet.bignum;
+  padding_8: beet.bignum;
 };
 
 export type Ladder = {
   bids: Array<[BN, BN]>;
   asks: Array<[BN, BN]>;
 };
+
 export type UiLadder = {
   bids: Array<[number, number]>;
   asks: Array<[number, number]>;
+};
+
+export const traderStateBeet = new beet.BeetArgsStruct<TraderState>(
+  [
+    ["quoteLotsLocked", beet.u64],
+    ["quoteLotsFree", beet.u64],
+    ["baseLotsLocked", beet.u64],
+    ["baseLotsFree", beet.u64],
+    ["padding_1", beet.u64],
+    ["padding_2", beet.u64],
+    ["padding_3", beet.u64],
+    ["padding_4", beet.u64],
+    ["padding_5", beet.u64],
+    ["padding_6", beet.u64],
+    ["padding_7", beet.u64],
+    ["padding_8", beet.u64],
+  ],
+  "TraderState"
+);
+
+type PubkeyWrapper = {
+  publicKey: PublicKey;
 };
 
 export interface MarketData {
