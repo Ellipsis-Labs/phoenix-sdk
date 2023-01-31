@@ -59,21 +59,23 @@ export class Trader {
    */
   async refresh(connection: Connection) {
     // Refresh token balances
-    for (const mintKey in this.tokenBalances) {
-      const tokenAccounts = await connection.getTokenAccountsByOwner(
-        this.pubkey,
-        {
-          programId: TOKEN_PROGRAM_ID,
-          mint: new PublicKey(mintKey),
-        }
-      );
+    await Promise.all(
+      Object.keys(this.tokenBalances).map(async (mintKey) => {
+        const tokenAccounts = await connection.getTokenAccountsByOwner(
+          this.pubkey,
+          {
+            programId: TOKEN_PROGRAM_ID,
+            mint: new PublicKey(mintKey),
+          }
+        );
 
-      const tokenAccount = tokenAccounts.value[0];
-      this.tokenBalances[mintKey] = getTokenAmountFromBuffer(
-        tokenAccount.account.data,
-        this.tokenBalances[mintKey].decimals
-      );
-    }
+        const tokenAccount = tokenAccounts.value[0];
+        this.tokenBalances[mintKey] = getTokenAmountFromBuffer(
+          tokenAccount.account.data,
+          this.tokenBalances[mintKey].decimals
+        );
+      })
+    );
   }
 
   /**
@@ -82,28 +84,30 @@ export class Trader {
    * @param connection The Solana `Connection` object
    */
   async subscribe(connection: Connection) {
-    // Subscribe to token balance updates
-    for (const mintKey in this.tokenBalances) {
-      const tokenAccounts = await connection.getTokenAccountsByOwner(
-        this.pubkey,
-        {
-          programId: TOKEN_PROGRAM_ID,
-          mint: new PublicKey(mintKey),
-        }
-      );
+    // Subscribe to token balance updates in promise.all
+    await Promise.all(
+      Object.keys(this.tokenBalances).map(async (mintKey) => {
+        const tokenAccounts = await connection.getTokenAccountsByOwner(
+          this.pubkey,
+          {
+            programId: TOKEN_PROGRAM_ID,
+            mint: new PublicKey(mintKey),
+          }
+        );
 
-      const tokenAccount = tokenAccounts.value[0];
-      const subId = connection.onAccountChange(
-        tokenAccount.pubkey,
-        (accountInfo) => {
-          this.tokenBalances[mintKey] = getTokenAmountFromBuffer(
-            accountInfo.data,
-            this.tokenBalances[mintKey].decimals
-          );
-        }
-      );
-      this.subscriptions.push(subId);
-    }
+        const tokenAccount = tokenAccounts.value[0];
+        const subId = connection.onAccountChange(
+          tokenAccount.pubkey,
+          (accountInfo) => {
+            this.tokenBalances[mintKey] = getTokenAmountFromBuffer(
+              accountInfo.data,
+              this.tokenBalances[mintKey].decimals
+            );
+          }
+        );
+        this.subscriptions.push(subId);
+      })
+    );
   }
 
   /**
@@ -111,10 +115,12 @@ export class Trader {
    *
    * @param connection The Solana `Connection` object
    */
-  unsubscribe(connection: Connection) {
-    for (const subId of this.subscriptions) {
-      connection.removeAccountChangeListener(subId);
-    }
+  async unsubscribe(connection: Connection) {
+    await Promise.all(
+      this.subscriptions.map((subId) =>
+        connection.removeAccountChangeListener(subId)
+      )
+    );
 
     this.subscriptions = [];
   }

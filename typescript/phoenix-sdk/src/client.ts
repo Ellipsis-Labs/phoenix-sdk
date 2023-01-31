@@ -80,11 +80,10 @@ export class Client {
    * Subscribes to all market and trader changes
    */
   subscribe() {
-    if (this.markets.length) {
-      for (const market of this.markets) {
-        market.subscribe(this.connection);
-      }
+    for (const market of this.markets) {
+      market.subscribe(this.connection);
     }
+
     if (this.trader) {
       this.trader.subscribe(this.connection);
     }
@@ -93,12 +92,11 @@ export class Client {
   /**
    * Unsubscribes from all subscriptions when the client is no longer needed
    */
-  unsubscribe() {
-    if (this.markets.length) {
-      for (const market of this.markets) {
-        market.unsubscribe(this.connection);
-      }
+  async unsubscribe() {
+    for (const market of this.markets) {
+      market.unsubscribe(this.connection);
     }
+
     if (this.trader) {
       this.trader.unsubscribe(this.connection);
     }

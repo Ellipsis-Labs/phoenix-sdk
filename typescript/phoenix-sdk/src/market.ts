@@ -232,7 +232,7 @@ export class Market {
    *
    * @param connection The Solana `Connection` object
    */
-  async subscribe(connection: Connection) {
+  subscribe(connection: Connection) {
     const subId = connection.onAccountChange(this.address, (account) => {
       const marketData = deserializeMarketData(account.data);
       this.data = marketData;
@@ -245,10 +245,12 @@ export class Market {
    *
    * @param connection The Solana `Connection` object
    */
-  unsubscribe(connection: Connection) {
-    for (const subId of this.subscriptions) {
-      connection.removeAccountChangeListener(subId);
-    }
+  async unsubscribe(connection: Connection) {
+    await Promise.all(
+      this.subscriptions.map((subId) =>
+        connection.removeAccountChangeListener(subId)
+      )
+    );
 
     this.subscriptions = [];
   }
