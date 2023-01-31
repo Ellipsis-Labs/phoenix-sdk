@@ -1,7 +1,9 @@
 {
   "name": "@ellipsis-labs/phoenix-sdk",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "TypeScript SDK for Phoenix",
+  "author": "Ellipsis Labs",
+  "repository": "https://github.com/Ellipsis-Labs/phoenix-sdk",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "license": "MIT",
