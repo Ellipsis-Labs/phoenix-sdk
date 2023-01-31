@@ -38,7 +38,8 @@ export function deserializeMarketData(data: Buffer): MarketData {
   const [header] = marketHeaderBeet.deserialize(data.subarray(0, offset));
 
   // Parse market data
-  let remaining = data.subarray(offset);
+  let paddingLen = 8 * 32;
+  let remaining = data.subarray(offset + paddingLen);
   offset = 0;
   const baseLotsPerBaseUnit = Number(remaining.readBigUInt64LE(offset));
   offset += 8;
