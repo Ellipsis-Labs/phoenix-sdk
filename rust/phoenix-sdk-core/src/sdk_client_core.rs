@@ -724,6 +724,7 @@ impl SDKClientCore {
         for &FIFOOrderId {
             price_in_ticks,
             order_sequence_number,
+            ..
         } in ids.iter()
         {
             cancel_orders.push(CancelOrderParams {
