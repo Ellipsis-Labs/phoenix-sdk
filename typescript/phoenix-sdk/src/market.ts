@@ -59,7 +59,7 @@ export class Market {
   baseToken: Token;
   quoteToken: Token;
   data: MarketData;
-  subscriptions: Array<number>;
+  private subscriptions: Array<number>;
 
   private constructor({
     name,
@@ -67,21 +67,19 @@ export class Market {
     baseToken,
     quoteToken,
     data,
-    subscriptions,
   }: {
     name: string;
     address: PublicKey;
     baseToken: Token;
     quoteToken: Token;
     data: MarketData;
-    subscriptions: Array<number>;
   }) {
     this.name = name;
     this.address = address;
     this.baseToken = baseToken;
     this.quoteToken = quoteToken;
     this.data = data;
-    this.subscriptions = subscriptions;
+    this.subscriptions = [];
   }
 
   /**
@@ -138,16 +136,7 @@ export class Market {
       baseToken,
       quoteToken,
       data: marketData,
-      subscriptions: [],
     });
-
-    // Subscription to market updates
-    const subId = connection.onAccountChange(address, (account) => {
-      const buffer = Buffer.from(account.data);
-      const marketData = deserializeMarketData(buffer);
-      market.data = marketData;
-    });
-    market.subscriptions.push(subId);
 
     return market;
   }
@@ -239,6 +228,19 @@ export class Market {
   }
 
   /**
+   * Subscribes to updates on the market
+   *
+   * @param connection The Solana `Connection` object
+   */
+  async subscribe(connection: Connection) {
+    const subId = connection.onAccountChange(this.address, (account) => {
+      const marketData = deserializeMarketData(account.data);
+      this.data = marketData;
+    });
+    this.subscriptions.push(subId);
+  }
+
+  /**
    * Unsubscribes from updates when the market is no longer needed
    *
    * @param connection The Solana `Connection` object
@@ -247,5 +249,7 @@ export class Market {
     for (const subId of this.subscriptions) {
       connection.removeAccountChangeListener(subId);
     }
+
+    this.subscriptions = [];
   }
 }

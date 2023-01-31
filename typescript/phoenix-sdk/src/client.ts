@@ -69,7 +69,7 @@ export class Client {
       trader: trader
         ? await Trader.create({
             connection,
-            publicKey: trader,
+            pubkey: trader,
             tokens,
           })
         : undefined,
@@ -77,10 +77,30 @@ export class Client {
   }
 
   /**
+   * Subscribes to all market and trader changes
+   */
+  subscribe() {
+    if (this.markets.length) {
+      for (const market of this.markets) {
+        market.subscribe(this.connection);
+      }
+    }
+    if (this.trader) {
+      this.trader.subscribe(this.connection);
+    }
+  }
+
+  /**
    * Unsubscribes from all subscriptions when the client is no longer needed
    */
   unsubscribe() {
-    this.markets.forEach((market) => market.unsubscribe(this.connection));
-    this.trader.unsubscribe(this.connection);
+    if (this.markets.length) {
+      for (const market of this.markets) {
+        market.unsubscribe(this.connection);
+      }
+    }
+    if (this.trader) {
+      this.trader.unsubscribe(this.connection);
+    }
   }
 }
