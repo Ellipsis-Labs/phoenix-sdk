@@ -5,22 +5,22 @@ import { Token } from "./token";
 
 // TODO would be nice to add other stuff like orders, history, etc.
 export class Trader {
-  private connection: Connection;
   pubkey: PublicKey;
   tokenBalances: Record<string, TokenAmount>;
+  private subscriptions: Array<number>;
 
   private constructor({
-    connection,
     pubkey,
     tokenBalances,
+    subscriptions,
   }: {
-    connection: Connection;
     pubkey: PublicKey;
     tokenBalances: Record<string, TokenAmount>;
+    subscriptions: Array<number>;
   }) {
-    this.connection = connection;
     this.pubkey = pubkey;
     this.tokenBalances = tokenBalances;
+    this.subscriptions = subscriptions;
   }
 
   /**
@@ -39,7 +39,7 @@ export class Trader {
     tokens: Array<Token>;
   }): Promise<Trader> {
     const trader = new Trader({
-      connection,
+      subscriptions: [],
       pubkey,
       tokenBalances: {},
     });
@@ -61,10 +61,14 @@ export class Trader {
         );
 
       // Subscribe to token balance updates
-      connection.onAccountChange(tokenAccount.pubkey, (accountInfo) => {
-        trader.tokenBalances[token.data.mintKey.toBase58()] =
-          getTokenAmountFromBuffer(accountInfo.data, token.data.decimals);
-      });
+      const subId = connection.onAccountChange(
+        tokenAccount.pubkey,
+        (accountInfo) => {
+          trader.tokenBalances[token.data.mintKey.toBase58()] =
+            getTokenAmountFromBuffer(accountInfo.data, token.data.decimals);
+        }
+      );
+      trader.subscriptions.push(subId);
     }
 
     return trader;
@@ -72,24 +76,36 @@ export class Trader {
 
   /**
    * Refreshes the trader data
+   *
+   * @param connection The Solana `Connection` object
    */
-  async refresh() {
+  async refresh(connection: Connection) {
     // Refresh token balances
-    for (const tokenMint in this.tokenBalances) {
-      const mint = new PublicKey(tokenMint);
-      const tokenAccounts = await this.connection.getTokenAccountsByOwner(
-        mint,
+    for (const mintKey in this.tokenBalances) {
+      const tokenAccounts = await connection.getTokenAccountsByOwner(
+        this.pubkey,
         {
           programId: TOKEN_PROGRAM_ID,
-          mint,
+          mint: new PublicKey(mintKey),
         }
       );
 
       const tokenAccount = tokenAccounts.value[0];
-      this.tokenBalances[tokenMint] = getTokenAmountFromBuffer(
+      this.tokenBalances[mintKey] = getTokenAmountFromBuffer(
         tokenAccount.account.data,
-        this.tokenBalances[tokenMint].decimals
+        this.tokenBalances[mintKey].decimals
       );
+    }
+  }
+
+  /**
+   * Unsubscribes from updates when the trader is no longer needed
+   *
+   * @param connection The Solana `Connection` object
+   */
+  destroy(connection: Connection) {
+    for (const subId of this.subscriptions) {
+      connection.removeAccountChangeListener(subId);
     }
   }
 }

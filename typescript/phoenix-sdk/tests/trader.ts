@@ -4,9 +4,12 @@ import * as Phoenix from "../src";
 
 // Ex: ts-node tests/trader.ts {{ PUBLIC_KEY }}
 export async function trader(pubkey: string) {
+  if (!pubkey) throw new Error("Missing public key");
+
   const connection = new Connection("https://qn-devnet.solana.fm/");
   const traderKey = new PublicKey(pubkey);
   const phoenix = await Phoenix.Client.create(connection, traderKey);
+
   console.log(phoenix.trader.tokenBalances);
 }
 

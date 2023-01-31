@@ -54,34 +54,34 @@ export interface MarketData {
 }
 
 export class Market {
-  private connection: Connection;
   name: string;
   address: PublicKey;
   baseToken: Token;
   quoteToken: Token;
   data: MarketData;
+  subscriptions: Array<number>;
 
   private constructor({
-    connection,
     name,
     address,
     baseToken,
     quoteToken,
     data,
+    subscriptions,
   }: {
-    connection: Connection;
     name: string;
     address: PublicKey;
     baseToken: Token;
     quoteToken: Token;
     data: MarketData;
+    subscriptions: Array<number>;
   }) {
-    this.connection = connection;
     this.name = name;
     this.address = address;
     this.baseToken = baseToken;
     this.quoteToken = quoteToken;
     this.data = data;
+    this.subscriptions = subscriptions;
   }
 
   /**
@@ -133,29 +133,32 @@ export class Market {
 
     // Create the market object
     const market = new Market({
-      connection,
       name: `${baseToken.symbol}/${quoteToken.symbol}`,
       address,
       baseToken,
       quoteToken,
       data: marketData,
+      subscriptions: [],
     });
 
     // Subscription to market updates
-    connection.onAccountChange(address, (account) => {
+    const subId = connection.onAccountChange(address, (account) => {
       const buffer = Buffer.from(account.data);
       const marketData = deserializeMarketData(buffer);
       market.data = marketData;
     });
+    market.subscriptions.push(subId);
 
     return market;
   }
 
   /**
    * Refreshes the market data
+   *
+   * @param connection The Solana `Connection` object
    */
-  async refresh() {
-    const account = await this.connection.getAccountInfo(this.address);
+  async refresh(connection: Connection) {
+    const account = await connection.getAccountInfo(this.address);
     if (!account)
       throw new Error(
         "Account not found for market: " + this.address.toBase58()
@@ -233,5 +236,16 @@ export class Market {
       side,
       inAmount,
     });
+  }
+
+  /**
+   * Unsubscribes from updates when the market is no longer needed
+   *
+   * @param connection The Solana `Connection` object
+   */
+  destroy(connection: Connection) {
+    for (const subId of this.subscriptions) {
+      connection.removeAccountChangeListener(subId);
+    }
   }
 }

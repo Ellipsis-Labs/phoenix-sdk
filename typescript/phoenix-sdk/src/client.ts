@@ -54,7 +54,7 @@ export class Client {
       });
       markets.push(market);
 
-      // Set the tokens from the market
+      // Set the tokens from the market (avoiding duplicates)
       for (const token of [market.baseToken, market.quoteToken]) {
         const mint = token.data.mintKey.toBase58();
         if (tokens.find((t) => t.data.mintKey.toBase58() === mint)) continue;
