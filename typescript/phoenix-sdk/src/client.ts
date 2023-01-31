@@ -69,10 +69,18 @@ export class Client {
       trader: trader
         ? await Trader.create({
             connection,
-            pubkey: trader,
+            publicKey: trader,
             tokens,
           })
         : undefined,
     });
+  }
+
+  /**
+   * Unsubscribes from all subscriptions when the client is no longer needed
+   */
+  unsubscribe() {
+    this.markets.forEach((market) => market.unsubscribe(this.connection));
+    this.trader.unsubscribe(this.connection);
   }
 }

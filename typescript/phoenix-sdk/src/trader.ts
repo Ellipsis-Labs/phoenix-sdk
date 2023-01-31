@@ -5,20 +5,20 @@ import { Token } from "./token";
 
 // TODO would be nice to add other stuff like orders, history, etc.
 export class Trader {
-  pubkey: PublicKey;
+  publicKey: PublicKey;
   tokenBalances: Record<string, TokenAmount>;
   private subscriptions: Array<number>;
 
   private constructor({
-    pubkey,
+    publicKey,
     tokenBalances,
     subscriptions,
   }: {
-    pubkey: PublicKey;
+    publicKey: PublicKey;
     tokenBalances: Record<string, TokenAmount>;
     subscriptions: Array<number>;
   }) {
-    this.pubkey = pubkey;
+    this.publicKey = publicKey;
     this.tokenBalances = tokenBalances;
     this.subscriptions = subscriptions;
   }
@@ -31,25 +31,28 @@ export class Trader {
    */
   static async create({
     connection,
-    pubkey,
+    publicKey,
     tokens,
   }: {
     connection: Connection;
-    pubkey: PublicKey;
+    publicKey: PublicKey;
     tokens: Array<Token>;
   }): Promise<Trader> {
     const trader = new Trader({
       subscriptions: [],
-      pubkey,
+      publicKey,
       tokenBalances: {},
     });
 
     // Token balances
     for (const token of tokens) {
-      const tokenAccounts = await connection.getTokenAccountsByOwner(pubkey, {
-        programId: TOKEN_PROGRAM_ID,
-        mint: token.data.mintKey,
-      });
+      const tokenAccounts = await connection.getTokenAccountsByOwner(
+        publicKey,
+        {
+          programId: TOKEN_PROGRAM_ID,
+          mint: token.data.mintKey,
+        }
+      );
       if (tokenAccounts.value.length === 0) continue;
 
       // Set current token balance
@@ -83,7 +86,7 @@ export class Trader {
     // Refresh token balances
     for (const mintKey in this.tokenBalances) {
       const tokenAccounts = await connection.getTokenAccountsByOwner(
-        this.pubkey,
+        this.publicKey,
         {
           programId: TOKEN_PROGRAM_ID,
           mint: new PublicKey(mintKey),
@@ -103,7 +106,7 @@ export class Trader {
    *
    * @param connection The Solana `Connection` object
    */
-  destroy(connection: Connection) {
+  unsubscribe(connection: Connection) {
     for (const subId of this.subscriptions) {
       connection.removeAccountChangeListener(subId);
     }
@@ -119,6 +122,7 @@ export class Trader {
 function getTokenAmountFromBuffer(data: Buffer, decimals: number): TokenAmount {
   const tokenAccountRaw = AccountLayout.decode(data);
   const amount = tokenAccountRaw.amount.toString();
+
   return {
     amount,
     decimals,

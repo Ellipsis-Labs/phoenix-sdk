@@ -243,7 +243,7 @@ export class Market {
    *
    * @param connection The Solana `Connection` object
    */
-  destroy(connection: Connection) {
+  unsubscribe(connection: Connection) {
     for (const subId of this.subscriptions) {
       connection.removeAccountChangeListener(subId);
     }
