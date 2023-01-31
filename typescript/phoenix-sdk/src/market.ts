@@ -54,34 +54,32 @@ export interface MarketData {
 }
 
 export class Market {
-  private connection: Connection;
   name: string;
   address: PublicKey;
   baseToken: Token;
   quoteToken: Token;
   data: MarketData;
+  private subscriptions: Array<number>;
 
   private constructor({
-    connection,
     name,
     address,
     baseToken,
     quoteToken,
     data,
   }: {
-    connection: Connection;
     name: string;
     address: PublicKey;
     baseToken: Token;
     quoteToken: Token;
     data: MarketData;
   }) {
-    this.connection = connection;
     this.name = name;
     this.address = address;
     this.baseToken = baseToken;
     this.quoteToken = quoteToken;
     this.data = data;
+    this.subscriptions = [];
   }
 
   /**
@@ -133,7 +131,6 @@ export class Market {
 
     // Create the market object
     const market = new Market({
-      connection,
       name: `${baseToken.symbol}/${quoteToken.symbol}`,
       address,
       baseToken,
@@ -141,21 +138,16 @@ export class Market {
       data: marketData,
     });
 
-    // Subscription to market updates
-    connection.onAccountChange(address, (account) => {
-      const buffer = Buffer.from(account.data);
-      const marketData = deserializeMarketData(buffer);
-      market.data = marketData;
-    });
-
     return market;
   }
 
   /**
    * Refreshes the market data
+   *
+   * @param connection The Solana `Connection` object
    */
-  async refresh() {
-    const account = await this.connection.getAccountInfo(this.address);
+  async refresh(connection: Connection) {
+    const account = await connection.getAccountInfo(this.address);
     if (!account)
       throw new Error(
         "Account not found for market: " + this.address.toBase58()
@@ -233,5 +225,33 @@ export class Market {
       side,
       inAmount,
     });
+  }
+
+  /**
+   * Subscribes to updates on the market
+   *
+   * @param connection The Solana `Connection` object
+   */
+  subscribe(connection: Connection) {
+    const subId = connection.onAccountChange(this.address, (account) => {
+      const marketData = deserializeMarketData(account.data);
+      this.data = marketData;
+    });
+    this.subscriptions.push(subId);
+  }
+
+  /**
+   * Unsubscribes from updates when the market is no longer needed
+   *
+   * @param connection The Solana `Connection` object
+   */
+  async unsubscribe(connection: Connection) {
+    await Promise.all(
+      this.subscriptions.map((subId) =>
+        connection.removeAccountChangeListener(subId)
+      )
+    );
+
+    this.subscriptions = [];
   }
 }

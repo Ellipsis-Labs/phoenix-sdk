@@ -46,21 +46,23 @@ export class Client {
     const tokens = [];
 
     // For every market:
-    for (const marketAddress of CONFIG[cluster].markets) {
-      // Load the market
-      const market = await Market.load({
-        connection,
-        address: new PublicKey(marketAddress),
-      });
-      markets.push(market);
+    await Promise.all(
+      CONFIG[cluster].markets.map(async (marketAddress: string) => {
+        // Load the market
+        const market = await Market.load({
+          connection,
+          address: new PublicKey(marketAddress),
+        });
+        markets.push(market);
 
-      // Set the tokens from the market
-      for (const token of [market.baseToken, market.quoteToken]) {
-        const mint = token.data.mintKey.toBase58();
-        if (tokens.find((t) => t.data.mintKey.toBase58() === mint)) continue;
-        tokens.push(token);
-      }
-    }
+        // Set the tokens from the market (avoiding duplicates)
+        for (const token of [market.baseToken, market.quoteToken]) {
+          const mint = token.data.mintKey.toBase58();
+          if (tokens.find((t) => t.data.mintKey.toBase58() === mint)) continue;
+          tokens.push(token);
+        }
+      })
+    );
 
     return new Client({
       connection,
@@ -74,5 +76,33 @@ export class Client {
           })
         : undefined,
     });
+  }
+
+  /**
+   * Subscribes to all market and trader changes
+   */
+  subscribe() {
+    for (const market of this.markets) {
+      market.subscribe(this.connection);
+    }
+
+    if (this.trader) {
+      this.trader.subscribe(this.connection);
+    }
+  }
+
+  /**
+   * Unsubscribes from all subscriptions when the client is no longer needed
+   */
+  async unsubscribe() {
+    await Promise.all(
+      this.markets.map(async (market) => {
+        await market.unsubscribe(this.connection);
+      })
+    );
+
+    if (this.trader) {
+      await this.trader.unsubscribe(this.connection);
+    }
   }
 }

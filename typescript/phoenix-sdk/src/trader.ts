@@ -5,22 +5,14 @@ import { Token } from "./token";
 
 // TODO would be nice to add other stuff like orders, history, etc.
 export class Trader {
-  private connection: Connection;
   pubkey: PublicKey;
   tokenBalances: Record<string, TokenAmount>;
+  private subscriptions: Array<number>;
 
-  private constructor({
-    connection,
-    pubkey,
-    tokenBalances,
-  }: {
-    connection: Connection;
-    pubkey: PublicKey;
-    tokenBalances: Record<string, TokenAmount>;
-  }) {
-    this.connection = connection;
-    this.pubkey = pubkey;
-    this.tokenBalances = tokenBalances;
+  private constructor(publicKey: PublicKey) {
+    this.pubkey = publicKey;
+    this.tokenBalances = {};
+    this.subscriptions = [];
   }
 
   /**
@@ -38,11 +30,7 @@ export class Trader {
     pubkey: PublicKey;
     tokens: Array<Token>;
   }): Promise<Trader> {
-    const trader = new Trader({
-      connection,
-      pubkey,
-      tokenBalances: {},
-    });
+    const trader = new Trader(pubkey);
 
     // Token balances
     for (const token of tokens) {
@@ -59,12 +47,6 @@ export class Trader {
           tokenAccount.account.data,
           token.data.decimals
         );
-
-      // Subscribe to token balance updates
-      connection.onAccountChange(tokenAccount.pubkey, (accountInfo) => {
-        trader.tokenBalances[token.data.mintKey.toBase58()] =
-          getTokenAmountFromBuffer(accountInfo.data, token.data.decimals);
-      });
     }
 
     return trader;
@@ -72,25 +54,75 @@ export class Trader {
 
   /**
    * Refreshes the trader data
+   *
+   * @param connection The Solana `Connection` object
    */
-  async refresh() {
+  async refresh(connection: Connection) {
     // Refresh token balances
-    for (const tokenMint in this.tokenBalances) {
-      const mint = new PublicKey(tokenMint);
-      const tokenAccounts = await this.connection.getTokenAccountsByOwner(
-        mint,
-        {
-          programId: TOKEN_PROGRAM_ID,
-          mint,
-        }
-      );
+    await Promise.all(
+      Object.keys(this.tokenBalances).map(async (mintKey) => {
+        const tokenAccounts = await connection.getTokenAccountsByOwner(
+          this.pubkey,
+          {
+            programId: TOKEN_PROGRAM_ID,
+            mint: new PublicKey(mintKey),
+          }
+        );
 
-      const tokenAccount = tokenAccounts.value[0];
-      this.tokenBalances[tokenMint] = getTokenAmountFromBuffer(
-        tokenAccount.account.data,
-        this.tokenBalances[tokenMint].decimals
-      );
-    }
+        const tokenAccount = tokenAccounts.value[0];
+        this.tokenBalances[mintKey] = getTokenAmountFromBuffer(
+          tokenAccount.account.data,
+          this.tokenBalances[mintKey].decimals
+        );
+      })
+    );
+  }
+
+  /**
+   * Subscribes to trader updates
+   *
+   * @param connection The Solana `Connection` object
+   */
+  async subscribe(connection: Connection) {
+    // Subscribe to token balance updates in promise.all
+    await Promise.all(
+      Object.keys(this.tokenBalances).map(async (mintKey) => {
+        const tokenAccounts = await connection.getTokenAccountsByOwner(
+          this.pubkey,
+          {
+            programId: TOKEN_PROGRAM_ID,
+            mint: new PublicKey(mintKey),
+          }
+        );
+
+        const tokenAccount = tokenAccounts.value[0];
+        const subId = connection.onAccountChange(
+          tokenAccount.pubkey,
+          (accountInfo) => {
+            this.tokenBalances[mintKey] = getTokenAmountFromBuffer(
+              accountInfo.data,
+              this.tokenBalances[mintKey].decimals
+            );
+          }
+        );
+        this.subscriptions.push(subId);
+      })
+    );
+  }
+
+  /**
+   * Unsubscribes from updates when the trader is no longer needed
+   *
+   * @param connection The Solana `Connection` object
+   */
+  async unsubscribe(connection: Connection) {
+    await Promise.all(
+      this.subscriptions.map((subId) =>
+        connection.removeAccountChangeListener(subId)
+      )
+    );
+
+    this.subscriptions = [];
   }
 }
 
@@ -103,6 +135,7 @@ export class Trader {
 function getTokenAmountFromBuffer(data: Buffer, decimals: number): TokenAmount {
   const tokenAccountRaw = AccountLayout.decode(data);
   const amount = tokenAccountRaw.amount.toString();
+
   return {
     amount,
     decimals,

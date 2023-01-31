@@ -1,5 +1,5 @@
 {
-  "name": "@jup-ag/phoenix-sdk",
+  "name": "@ellipsis-labs/phoenix-sdk",
   "version": "1.0.3",
   "description": "TypeScript SDK for Phoenix",
   "main": "dist/index.js",
