@@ -350,11 +350,12 @@ export function printUiLadder(uiLadder: UiLadder) {
 /**
  * Returns a Phoenix swap transaction
  *
- * @param market The market to swap on
- * @param type The type of order to place (limit, ioc, postOnly)
+ * @param marketAddress The address of the market to swap in
+ * @param marketData The `MarketData` for the swap market
+ * @param trader The `PublicKey` of the trader
  * @param side The side of the order to place (Bid, Ask)
  * @param inAmount The amount (in whole tokens) of the input token to swap
- * @param trader The trader's wallet public key
+ * @param slippage The slippage tolerance (optional, default 0.5%)
  * @param clientOrderId The client order ID (optional)
  */
 export function getMarketSwapTransaction({
@@ -428,7 +429,7 @@ export function getMarketSwapTransaction({
 /**
  * Returns a Phoenix swap order packet
  *
- * @param market The market to submit the order to
+ * @param marketData The `MarketData` for the swap market
  * @param side The side of the order
  * @param inAmount The amount of the input token
  * @param slippage The slippage tolerance in bps (optional, default 0.5%)
@@ -508,7 +509,7 @@ export function getMarketSwapOrderPacket({
 /**
  * Returns the expected amount out for a given swap order
  *
- * @param market The market to calculate the amount out for
+ * @param marketData The `MarketData` for the swap market
  * @param side The side of the order (Bid or Ask)
  * @param inAmount The amount of the input token
  *

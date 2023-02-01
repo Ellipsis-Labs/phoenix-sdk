@@ -182,9 +182,10 @@ export class Market {
   /**
    * Returns a Phoenix swap transaction
    *
+   * @param trader The `PublicKey` of the trader
    * @param side The side of the order to place (Bid, Ask)
    * @param inAmount The amount (in whole tokens) of the input token to swap
-   * @param trader The trader's wallet public key
+   * @param slippage The slippage tolerance (optional, default 0.5%)
    * @param clientOrderId The client order ID (optional)
    */
   getSwapTransaction({

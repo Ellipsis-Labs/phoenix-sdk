@@ -32,7 +32,7 @@ export class Client {
    * Creates a new `PhoenixClient`
    *
    * @param connection The Solana `Connection` to use for the client
-   * @param wallet The `WalletAdapter` to use for submitting transactions (optional)
+   * @param trader The `PublicKey` of the trader account to use for the client (optional)
    */
   static async create(
     connection: Connection,
