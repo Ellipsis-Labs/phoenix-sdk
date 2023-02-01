@@ -5,13 +5,13 @@ import BN from "bn.js";
 import CONFIG from "../config.json";
 import { MarketHeader, Side } from "./types";
 import {
+  DEFAULT_SLIPPAGE_PERCENT,
   deserializeMarketData,
   getMarketLadder,
   getMarketUiLadder,
   printUiLadder,
   getMarketSwapTransaction,
   getMarketExpectedOutAmount,
-  DEFAULT_SLIPPAGE_PERCENT,
 } from "./utils";
 import { Token } from "./token";
 
