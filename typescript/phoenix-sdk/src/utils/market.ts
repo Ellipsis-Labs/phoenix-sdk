@@ -92,7 +92,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
 
   // TODO: Respect price-time ordering
   const bids = [...bidsUnsorted].sort(
-    (a, b) => a[0].priceInTicks - b[0].priceInTicks
+    (a, b) => b[0].priceInTicks - a[0].priceInTicks
   );
 
   // TODO: Respect price-time ordering
@@ -323,7 +323,7 @@ export function getMarketUiLadder(
  */
 export function printUiLadder(uiLadder: UiLadder) {
   const bids = uiLadder.bids;
-  const asks = uiLadder.asks.reverse();
+  const asks = uiLadder.asks;
 
   const maxBaseSize = Math.max(
     ...bids.map((b) => b[1]),
@@ -338,13 +338,14 @@ export function printUiLadder(uiLadder: UiLadder) {
       priceStr + `\u001b[3${color === "green" ? 2 : 1}m` + sizeStr + "\u001b[0m"
     );
   };
+  // Reverse the asks so the display order is descending in price
   console.log("\u001b[30mAsks\u001b[0m");
-  for (const [price, size] of asks) {
+  for (const [price, size] of asks.reverse()) {
     printLine(price, size, "red");
   }
 
   console.log("\u001b[30mBids\u001b[0m");
-  for (const [price, size] of bids.reverse()) {
+  for (const [price, size] of bids) {
     printLine(price, size, "green");
   }
 }

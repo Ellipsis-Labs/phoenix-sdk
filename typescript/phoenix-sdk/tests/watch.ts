@@ -5,6 +5,7 @@ import * as Phoenix from "../src";
 export async function watch() {
   const connection = new Connection("http://localhost:8899");
   const phoenix = await Phoenix.Client.create(connection);
+  phoenix.subscribe();
   const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
   if (!market) throw new Error("Market not found");
 

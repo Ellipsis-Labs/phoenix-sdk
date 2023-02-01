@@ -26,7 +26,10 @@ export async function swap() {
   const marketAddress = new PublicKey(
     "3MZskhKUdNRkeMQ6zyNVSJcCx38o79ohwmSgZ2d5a4cu"
   );
-  const marketAccount = await connection.getAccountInfo(marketAddress);
+  const marketAccount = await connection.getAccountInfo(
+    marketAddress,
+    "confirmed"
+  );
   if (!marketAccount)
     throw Error(
       "Market account not found for address: " + marketAddress.toBase58()
@@ -127,22 +130,14 @@ export async function swap() {
     side === Phoenix.Side.Ask ? "USDC" : "SOL"
   );
 
-  const txId = await sendAndConfirmTransaction(connection, swapTx, [trader], {
+  const txId = await connection.sendTransaction(swapTx, [trader], {
     skipPreflight: true,
-    commitment: "confirmed",
   });
+  await connection.confirmTransaction(txId, "confirmed");
   console.log("Transaction ID:", txId);
 
   // Wait for transaction to be confirmed (up to 10 tries)
   let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
-  let counter = 1;
-  while (txResult.instructions.length == 0) {
-    txResult = await Phoenix.getEventsFromTransaction(connection, txId);
-    counter += 1;
-    if (counter == 10) {
-      throw Error("Failed to fetch transaction");
-    }
-  }
   const fillEvents = txResult.instructions[0];
 
   const summary = fillEvents.events[
@@ -185,6 +180,7 @@ export async function swap() {
       console.log("Error: ", err);
       process.exit(1);
     }
+    // await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   process.exit(0);
