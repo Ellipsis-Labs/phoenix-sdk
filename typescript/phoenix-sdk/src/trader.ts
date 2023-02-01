@@ -3,7 +3,6 @@ import { Connection, PublicKey, TokenAmount } from "@solana/web3.js";
 
 import { Token } from "./token";
 
-// TODO would be nice to add other stuff like orders, history, etc.
 export class Trader {
   pubkey: PublicKey;
   tokenBalances: Record<string, TokenAmount>;
@@ -20,6 +19,7 @@ export class Trader {
    *
    * @param connection The Solana `Connection` object
    * @param pubkey The `PublicKey` of the trader
+   * @param tokens The list of `Token` objects to load balances for
    */
   static async create({
     connection,
