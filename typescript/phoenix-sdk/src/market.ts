@@ -11,6 +11,7 @@ import {
   printUiLadder,
   getMarketSwapTransaction,
   getMarketExpectedOutAmount,
+  DEFAULT_SLIPPAGE_PERCENT,
 } from "./utils";
 import { Token } from "./token";
 
@@ -190,11 +191,13 @@ export class Market {
     trader,
     side,
     inAmount,
+    slippage = DEFAULT_SLIPPAGE_PERCENT,
     clientOrderId = 0,
   }: {
     trader: PublicKey;
     side: Side;
     inAmount: number;
+    slippage?: number;
     clientOrderId?: number;
   }) {
     return getMarketSwapTransaction({
@@ -203,6 +206,7 @@ export class Market {
       trader,
       side,
       inAmount,
+      slippage,
       clientOrderId,
     });
   }
