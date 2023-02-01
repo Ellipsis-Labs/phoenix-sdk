@@ -15,7 +15,7 @@ import * as Phoenix from "../src";
 
 export async function swap() {
   // const connection = new Connection("https://qn-devnet.solana.fm/");
-  const connection = new Connection("https://localhost:8899");
+  const connection = new Connection("http://localhost:8899");
   // DO NOT USE THIS KEYPAIR IN PRODUCTION
   const trader = Keypair.fromSecretKey(
     base58.decode(
@@ -24,7 +24,7 @@ export async function swap() {
   );
 
   const marketAddress = new PublicKey(
-    "5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8"
+    "3MZskhKUdNRkeMQ6zyNVSJcCx38o79ohwmSgZ2d5a4cu"
   );
   const marketAccount = await connection.getAccountInfo(marketAddress);
   if (!marketAccount)

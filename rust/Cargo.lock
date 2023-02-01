@@ -1291,8 +1291,7 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 [[package]]
 name = "ellipsis-client"
 version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab912441730ac7eb0f64a99840cacfcf48a367e68d1aafc5e1a9e70a773911f3"
+source = "git+https://github.com/Ellipsis-Labs/ellipsis-client?branch=jxiao/json-transaction-encoding#6e976ce7be3767f199dc80f165df4212ea7eed30"
 dependencies = [
  "anyhow",
  "assert_matches",
