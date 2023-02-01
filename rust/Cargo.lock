@@ -2697,6 +2697,7 @@ dependencies = [
 [[package]]
 name = "phoenix-types"
 version = "0.1.9"
+source = "git+https://github.com/Ellipsis-Labs/phoenix-types?branch=jarry/ell-44-add-padding-to-structs#a7c036b9da8bbfa333c4de73ee2320651d0b5409"
 dependencies = [
  "borsh",
  "bytemuck",

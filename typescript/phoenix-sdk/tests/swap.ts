@@ -14,7 +14,8 @@ import base58 from "bs58";
 import * as Phoenix from "../src";
 
 export async function swap() {
-  const connection = new Connection("https://qn-devnet.solana.fm/");
+  // const connection = new Connection("https://qn-devnet.solana.fm/");
+  const connection = new Connection("https://localhost:8899");
   // DO NOT USE THIS KEYPAIR IN PRODUCTION
   const trader = Keypair.fromSecretKey(
     base58.decode(
