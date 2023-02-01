@@ -63,6 +63,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
   const numBids = toNum(header.marketSizeParams.bidsSize);
   const numAsks = toNum(header.marketSizeParams.asksSize);
   const numTraders = toNum(header.marketSizeParams.numSeats);
+
   const bidsSize =
     16 + 16 + (16 + orderIdBeet.byteSize + restingOrderBeet.byteSize) * numBids;
   const asksSize =
@@ -82,6 +83,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
     orderIdBeet,
     restingOrderBeet
   );
+
   const asksUnsorted = deserializeRedBlackTree(
     askBuffer,
     orderIdBeet,
@@ -90,12 +92,12 @@ export function deserializeMarketData(data: Buffer): MarketData {
 
   // TODO: Respect price-time ordering
   const bids = [...bidsUnsorted].sort(
-    (a, b) => toNum(-a[0].priceInTicks) + toNum(b[0].priceInTicks)
+    (a, b) => a[0].priceInTicks - b[0].priceInTicks
   );
 
   // TODO: Respect price-time ordering
   const asks = [...asksUnsorted].sort(
-    (a, b) => toNum(a[0].priceInTicks) - toNum(b[0].priceInTicks)
+    (a, b) => a[0].priceInTicks - b[0].priceInTicks
   );
 
   let traders = new Map<PublicKey, TraderState>();
@@ -220,7 +222,7 @@ export function getMarketLadder(
         throw Error;
       }
       if (priceInTicks.eq(prev[0])) {
-        prev[1] = numBaseLots;
+        prev[1] = prev[1].add(numBaseLots);
       } else {
         if (bids.length === levels) {
           break;
@@ -272,11 +274,11 @@ function levelToUiLevel(
   quoteAtomsPerQuoteUnit: number
 ): [number, number] {
   return [
-    (toNum(priceInTicks) *
-      marketData.quoteLotsPerBaseUnitPerTick *
-      toNum(marketData.header.quoteLotSize)) /
+    (priceInTicks *
+      new BN(marketData.quoteLotsPerBaseUnitPerTick) *
+      marketData.header.quoteLotSize) /
       quoteAtomsPerQuoteUnit,
-    toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit,
+    sizeInBaseLots / marketData.baseLotsPerBaseUnit,
   ];
 }
 
@@ -330,21 +332,20 @@ export function printUiLadder(uiLadder: UiLadder) {
   const maxBaseSizeLength = maxBaseSize.toString().length;
 
   const printLine = (price: number, size: number, color: "red" | "green") => {
-    const priceStr = price.toFixed(2);
+    const priceStr = price.toFixed(3);
     const sizeStr = size.toFixed(2).padStart(maxBaseSizeLength, " ");
     console.log(
       priceStr + `\u001b[3${color === "green" ? 2 : 1}m` + sizeStr + "\u001b[0m"
     );
   };
-
-  console.log("\u001b[30mBids\u001b[0m");
-  for (const [price, size] of bids) {
-    printLine(price, size, "green");
-  }
-
   console.log("\u001b[30mAsks\u001b[0m");
   for (const [price, size] of asks) {
     printLine(price, size, "red");
+  }
+
+  console.log("\u001b[30mBids\u001b[0m");
+  for (const [price, size] of bids.reverse()) {
+    printLine(price, size, "green");
   }
 }
 

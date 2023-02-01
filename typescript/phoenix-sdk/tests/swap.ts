@@ -31,9 +31,12 @@ export async function swap() {
     throw Error(
       "Market account not found for address: " + marketAddress.toBase58()
     );
-  const marketData = Phoenix.deserializeMarketData(
-    Buffer.from(marketAccount.data)
-  );
+
+  let market = await Phoenix.Market.load({
+    connection,
+    address: marketAddress,
+  });
+  let marketData = market.data;
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
   const inAmount =

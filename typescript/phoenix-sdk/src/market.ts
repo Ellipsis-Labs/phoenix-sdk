@@ -26,16 +26,6 @@ export type RestingOrder = {
   padding_2: beet.bignum;
 };
 
-export const restingOrderBeet = new beet.BeetArgsStruct<RestingOrder>(
-  [
-    ["traderIndex", beet.u64],
-    ["numBaseLots", beet.u64],
-    ["padding_1", beet.u64],
-    ["padding_2", beet.u64],
-  ],
-  "fIFORestingOrder"
-);
-
 export type TraderState = {
   quoteLotsLocked: beet.bignum;
   quoteLotsFree: beet.bignum;
@@ -60,24 +50,6 @@ export type UiLadder = {
   bids: Array<[number, number]>;
   asks: Array<[number, number]>;
 };
-
-export const traderStateBeet = new beet.BeetArgsStruct<TraderState>(
-  [
-    ["quoteLotsLocked", beet.u64],
-    ["quoteLotsFree", beet.u64],
-    ["baseLotsLocked", beet.u64],
-    ["baseLotsFree", beet.u64],
-    ["padding_1", beet.u64],
-    ["padding_2", beet.u64],
-    ["padding_3", beet.u64],
-    ["padding_4", beet.u64],
-    ["padding_5", beet.u64],
-    ["padding_6", beet.u64],
-    ["padding_7", beet.u64],
-    ["padding_8", beet.u64],
-  ],
-  "TraderState"
-);
 
 type PubkeyWrapper = {
   publicKey: PublicKey;
@@ -149,9 +121,16 @@ export class Market {
     const allTokens = Object.values(CONFIG)
       .map(({ tokens }) => tokens)
       .flat();
-    const baseTokenConfig = allTokens.find(
+
+    const baseConfig = allTokens.find(
       (token) => token.mint === marketData.header.baseParams.mintKey.toBase58()
     );
+    let baseTokenConfig: Token;
+    if (baseConfig === undefined) {
+      baseTokenConfig = Token.default();
+    } else {
+      baseTokenConfig = baseConfig;
+    }
     const baseToken = new Token({
       name: baseTokenConfig.name,
       symbol: baseTokenConfig.symbol,
@@ -160,9 +139,15 @@ export class Market {
         ...marketData.header.baseParams,
       },
     });
-    const quoteTokenConfig = allTokens.find(
+    const quoteConfig = allTokens.find(
       (token) => token.mint === marketData.header.quoteParams.mintKey.toBase58()
     );
+    let quoteTokenConfig: Token;
+    if (quoteConfig === undefined) {
+      quoteTokenConfig = Token.default();
+    } else {
+      quoteTokenConfig = quoteConfig;
+    }
     const quoteToken = new Token({
       name: quoteTokenConfig.name,
       symbol: quoteTokenConfig.symbol,

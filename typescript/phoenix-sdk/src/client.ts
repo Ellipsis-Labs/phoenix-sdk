@@ -40,6 +40,8 @@ export class Client {
   ): Promise<Client> {
     const cluster = connection.rpcEndpoint.includes("devnet")
       ? "devnet"
+      : connection.rpcEndpoint.includes("local")
+      ? "localhost"
       : "mainnet-beta";
 
     const markets = [];
