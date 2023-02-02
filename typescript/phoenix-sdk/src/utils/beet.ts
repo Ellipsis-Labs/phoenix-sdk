@@ -20,8 +20,7 @@ export const restingOrderBeet = new beet.BeetArgsStruct<RestingOrder>(
   [
     ["traderIndex", beet.u64],
     ["numBaseLots", beet.u64],
-    ["padding_1", beet.u64],
-    ["padding_2", beet.u64],
+    ["padding", beet.uniformFixedSizeArray(beet.u64, 2)],
   ],
   "fIFORestingOrder"
 );
@@ -32,14 +31,7 @@ export const traderStateBeet = new beet.BeetArgsStruct<TraderState>(
     ["quoteLotsFree", beet.u64],
     ["baseLotsLocked", beet.u64],
     ["baseLotsFree", beet.u64],
-    ["padding_1", beet.u64],
-    ["padding_2", beet.u64],
-    ["padding_3", beet.u64],
-    ["padding_4", beet.u64],
-    ["padding_5", beet.u64],
-    ["padding_6", beet.u64],
-    ["padding_7", beet.u64],
-    ["padding_8", beet.u64],
+    ["padding", beet.uniformFixedSizeArray(beet.u64, 8)],
   ],
   "TraderState"
 );

@@ -1,10 +1,10 @@
 import { TokenParams } from "./types";
 
 export class Token {
-  name?: string;
-  symbol?: string;
-  logoUri?: string;
-  data?: TokenParams;
+  name: string;
+  symbol: string;
+  logoUri: string;
+  data: TokenParams;
 
   constructor({
     name,
@@ -12,10 +12,10 @@ export class Token {
     logoUri,
     data,
   }: {
-    name?: string;
-    symbol?: string;
-    logoUri?: string;
-    data?: TokenParams;
+    name: string;
+    symbol: string;
+    logoUri: string;
+    data: TokenParams;
   }) {
     this.name = name;
     this.symbol = symbol;

@@ -9,7 +9,7 @@
       },
       {
         "name": "Solana",
-        "symbol": "SOL",
+        "symbol": "wSOL",
         "mint": "B1sL3zxwyVnDGzRWCAsBkjL23wyu8HgwQP4XxgnHiSrv",
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       },
@@ -20,7 +20,10 @@
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/6dhTynDkYsVM7cbF7TKfC9DWB636TcEM935fq7JzL2ES/logo.png"
       }
     ],
-    "markets": ["5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8", "87dvn2VMw3zjsyiR5i9LNKnaxXNdB7dJUjpp3QMC77Xw"]
+    "markets": [
+      "5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8",
+      "87dvn2VMw3zjsyiR5i9LNKnaxXNdB7dJUjpp3QMC77Xw"
+    ]
   },
   "mainnet-beta": {
     "tokens": [
@@ -32,7 +35,7 @@
       },
       {
         "name": "Wrapped SOL",
-        "symbol": "SOL",
+        "symbol": "wSOL",
         "mint": "So11111111111111111111111111111111111111112",
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       },
@@ -72,6 +75,9 @@
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/6dhTynDkYsVM7cbF7TKfC9DWB636TcEM935fq7JzL2ES/logo.png"
       }
     ],
-    "markets": ["3MZskhKUdNRkeMQ6zyNVSJcCx38o79ohwmSgZ2d5a4cu", "HhHRvLFvZid6FD7C96H93F2MkASjYfYAx8Y2P8KMAr6b"]
+    "markets": [
+      "3MZskhKUdNRkeMQ6zyNVSJcCx38o79ohwmSgZ2d5a4cu",
+      "HhHRvLFvZid6FD7C96H93F2MkASjYfYAx8Y2P8KMAr6b"
+    ]
   }
 }

@@ -13,7 +13,7 @@ import {
   Side,
 } from "../types";
 import { createSwapInstruction } from "../instructions";
-import { toBN, toNum } from "./numbers";
+import { sign, toBN, toNum } from "./numbers";
 import {
   orderIdBeet,
   publicKeyBeet,
@@ -91,13 +91,13 @@ export function deserializeMarketData(data: Buffer): MarketData {
   );
 
   // TODO: Respect price-time ordering
-  const bids = [...bidsUnsorted].sort(
-    (a, b) => b[0].priceInTicks - a[0].priceInTicks
+  const bids = [...bidsUnsorted].sort((a, b) =>
+    sign(toBN(b[0].priceInTicks).sub(toBN(a[0].priceInTicks)))
   );
 
   // TODO: Respect price-time ordering
-  const asks = [...asksUnsorted].sort(
-    (a, b) => a[0].priceInTicks - b[0].priceInTicks
+  const asks = [...asksUnsorted].sort((a, b) =>
+    sign(toBN(a[0].priceInTicks).sub(toBN(b[0].priceInTicks)))
   );
 
   let traders = new Map<PublicKey, TraderState>();
@@ -274,11 +274,16 @@ function levelToUiLevel(
   quoteAtomsPerQuoteUnit: number
 ): [number, number] {
   return [
-    (priceInTicks *
-      new BN(marketData.quoteLotsPerBaseUnitPerTick) *
-      marketData.header.quoteLotSize) /
-      quoteAtomsPerQuoteUnit,
-    sizeInBaseLots / marketData.baseLotsPerBaseUnit,
+    // multiply and divide by 10^10 because BN only supports integer division
+    toNum(
+      priceInTicks
+        .mul(toBN(marketData.quoteLotsPerBaseUnitPerTick))
+        .mul(toBN(marketData.header.quoteLotSize))
+        .mul(toBN(10 ** 10))
+        .div(toBN(quoteAtomsPerQuoteUnit))
+    ) /
+      10 ** 10,
+    toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit,
   ];
 }
 

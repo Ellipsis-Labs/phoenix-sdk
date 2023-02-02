@@ -5,6 +5,19 @@ import { Token } from "./token";
 import { Market } from "./market";
 import { Trader } from "./trader";
 
+export enum Cluster {
+  MainnetBeta = "mainnet-beta",
+  Devnet = "devnet",
+  Localhost = "localhost",
+}
+
+export const clusterFromEndpoint = (endpoint: string): Cluster => {
+  if (endpoint.includes("devnet")) return Cluster.Devnet;
+  if (endpoint.includes("local") || endpoint.includes("127.0.0.1"))
+    return Cluster.Localhost;
+  return Cluster.MainnetBeta;
+};
+
 export class Client {
   connection: Connection;
   trader: Trader;
@@ -38,17 +51,13 @@ export class Client {
     connection: Connection,
     trader?: PublicKey
   ): Promise<Client> {
-    const cluster = connection.rpcEndpoint.includes("devnet")
-      ? "devnet"
-      : connection.rpcEndpoint.includes("local")
-      ? "localhost"
-      : "mainnet-beta";
+    const cluster = clusterFromEndpoint(connection.rpcEndpoint);
 
     const markets = [];
     const tokens = [];
 
-    // For every market:
     await Promise.all(
+      // For every market:
       CONFIG[cluster].markets.map(async (marketAddress: string) => {
         // Load the market
         const market = await Market.load({

@@ -2,16 +2,11 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import {
-  Connection,
-  PublicKey,
-  Keypair,
-  Transaction,
-  sendAndConfirmTransaction,
-} from "@solana/web3.js";
+import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
 import base58 from "bs58";
 
 import * as Phoenix from "../src";
+import { printUiLadder } from "../src";
 
 export async function swap() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
@@ -23,22 +18,23 @@ export async function swap() {
   );
 
   const marketAddress = new PublicKey(
-    "3MZskhKUdNRkeMQ6zyNVSJcCx38o79ohwmSgZ2d5a4cu"
+    "5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8"
   );
   const marketAccount = await connection.getAccountInfo(
     marketAddress,
     "confirmed"
   );
-  if (!marketAccount)
+  if (!marketAccount) {
     throw Error(
       "Market account not found for address: " + marketAddress.toBase58()
     );
+  }
 
-  let market = await Phoenix.Market.load({
+  const market = await Phoenix.Market.load({
     connection,
     address: marketAddress,
   });
-  let marketData = market.data;
+  const marketData = market.data;
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
   const inAmount =
@@ -129,14 +125,16 @@ export async function swap() {
     side === Phoenix.Side.Ask ? "USDC" : "SOL"
   );
 
+  // console.log("Market UI ladder:");
+  // printUiLadder(Phoenix.getMarketUiLadder(marketData, 20));
+
   const txId = await connection.sendTransaction(swapTx, [trader], {
     skipPreflight: true,
   });
   await connection.confirmTransaction(txId, "confirmed");
   console.log("Transaction ID:", txId);
 
-  // Wait for transaction to be confirmed (up to 10 tries)
-  let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
+  const txResult = await Phoenix.getEventsFromTransaction(connection, txId);
   const fillEvents = txResult.instructions[0];
 
   const summary = fillEvents.events[
@@ -174,12 +172,12 @@ export async function swap() {
     console.log("Swap", i + 1, "of", 10);
     try {
       await swap();
-      console.log("Done \n");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log();
     } catch (err) {
       console.log("Error: ", err);
       process.exit(1);
     }
-    // await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   process.exit(0);
