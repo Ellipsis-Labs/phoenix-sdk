@@ -3,11 +3,11 @@ import { Connection } from "@solana/web3.js";
 import * as Phoenix from "../src";
 
 export async function watch() {
-  const connection = new Connection("https://qn-devnet.solana.fm/");
+  // const connection = new Connection("https://qn-devnet.solana.fm/");
+  const connection = new Connection("http://127.0.0.1:8899");
   const phoenix = await Phoenix.Client.create(connection);
 
   phoenix.subscribe();
-  console.log(phoenix.markets);
 
   const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
   if (!market) throw new Error("Market not found");

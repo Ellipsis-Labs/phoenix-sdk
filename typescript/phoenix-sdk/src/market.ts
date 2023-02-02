@@ -11,9 +11,9 @@ import {
   printUiLadder,
   getMarketSwapTransaction,
   getMarketExpectedOutAmount,
+  clusterFromEndpoint,
 } from "./utils";
 import { Token } from "./token";
-import { clusterFromEndpoint } from "./client";
 
 export type OrderId = {
   priceInTicks: beet.bignum;
@@ -42,10 +42,6 @@ export type Ladder = {
 export type UiLadder = {
   bids: Array<[number, number]>;
   asks: Array<[number, number]>;
-};
-
-type PubkeyWrapper = {
-  publicKey: PublicKey;
 };
 
 export interface MarketData {

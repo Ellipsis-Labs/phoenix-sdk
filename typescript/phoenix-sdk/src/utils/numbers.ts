@@ -42,7 +42,6 @@ export function sign(n: BN) {
   } else if (n.gt(new BN(0))) {
     return 1;
   } else {
-    // diff == 0
     return 0;
   }
 }

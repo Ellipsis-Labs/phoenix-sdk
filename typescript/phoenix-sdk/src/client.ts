@@ -4,19 +4,7 @@ import CONFIG from "../config.json";
 import { Token } from "./token";
 import { Market } from "./market";
 import { Trader } from "./trader";
-
-export enum Cluster {
-  MainnetBeta = "mainnet-beta",
-  Devnet = "devnet",
-  Localhost = "localhost",
-}
-
-export const clusterFromEndpoint = (endpoint: string): Cluster => {
-  if (endpoint.includes("devnet")) return Cluster.Devnet;
-  if (endpoint.includes("local") || endpoint.includes("127.0.0.1"))
-    return Cluster.Localhost;
-  return Cluster.MainnetBeta;
-};
+import { clusterFromEndpoint } from "./utils";
 
 export class Client {
   connection: Connection;
