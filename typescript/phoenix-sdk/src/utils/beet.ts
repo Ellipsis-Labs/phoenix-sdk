@@ -4,9 +4,14 @@ import * as beetSolana from "@metaplex-foundation/beet-solana";
 
 import { OrderId, RestingOrder, TraderState } from "../market";
 
-export const publicKeyBeet = new beet.BeetArgsStruct<{
+type PubkeyWrapper = {
   publicKey: PublicKey;
-}>([["publicKey", beetSolana.publicKey]], "PubkeyWrapper");
+};
+
+export const publicKeyBeet = new beet.BeetArgsStruct<PubkeyWrapper>(
+  [["publicKey", beetSolana.publicKey]],
+  "PubkeyWrapper"
+);
 
 export const orderIdBeet = new beet.BeetArgsStruct<OrderId>(
   [
@@ -20,6 +25,7 @@ export const restingOrderBeet = new beet.BeetArgsStruct<RestingOrder>(
   [
     ["traderIndex", beet.u64],
     ["numBaseLots", beet.u64],
+    ["padding", beet.uniformFixedSizeArray(beet.u64, 2)],
   ],
   "fIFORestingOrder"
 );
@@ -30,6 +36,7 @@ export const traderStateBeet = new beet.BeetArgsStruct<TraderState>(
     ["quoteLotsFree", beet.u64],
     ["baseLotsLocked", beet.u64],
     ["baseLotsFree", beet.u64],
+    ["padding", beet.uniformFixedSizeArray(beet.u64, 8)],
   ],
   "TraderState"
 );

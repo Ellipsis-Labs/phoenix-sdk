@@ -104,6 +104,7 @@ impl Orderbook<FIFOOrderId, PhoenixOrder> {
                             &FIFORestingOrder {
                                 trader_index,
                                 num_base_lots,
+                                ..
                             },
                         )| {
                             (

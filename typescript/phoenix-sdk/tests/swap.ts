@@ -2,13 +2,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import {
-  Connection,
-  PublicKey,
-  Keypair,
-  Transaction,
-  sendAndConfirmTransaction,
-} from "@solana/web3.js";
+import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
 import base58 from "bs58";
 
 import * as Phoenix from "../src";
@@ -25,14 +19,21 @@ export async function swap() {
   const marketAddress = new PublicKey(
     "5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8"
   );
-  const marketAccount = await connection.getAccountInfo(marketAddress);
-  if (!marketAccount)
+  const marketAccount = await connection.getAccountInfo(
+    marketAddress,
+    "confirmed"
+  );
+  if (!marketAccount) {
     throw Error(
       "Market account not found for address: " + marketAddress.toBase58()
     );
-  const marketData = Phoenix.deserializeMarketData(
-    Buffer.from(marketAccount.data)
-  );
+  }
+
+  const market = await Phoenix.Market.load({
+    connection,
+    address: marketAddress,
+  });
+  const marketData = market.data;
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
   const inAmount =
@@ -123,22 +124,13 @@ export async function swap() {
     side === Phoenix.Side.Ask ? "USDC" : "SOL"
   );
 
-  const txId = await sendAndConfirmTransaction(connection, swapTx, [trader], {
+  const txId = await connection.sendTransaction(swapTx, [trader], {
     skipPreflight: true,
-    commitment: "confirmed",
   });
+  await connection.confirmTransaction(txId, "confirmed");
   console.log("Transaction ID:", txId);
 
-  // Wait for transaction to be confirmed (up to 10 tries)
-  let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
-  let counter = 1;
-  while (txResult.instructions.length == 0) {
-    txResult = await Phoenix.getEventsFromTransaction(connection, txId);
-    counter += 1;
-    if (counter == 10) {
-      throw Error("Failed to fetch transaction");
-    }
-  }
+  const txResult = await Phoenix.getEventsFromTransaction(connection, txId);
   const fillEvents = txResult.instructions[0];
 
   const summary = fillEvents.events[
@@ -176,7 +168,8 @@ export async function swap() {
     console.log("Swap", i + 1, "of", 10);
     try {
       await swap();
-      console.log("Done \n");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log();
     } catch (err) {
       console.log("Error: ", err);
       process.exit(1);

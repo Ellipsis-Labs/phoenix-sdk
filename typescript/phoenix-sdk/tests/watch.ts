@@ -5,6 +5,9 @@ import * as Phoenix from "../src";
 export async function watch() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
   const phoenix = await Phoenix.Client.create(connection);
+
+  phoenix.subscribe();
+
   const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
   if (!market) throw new Error("Market not found");
 
@@ -20,8 +23,10 @@ export async function watch() {
       updates++;
     }
 
-    await new Promise((res) => setTimeout(res, 1000));
+    await new Promise((res) => setTimeout(res, 500));
   }
+
+  phoenix.unsubscribe();
 }
 
 (async function () {

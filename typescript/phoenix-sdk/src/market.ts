@@ -12,6 +12,7 @@ import {
   printUiLadder,
   getMarketSwapTransaction,
   getMarketExpectedOutAmount,
+  clusterFromEndpoint,
 } from "./utils";
 import { Token } from "./token";
 
@@ -23,6 +24,7 @@ export type OrderId = {
 export type RestingOrder = {
   traderIndex: beet.bignum;
   numBaseLots: beet.bignum;
+  padding: beet.bignum[]; // size: 2
 };
 
 export type TraderState = {
@@ -30,12 +32,14 @@ export type TraderState = {
   quoteLotsFree: beet.bignum;
   baseLotsLocked: beet.bignum;
   baseLotsFree: beet.bignum;
+  padding: beet.bignum[]; // size: 8
 };
 
 export type Ladder = {
   bids: Array<[BN, BN]>;
   asks: Array<[BN, BN]>;
 };
+
 export type UiLadder = {
   bids: Array<[number, number]>;
   asks: Array<[number, number]>;
@@ -103,13 +107,27 @@ export class Market {
     const buffer = Buffer.from(account.data);
     const marketData = deserializeMarketData(buffer);
 
-    // Parse token config data
-    const allTokens = Object.values(CONFIG)
-      .map(({ tokens }) => tokens)
-      .flat();
+    const allTokens =
+      CONFIG[clusterFromEndpoint(connection.rpcEndpoint)].tokens;
+
     const baseTokenConfig = allTokens.find(
       (token) => token.mint === marketData.header.baseParams.mintKey.toBase58()
     );
+    const quoteTokenConfig = allTokens.find(
+      (token) => token.mint === marketData.header.quoteParams.mintKey.toBase58()
+    );
+
+    if (baseTokenConfig === undefined) {
+      throw new Error(
+        `Base token ${marketData.header.baseParams.mintKey} not found in config`
+      );
+    }
+    if (quoteTokenConfig === undefined) {
+      throw new Error(
+        `Quote token ${marketData.header.quoteParams.mintKey} not found in config`
+      );
+    }
+
     const baseToken = new Token({
       name: baseTokenConfig.name,
       symbol: baseTokenConfig.symbol,
@@ -118,9 +136,7 @@ export class Market {
         ...marketData.header.baseParams,
       },
     });
-    const quoteTokenConfig = allTokens.find(
-      (token) => token.mint === marketData.header.quoteParams.mintKey.toBase58()
-    );
+
     const quoteToken = new Token({
       name: quoteTokenConfig.name,
       symbol: quoteTokenConfig.symbol,

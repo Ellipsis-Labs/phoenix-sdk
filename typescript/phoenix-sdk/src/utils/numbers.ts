@@ -28,3 +28,20 @@ export function toBN(n: number | beet.bignum) {
     return n.clone();
   }
 }
+
+/**
+ * Converts a BN sort value to a number.
+ *
+ * Required because sort function must return a number.
+ *
+ * @param n The BN to convert
+ */
+export function sign(n: BN) {
+  if (n.lt(new BN(0))) {
+    return -1;
+  } else if (n.gt(new BN(0))) {
+    return 1;
+  } else {
+    return 0;
+  }
+}

@@ -4,6 +4,7 @@ import CONFIG from "../config.json";
 import { Token } from "./token";
 import { Market } from "./market";
 import { Trader } from "./trader";
+import { clusterFromEndpoint } from "./utils";
 
 export class Client {
   connection: Connection;
@@ -38,15 +39,13 @@ export class Client {
     connection: Connection,
     trader?: PublicKey
   ): Promise<Client> {
-    const cluster = connection.rpcEndpoint.includes("devnet")
-      ? "devnet"
-      : "mainnet-beta";
+    const cluster = clusterFromEndpoint(connection.rpcEndpoint);
 
     const markets = [];
     const tokens = [];
 
-    // For every market:
     await Promise.all(
+      // For every market:
       CONFIG[cluster].markets.map(async (marketAddress: string) => {
         // Load the market
         const market = await Market.load({
