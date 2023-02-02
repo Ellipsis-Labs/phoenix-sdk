@@ -22,13 +22,4 @@ export class Token {
     this.logoUri = logoUri;
     this.data = data;
   }
-
-  static default = (): Token => {
-    return {
-      name: undefined,
-      symbol: undefined,
-      logoUri: undefined,
-      data: undefined,
-    };
-  };
 }

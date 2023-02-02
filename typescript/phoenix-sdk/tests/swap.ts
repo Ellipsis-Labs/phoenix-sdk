@@ -6,7 +6,6 @@ import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
 import base58 from "bs58";
 
 import * as Phoenix from "../src";
-import { printUiLadder } from "../src";
 
 export async function swap() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
@@ -124,9 +123,6 @@ export async function swap() {
     expectedOutAmount,
     side === Phoenix.Side.Ask ? "USDC" : "SOL"
   );
-
-  // console.log("Market UI ladder:");
-  // printUiLadder(Phoenix.getMarketUiLadder(marketData, 20));
 
   const txId = await connection.sendTransaction(swapTx, [trader], {
     skipPreflight: true,
