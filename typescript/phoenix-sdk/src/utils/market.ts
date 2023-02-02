@@ -274,15 +274,9 @@ function levelToUiLevel(
   quoteAtomsPerQuoteUnit: number
 ): [number, number] {
   return [
-    // multiply and divide by 10^10 because BN only supports integer division
-    toNum(
-      priceInTicks
-        .mul(toBN(marketData.quoteLotsPerBaseUnitPerTick))
-        .mul(toBN(marketData.header.quoteLotSize))
-        .mul(toBN(10 ** 10))
-        .div(toBN(quoteAtomsPerQuoteUnit))
-    ) /
-      10 ** 10,
+    (toNum(priceInTicks) / quoteAtomsPerQuoteUnit) *
+      marketData.quoteLotsPerBaseUnitPerTick *
+      toNum(marketData.header.quoteLotSize),
     toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit,
   ];
 }
