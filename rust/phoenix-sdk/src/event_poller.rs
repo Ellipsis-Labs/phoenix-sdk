@@ -2,10 +2,10 @@ use crate::{market_event_handler::SDKMarketEvent, sdk_client::SDKClient};
 use solana_client::rpc_client::GetConfirmedSignaturesForAddress2Config;
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Signature};
 use std::{str::FromStr, sync::Arc, time::Duration};
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::UnboundedSender;
 
 pub struct EventPoller {
-    event_sender: Sender<Vec<SDKMarketEvent>>,
+    event_sender: UnboundedSender<Vec<SDKMarketEvent>>,
     sdk: Arc<SDKClient>,
     timeout_ms: u64,
 }
@@ -13,7 +13,7 @@ pub struct EventPoller {
 impl EventPoller {
     pub fn new(
         sdk: Arc<SDKClient>,
-        event_sender: Sender<Vec<SDKMarketEvent>>,
+        event_sender: UnboundedSender<Vec<SDKMarketEvent>>,
         timeout_ms: u64,
     ) -> Self {
         Self {
@@ -25,7 +25,7 @@ impl EventPoller {
 
     pub fn new_with_default_timeout(
         sdk: Arc<SDKClient>,
-        event_sender: Sender<Vec<SDKMarketEvent>>,
+        event_sender: UnboundedSender<Vec<SDKMarketEvent>>,
     ) -> Self {
         Self::new(sdk, event_sender, 1000)
     }
@@ -81,7 +81,6 @@ impl EventPoller {
                             .map(|&e| SDKMarketEvent::PhoenixEvent { event: Box::new(e) })
                             .collect::<Vec<_>>(),
                     )
-                    .await
                     .is_err()
                 {
                     println!("Event sender disconnected, continuing");
