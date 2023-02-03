@@ -9,17 +9,17 @@ use std::{
     collections::BTreeMap,
     sync::{Arc, RwLock},
 };
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::UnboundedSender;
 
 pub struct CoinbasePriceListener {
     ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
     market_name: String,
-    sender: Sender<Vec<SDKMarketEvent>>,
+    sender: UnboundedSender<Vec<SDKMarketEvent>>,
     use_ticker: bool,
 }
 
 impl CoinbasePriceListener {
-    pub fn new(market_name: String, sender: Sender<Vec<SDKMarketEvent>>) -> Self {
+    pub fn new(market_name: String, sender: UnboundedSender<Vec<SDKMarketEvent>>) -> Self {
         let ladder = Arc::new(RwLock::new(Orderbook {
             size_mult: 1.0,
             price_mult: 1.0,
@@ -37,7 +37,7 @@ impl CoinbasePriceListener {
 
     pub fn new_with_last_trade_price(
         market_name: String,
-        sender: Sender<Vec<SDKMarketEvent>>,
+        sender: UnboundedSender<Vec<SDKMarketEvent>>,
     ) -> Self {
         let ladder = Arc::new(RwLock::new(Orderbook {
             size_mult: 1.0,
@@ -81,7 +81,7 @@ impl CoinbasePriceListener {
     async fn run_listener(
         stream: &mut (impl CBStream + CBSink),
         ladder: Arc<RwLock<Orderbook<Decimal, f64>>>,
-        sender: Sender<Vec<SDKMarketEvent>>,
+        sender: UnboundedSender<Vec<SDKMarketEvent>>,
     ) {
         loop {
             // let event = rt.block_on(stream.next());
@@ -196,10 +196,7 @@ impl CoinbasePriceListener {
                         );
                         return;
                     }
-                    match sender
-                        .send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }])
-                        .await
-                    {
+                    match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: *price }]) {
                         Ok(_) => {}
                         Err(e) => println!("Error while sending fair price update: {}", e),
                     }
@@ -224,10 +221,7 @@ impl CoinbasePriceListener {
                 );
                 return;
             }
-            match sender
-                .send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }])
-                .await
-            {
+            match sender.send(vec![SDKMarketEvent::FairPriceUpdate { price: vwap }]) {
                 Ok(_) => {}
                 Err(e) => println!("Error while sending vwap update: {}", e),
             }

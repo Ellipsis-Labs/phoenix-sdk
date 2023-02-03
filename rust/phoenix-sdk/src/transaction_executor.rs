@@ -1,15 +1,15 @@
 use crate::sdk_client::SDKClient;
 use solana_program::instruction::Instruction;
 use std::sync::Arc;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::UnboundedReceiver;
 
 pub struct TransactionExecutor {
     pub client: Arc<SDKClient>,
-    pub ix_receiver: Receiver<Vec<Instruction>>,
+    pub ix_receiver: UnboundedReceiver<Vec<Instruction>>,
 }
 
 impl TransactionExecutor {
-    pub fn new(client: Arc<SDKClient>, ix_receiver: Receiver<Vec<Instruction>>) -> Self {
+    pub fn new(client: Arc<SDKClient>, ix_receiver: UnboundedReceiver<Vec<Instruction>>) -> Self {
         Self {
             client,
             ix_receiver,
