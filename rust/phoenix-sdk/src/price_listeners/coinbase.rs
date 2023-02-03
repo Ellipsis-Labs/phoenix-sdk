@@ -231,6 +231,7 @@ impl CoinbasePriceListener {
                 Ok(_) => {}
                 Err(e) => println!("Error while sending vwap update: {}", e),
             }
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
         }
     }
 }
