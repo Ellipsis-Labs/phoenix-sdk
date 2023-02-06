@@ -17,7 +17,7 @@ export async function swap() {
   );
 
   const marketAddress = new PublicKey(
-    "5iLqmcg8vifdnnw6wEpVtQxFE4Few5uiceDWzi3jvzH8"
+    "3PgJmaEKQqVzQNAT3WtMaSQxBFPL3WqnvyahRM28PGJH"
   );
   const marketAccount = await connection.getAccountInfo(
     marketAddress,
@@ -130,7 +130,16 @@ export async function swap() {
   await connection.confirmTransaction(txId, "confirmed");
   console.log("Transaction ID:", txId);
 
-  const txResult = await Phoenix.getEventsFromTransaction(connection, txId);
+  let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
+  let counter = 1;
+  while (txResult.instructions.length == 0) {
+    txResult = await Phoenix.getEventsFromTransaction(connection, txId);
+    counter += 1;
+    if (counter == 10) {
+      throw Error("Failed to fetch transaction");
+    }
+  }
+
   const fillEvents = txResult.instructions[0];
 
   const summary = fillEvents.events[
