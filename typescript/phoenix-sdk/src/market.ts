@@ -64,7 +64,6 @@ export class Market {
   baseToken: Token;
   quoteToken: Token;
   data: MarketData;
-  private subscriptions: Array<number>;
 
   private constructor({
     name,
@@ -84,7 +83,6 @@ export class Market {
     this.baseToken = baseToken;
     this.quoteToken = quoteToken;
     this.data = data;
-    this.subscriptions = [];
   }
 
   /**
@@ -162,16 +160,16 @@ export class Market {
    * Refreshes the market data
    *
    * @param connection The Solana `Connection` object
+   *
+   * @returns The refreshed Market
    */
-  async refresh(connection: Connection) {
+  async refresh(connection: Connection): Promise<Market> {
     const account = await connection.getAccountInfo(this.address);
-    if (!account)
-      throw new Error(
-        "Account not found for market: " + this.address.toBase58()
-      );
     const data = Buffer.from(account.data);
     const marketData = deserializeMarketData(data);
     this.data = marketData;
+
+    return this;
   }
 
   /**
@@ -246,36 +244,5 @@ export class Market {
       side,
       inAmount,
     });
-  }
-
-  /**
-   * Subscribes to updates on the market
-   *
-   * @param connection The Solana `Connection` object
-   * @param callback The callback function that fires when the market is updated (Optional)
-   */
-  subscribe(connection: Connection, callback?: (market: Market) => void) {
-    const subId = connection.onAccountChange(this.address, (account) => {
-      const marketData = deserializeMarketData(account.data);
-      this.data = marketData;
-
-      if (callback) callback(this);
-    });
-    this.subscriptions.push(subId);
-  }
-
-  /**
-   * Unsubscribes from updates when the market is no longer needed
-   *
-   * @param connection The Solana `Connection` object
-   */
-  async unsubscribe(connection: Connection) {
-    await Promise.all(
-      this.subscriptions.map((subId) =>
-        connection.removeAccountChangeListener(subId)
-      )
-    );
-
-    this.subscriptions = [];
   }
 }
