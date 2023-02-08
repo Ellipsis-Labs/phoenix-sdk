@@ -78,15 +78,28 @@ export class Client {
   }
 
   /**
-   * Subscribes to all market and trader changes
+   * Subscribes to all market and trader updates
+   *
+   * @param callback The callback that fires when there is an update (Optional)
    */
-  subscribe() {
+  subscribe(callback?: (client: Client) => void) {
     for (const market of this.markets) {
-      market.subscribe(this.connection);
+      market.subscribe(this.connection, (market: Market) => {
+        const index = this.markets.findIndex(
+          (m) => m.address.toBase58() === market.address.toBase58()
+        );
+        this.markets[index] = market;
+
+        if (callback) callback(this);
+      });
     }
 
     if (this.trader) {
-      this.trader.subscribe(this.connection);
+      this.trader.subscribe(this.connection, (trader: Trader) => {
+        this.trader = trader;
+
+        if (callback) callback(this);
+      });
     }
   }
 

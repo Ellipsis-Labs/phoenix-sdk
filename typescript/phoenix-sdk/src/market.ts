@@ -252,11 +252,14 @@ export class Market {
    * Subscribes to updates on the market
    *
    * @param connection The Solana `Connection` object
+   * @param callback The callback function that fires when the market is updated (Optional)
    */
-  subscribe(connection: Connection) {
+  subscribe(connection: Connection, callback?: (market: Market) => void) {
     const subId = connection.onAccountChange(this.address, (account) => {
       const marketData = deserializeMarketData(account.data);
       this.data = marketData;
+
+      if (callback) callback(this);
     });
     this.subscriptions.push(subId);
   }

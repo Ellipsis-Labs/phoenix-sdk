@@ -8,7 +8,7 @@ export async function watch() {
 
   phoenix.subscribe();
 
-  const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
+  const market = phoenix.markets.find((market) => market.name === "wSOL/USDC");
   if (!market) throw new Error("Market not found");
 
   let lastLadder: Phoenix.UiLadder | null = null;

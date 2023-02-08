@@ -82,8 +82,9 @@ export class Trader {
    * Subscribes to trader updates
    *
    * @param connection The Solana `Connection` object
+   * @param callback The callback function that fires when the trader is updated (Optional)
    */
-  async subscribe(connection: Connection) {
+  async subscribe(connection: Connection, callback?: (trader: Trader) => void) {
     // Subscribe to token balance updates in promise.all
     await Promise.all(
       Object.keys(this.tokenBalances).map(async (mintKey) => {
@@ -103,6 +104,8 @@ export class Trader {
               accountInfo.data,
               this.tokenBalances[mintKey].decimals
             );
+
+            if (callback) callback(this);
           }
         );
         this.subscriptions.push(subId);
