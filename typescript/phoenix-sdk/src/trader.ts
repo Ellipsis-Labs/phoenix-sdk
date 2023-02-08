@@ -6,12 +6,10 @@ import { Token } from "./token";
 export class Trader {
   pubkey: PublicKey;
   tokenBalances: Record<string, TokenAmount>;
-  private subscriptions: Array<number>;
 
   private constructor(publicKey: PublicKey) {
     this.pubkey = publicKey;
     this.tokenBalances = {};
-    this.subscriptions = [];
   }
 
   /**
@@ -56,8 +54,10 @@ export class Trader {
    * Refreshes the trader data
    *
    * @param connection The Solana `Connection` object
+   *
+   * @returns The refreshed Trader
    */
-  async refresh(connection: Connection) {
+  async refresh(connection: Connection): Promise<Trader> {
     // Refresh token balances
     await Promise.all(
       Object.keys(this.tokenBalances).map(async (mintKey) => {
@@ -76,53 +76,8 @@ export class Trader {
         );
       })
     );
-  }
 
-  /**
-   * Subscribes to trader updates
-   *
-   * @param connection The Solana `Connection` object
-   */
-  async subscribe(connection: Connection) {
-    // Subscribe to token balance updates in promise.all
-    await Promise.all(
-      Object.keys(this.tokenBalances).map(async (mintKey) => {
-        const tokenAccounts = await connection.getTokenAccountsByOwner(
-          this.pubkey,
-          {
-            programId: TOKEN_PROGRAM_ID,
-            mint: new PublicKey(mintKey),
-          }
-        );
-
-        const tokenAccount = tokenAccounts.value[0];
-        const subId = connection.onAccountChange(
-          tokenAccount.pubkey,
-          (accountInfo) => {
-            this.tokenBalances[mintKey] = getTokenAmountFromBuffer(
-              accountInfo.data,
-              this.tokenBalances[mintKey].decimals
-            );
-          }
-        );
-        this.subscriptions.push(subId);
-      })
-    );
-  }
-
-  /**
-   * Unsubscribes from updates when the trader is no longer needed
-   *
-   * @param connection The Solana `Connection` object
-   */
-  async unsubscribe(connection: Connection) {
-    await Promise.all(
-      this.subscriptions.map((subId) =>
-        connection.removeAccountChangeListener(subId)
-      )
-    );
-
-    this.subscriptions = [];
+    return this;
   }
 }
 

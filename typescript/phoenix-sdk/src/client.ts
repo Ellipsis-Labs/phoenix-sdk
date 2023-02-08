@@ -76,32 +76,4 @@ export class Client {
         : undefined,
     });
   }
-
-  /**
-   * Subscribes to all market and trader changes
-   */
-  subscribe() {
-    for (const market of this.markets) {
-      market.subscribe(this.connection);
-    }
-
-    if (this.trader) {
-      this.trader.subscribe(this.connection);
-    }
-  }
-
-  /**
-   * Unsubscribes from all subscriptions when the client is no longer needed
-   */
-  async unsubscribe() {
-    await Promise.all(
-      this.markets.map(async (market) => {
-        await market.unsubscribe(this.connection);
-      })
-    );
-
-    if (this.trader) {
-      await this.trader.unsubscribe(this.connection);
-    }
-  }
 }
