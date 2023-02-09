@@ -279,6 +279,9 @@ impl SDKClient {
         sig: &Signature,
     ) -> Option<Vec<PhoenixEvent>> {
         let tx = self.client.get_transaction(sig).await.ok()?;
+        if tx.is_err {
+            return None;
+        }
         let mut event_list = vec![];
         for inner_ixs in tx.inner_instructions.iter() {
             for inner_ix in inner_ixs.iter() {
