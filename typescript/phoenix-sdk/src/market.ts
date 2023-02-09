@@ -13,6 +13,7 @@ import {
   getMarketSwapTransaction,
   getMarketExpectedOutAmount,
   clusterFromEndpoint,
+  toNum,
 } from "./utils";
 import { Token } from "./token";
 
@@ -244,5 +245,29 @@ export class Market {
       side,
       inAmount,
     });
+  }
+
+  getPriceDecimalPlaces(): number {
+    let target =
+      Math.pow(10, this.data.header.quoteParams.decimals) /
+      toNum(this.data.header.tickSizeInQuoteAtomsPerBaseUnit);
+
+    let exp2 = 0;
+    while (target % 2 === 0) {
+      target /= 2;
+      exp2 += 1;
+    }
+    let exp5 = 0;
+    while (target % 5 === 0) {
+      target /= 5;
+      exp5 += 1;
+    }
+    let precision = Math.max(exp2, exp5);
+    return (
+      Math.max(precision, 3) +
+      Math.floor(
+        Math.log10(Math.max(this.data.header.rawBaseUnitsPerBaseUnit, 1))
+      )
+    );
   }
 }
