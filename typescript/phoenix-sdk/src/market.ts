@@ -263,6 +263,11 @@ export class Market {
       exp5 += 1;
     }
     let precision = Math.max(exp2, exp5);
-    return Math.max(precision, 3);
+    return (
+      Math.max(precision, 3) +
+      Math.floor(
+        Math.log10(Math.max(this.data.header.rawBaseUnitsPerBaseUnit, 1))
+      )
+    );
   }
 }
