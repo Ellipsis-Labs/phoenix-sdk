@@ -247,7 +247,7 @@ export class Market {
     });
   }
 
-  getPriceDeicmalPlaces(): number {
+  getPriceDecimalPlaces(): number {
     let target =
       Math.pow(10, this.data.header.quoteParams.decimals) /
       toNum(this.data.header.tickSizeInQuoteAtomsPerBaseUnit);
@@ -263,6 +263,6 @@ export class Market {
       exp5 += 1;
     }
     let precision = Math.max(exp2, exp5);
-    return precision === 0 ? 3 : precision;
+    return Math.max(precision, 3);
   }
 }
