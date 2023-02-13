@@ -1326,8 +1326,9 @@ dependencies = [
 
 [[package]]
 name = "ellipsis-macros"
-version = "0.1.2"
-source = "git+https://github.com/Ellipsis-Labs/ellipsis-macros?branch=master#142c920ce91b0e41bb06c833dea46269cc868d14"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "598d7f4a52f256bc6d065f0ee1c8dd07275952f9425bdfc1639595c924e1498e"
 dependencies = [
  "bs58 0.4.0",
  "proc-macro2 1.0.50",
@@ -1424,11 +1425,12 @@ dependencies = [
  "anyhow",
  "borsh",
  "bs58 0.4.0",
+ "bytemuck",
  "clap 3.2.23",
  "devnet-token-faucet",
  "ellipsis-client",
+ "phoenix",
  "phoenix-sdk",
- "phoenix-types",
  "rand 0.7.3",
  "shellexpand",
  "solana-account-decoder",
@@ -2061,9 +2063,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "lib-sokoban"
-version = "0.2.6"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5bb852922d577557ec7dc2db26ca8d19586a2edba9193125d69f948344c7276"
+checksum = "ce6295db13f26aaa8bb4fb38e0c9ff50253814aa490eef7b4d6aa106ba6fc843"
 dependencies = [
  "bytemuck",
  "num-derive",
@@ -2274,7 +2276,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a53d79ba8304ac1c4f9eb3b9d281f21f7be9d4626f72ce7df4ad8fbde4f38a74"
 dependencies = [
  "modular-bitfield-impl",
- "static_assertions",
+ "static_assertions 1.1.0",
 ]
 
 [[package]]
@@ -2653,20 +2655,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "phoenix"
+version = "0.1.0"
+source = "git+https://github.com/Ellipsis-Labs/phoenix-v1?rev=640bcdf#640bcdf553e9513fb3dcae4adc27806e2b97e4f8"
+dependencies = [
+ "borsh",
+ "bytemuck",
+ "ellipsis-macros",
+ "itertools",
+ "lib-sokoban",
+ "num_enum",
+ "shank",
+ "solana-program",
+ "solana-security-txt",
+ "spl-associated-token-account",
+ "spl-token",
+ "static_assertions 0.1.1",
+ "thiserror",
+]
+
+[[package]]
 name = "phoenix-sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
  "borsh",
+ "bytemuck",
  "clap 3.2.23",
  "coinbase-pro-rs",
  "ellipsis-client",
  "futures 0.3.25",
  "itertools",
  "num-traits",
+ "phoenix",
  "phoenix-sdk-core",
- "phoenix-types",
  "rand 0.7.3",
  "rust_decimal",
  "rust_decimal_macros",
@@ -2686,30 +2709,12 @@ dependencies = [
  "borsh",
  "itertools",
  "num-traits",
- "phoenix-types",
+ "phoenix",
  "rand 0.7.3",
  "rust_decimal",
  "rust_decimal_macros",
  "solana-program",
  "solana-sdk",
-]
-
-[[package]]
-name = "phoenix-types"
-version = "0.1.9"
-source = "git+https://github.com/Ellipsis-Labs/phoenix-types?rev=9dc3547#9dc35478dd80c8dfa6ef49c19067dcd380d1248c"
-dependencies = [
- "borsh",
- "bytemuck",
- "ellipsis-macros",
- "lib-sokoban",
- "num_enum",
- "serde",
- "shank",
- "solana-sdk",
- "spl-associated-token-account",
- "spl-token",
- "thiserror",
 ]
 
 [[package]]
@@ -4246,6 +4251,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-security-txt"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e0461f3afb29d8591300b3dd09b5472b3772d65688a2826ad960b8c0d5fa605"
+
+[[package]]
 name = "solana-send-transaction-service"
 version = "1.14.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4536,6 +4547,12 @@ dependencies = [
 
 [[package]]
 name = "static_assertions"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f406d6ee68db6796e11ffd7b4d171864c58b7451e79ef9460ea33c287a1f89a7"
+
+[[package]]
+name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
@@ -4645,7 +4662,7 @@ dependencies = [
  "pin-project",
  "rand 0.8.5",
  "serde",
- "static_assertions",
+ "static_assertions 1.1.0",
  "tarpc-plugins",
  "thiserror",
  "tokio",

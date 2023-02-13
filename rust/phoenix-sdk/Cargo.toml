@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = { workspace = true }
 solana-program = { workspace = true }
-phoenix-types = { workspace = true }
+phoenix = { workspace = true }
 clap = { workspace = true }
 borsh = { workspace = true }
 rand = { workspace = true }
@@ -25,5 +25,6 @@ coinbase-pro-rs = "0.8.1"
 num-traits = { workspace = true }
 rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
+bytemuck = { workspace = true }
 itertools = "0.10.5"
 phoenix-sdk-core = { version = "0.1.0", path = "../phoenix-sdk-core" }

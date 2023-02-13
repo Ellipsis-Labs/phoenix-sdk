@@ -1,14 +1,20 @@
 use borsh::BorshDeserialize;
-use phoenix_types::{
-    enums::{SelfTradeBehavior, Side},
-    events::MarketEvent,
-    instructions::{
+use phoenix::{
+    program::events::PhoenixMarketEvent,
+    program::instruction_builders::{
         create_cancel_all_orders_instruction, create_cancel_multiple_orders_by_id_instruction,
         create_cancel_up_to_instruction, create_new_order_instruction,
-        CancelMultipleOrdersByIdParams, CancelOrderParams, CancelUpToParams,
     },
-    market::{FIFOOrderId, TraderState},
-    order_packet::OrderPacket,
+    program::{
+        processor::cancel_multiple_orders::{CancelMultipleOrdersByIdParams, CancelUpToParams},
+        EvictEvent, FeeEvent, FillEvent, FillSummaryEvent, PlaceEvent,
+    },
+    program::{processor::reduce_order::CancelOrderParams, ReduceEvent},
+    quantities::WrapperU64,
+    state::enums::{SelfTradeBehavior, Side},
+    state::markets::FIFOOrderId,
+    state::order_packet::OrderPacket,
+    state::trader_state::TraderState,
 };
 use rand::{rngs::StdRng, Rng};
 use solana_sdk::signature::Signature;
@@ -251,9 +257,10 @@ impl SDKClientCore {
         let mut market_events: Vec<PhoenixEvent> = vec![];
 
         for event in events.iter() {
-            let header_event = MarketEvent::try_from_slice(&event[..AUDIT_LOG_HEADER_LEN]).ok()?;
+            let header_event =
+                PhoenixMarketEvent::try_from_slice(&event[..AUDIT_LOG_HEADER_LEN]).ok()?;
             let header = match header_event {
-                MarketEvent::Header { header } => Some(header),
+                PhoenixMarketEvent::Header(header) => Some(header),
                 _ => {
                     panic!("Expected a header event");
                 }
@@ -261,28 +268,29 @@ impl SDKClientCore {
             let offset = AUDIT_LOG_HEADER_LEN;
             let mut phoenix_event_bytes = (header.total_events as u32).to_le_bytes().to_vec();
             phoenix_event_bytes.extend_from_slice(&event[offset..]);
-            let phoenix_events = match Vec::<MarketEvent>::try_from_slice(&phoenix_event_bytes) {
-                Ok(v) => v,
-                Err(e) => {
-                    println!("Error parsing events: {:?}", e);
-                    return None;
-                }
-            };
+            let phoenix_events =
+                match Vec::<PhoenixMarketEvent>::try_from_slice(&phoenix_event_bytes) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        println!("Error parsing events: {:?}", e);
+                        return None;
+                    }
+                };
             let mut trade_direction = None;
             for phoenix_event in phoenix_events {
                 match phoenix_event {
-                    MarketEvent::Fill {
+                    PhoenixMarketEvent::Fill(FillEvent {
                         index,
                         maker_id,
                         order_sequence_number,
                         price_in_ticks,
                         base_lots_filled,
                         base_lots_remaining,
-                    } => {
+                    }) => {
                         let side_filled = Side::from_order_sequence_number(order_sequence_number);
                         market_events.push(PhoenixEvent {
                             market: header.market,
-                            sequence_number: header.market_sequence_number,
+                            sequence_number: header.sequence_number,
                             slot: header.slot,
                             timestamp: header.timestamp,
                             signature: *sig,
@@ -308,15 +316,15 @@ impl SDKClientCore {
                             }
                         }
                     }
-                    MarketEvent::Reduce {
+                    PhoenixMarketEvent::Reduce(ReduceEvent {
                         index,
                         order_sequence_number,
                         price_in_ticks,
                         base_lots_removed,
                         base_lots_remaining,
-                    } => market_events.push(PhoenixEvent {
+                    }) => market_events.push(PhoenixEvent {
                         market: header.market,
-                        sequence_number: header.market_sequence_number,
+                        sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
                         signature: *sig,
@@ -332,15 +340,15 @@ impl SDKClientCore {
                         }),
                     }),
 
-                    MarketEvent::Place {
+                    PhoenixMarketEvent::Place(PlaceEvent {
                         index,
                         order_sequence_number,
                         client_order_id,
                         price_in_ticks,
                         base_lots_placed,
-                    } => market_events.push(PhoenixEvent {
+                    }) => market_events.push(PhoenixEvent {
                         market: header.market,
-                        sequence_number: header.market_sequence_number,
+                        sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
                         signature: *sig,
@@ -354,15 +362,15 @@ impl SDKClientCore {
                             base_lots_placed,
                         }),
                     }),
-                    MarketEvent::Evict {
+                    PhoenixMarketEvent::Evict(EvictEvent {
                         index,
                         maker_id,
                         order_sequence_number,
                         price_in_ticks,
                         base_lots_evicted,
-                    } => market_events.push(PhoenixEvent {
+                    }) => market_events.push(PhoenixEvent {
                         market: header.market,
-                        sequence_number: header.market_sequence_number,
+                        sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
                         signature: *sig,
@@ -375,15 +383,15 @@ impl SDKClientCore {
                             base_lots_evicted,
                         }),
                     }),
-                    MarketEvent::FillSummary {
+                    PhoenixMarketEvent::FillSummary(FillSummaryEvent {
                         index,
                         client_order_id,
                         total_base_lots_filled,
                         total_quote_lots_filled,
                         total_fee_in_quote_lots,
-                    } => market_events.push(PhoenixEvent {
+                    }) => market_events.push(PhoenixEvent {
                         market: header.market,
-                        sequence_number: header.market_sequence_number,
+                        sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
                         signature: *sig,
@@ -398,12 +406,12 @@ impl SDKClientCore {
                             trade_direction: trade_direction.unwrap_or(0),
                         }),
                     }),
-                    MarketEvent::Fee {
+                    PhoenixMarketEvent::Fee(FeeEvent {
                         index,
                         fees_collected_in_quote_lots,
-                    } => market_events.push(PhoenixEvent {
+                    }) => market_events.push(PhoenixEvent {
                         market: header.market,
-                        sequence_number: header.market_sequence_number,
+                        sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
                         signature: *sig,
@@ -729,7 +737,7 @@ impl SDKClientCore {
         {
             cancel_orders.push(CancelOrderParams {
                 side: Side::from_order_sequence_number(order_sequence_number),
-                price_in_ticks,
+                price_in_ticks: price_in_ticks.as_u64(),
                 order_sequence_number,
             });
         }

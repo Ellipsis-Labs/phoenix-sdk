@@ -2,9 +2,12 @@ use std::collections::BTreeMap;
 
 use itertools::Itertools;
 use num_traits::ToPrimitive;
-use phoenix_types::enums::Side;
-use phoenix_types::market::{FIFOOrderId, FIFORestingOrder, Market};
+use phoenix::quantities::WrapperU64;
+use phoenix::state::enums::Side;
+use phoenix::state::markets::{FIFOOrderId, FIFORestingOrder, Market};
+use phoenix::state::OrderPacket;
 use rust_decimal::Decimal;
+use solana_sdk::pubkey::Pubkey;
 
 use crate::sdk_client_core::PhoenixOrder;
 
@@ -18,7 +21,7 @@ pub trait OrderbookValue {
 
 impl OrderbookKey for FIFOOrderId {
     fn price(&self) -> f64 {
-        self.price_in_ticks.to_f64().unwrap()
+        self.price_in_ticks.as_u64().to_f64().unwrap()
     }
 }
 
@@ -73,7 +76,11 @@ pub struct Orderbook<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> {
 }
 
 impl Orderbook<FIFOOrderId, PhoenixOrder> {
-    pub fn from_market(market: &dyn Market, size_mult: f64, price_mult: f64) -> Self {
+    pub fn from_market(
+        market: &dyn Market<Pubkey, FIFOOrderId, FIFORestingOrder, OrderPacket>,
+        size_mult: f64,
+        price_mult: f64,
+    ) -> Self {
         let traders = market
             .get_registered_traders()
             .iter()
@@ -82,7 +89,7 @@ impl Orderbook<FIFOOrderId, PhoenixOrder> {
 
         let mut index_to_trader = BTreeMap::new();
         for trader in traders.iter() {
-            let index = market.get_trader_address(trader).unwrap();
+            let index = market.get_trader_index(trader).unwrap();
             index_to_trader.insert(index as u64, *trader);
         }
 
@@ -110,7 +117,7 @@ impl Orderbook<FIFOOrderId, PhoenixOrder> {
                             (
                                 k,
                                 PhoenixOrder {
-                                    num_base_lots,
+                                    num_base_lots: num_base_lots.as_u64(),
                                     maker_id: index_to_trader[&trader_index],
                                 },
                             )

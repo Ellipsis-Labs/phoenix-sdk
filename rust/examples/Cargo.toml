@@ -18,10 +18,11 @@ spl-token = { workspace = true }
 spl-associated-token-account = { workspace = true }
 bs58 = "0.4.0"
 tokio = { workspace = true }
+bytemuck = { workspace = true }
 ellipsis-client = { workspace = true }
 clap = { workspace = true }
 shellexpand = { workspace = true }
 borsh = { workspace = true }
-phoenix-types = { workspace = true }
+phoenix = { workspace = true }
 phoenix-sdk = { path = "../phoenix-sdk" }
 devnet-token-faucet = { git = "https://github.com/Ellipsis-Labs/devnet-token-faucet" }

@@ -1,4 +1,4 @@
-use phoenix_types::enums::Side;
+use phoenix::state::enums::Side;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Signature;
 
