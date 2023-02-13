@@ -5,10 +5,10 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
-import { WithdrawParams, withdrawParamsBeet } from '../types/WithdrawParams'
+import * as splToken from "@solana/spl-token";
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
+import { WithdrawParams, withdrawParamsBeet } from "../types/WithdrawParams";
 
 /**
  * @category Instructions
@@ -16,8 +16,8 @@ import { WithdrawParams, withdrawParamsBeet } from '../types/WithdrawParams'
  * @category generated
  */
 export type WithdrawFundsInstructionArgs = {
-  withdrawFundsParams: WithdrawParams
-}
+  withdrawFundsParams: WithdrawParams;
+};
 /**
  * @category Instructions
  * @category WithdrawFunds
@@ -25,15 +25,15 @@ export type WithdrawFundsInstructionArgs = {
  */
 export const WithdrawFundsStruct = new beet.FixableBeetArgsStruct<
   WithdrawFundsInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['withdrawFundsParams', withdrawParamsBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["withdrawFundsParams", withdrawParamsBeet],
   ],
-  'WithdrawFundsInstructionArgs'
-)
+  "WithdrawFundsInstructionArgs"
+);
 /**
  * Accounts required by the _WithdrawFunds_ instruction
  *
@@ -50,18 +50,18 @@ export const WithdrawFundsStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type WithdrawFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  baseAccount: web3.PublicKey
-  quoteAccount: web3.PublicKey
-  baseVault: web3.PublicKey
-  quoteVault: web3.PublicKey
-  tokenProgram?: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  baseAccount: web3.PublicKey;
+  quoteAccount: web3.PublicKey;
+  baseVault: web3.PublicKey;
+  quoteVault: web3.PublicKey;
+  tokenProgram?: web3.PublicKey;
+};
 
-export const withdrawFundsInstructionDiscriminator = 12
+export const withdrawFundsInstructionDiscriminator = 12;
 
 /**
  * Creates a _WithdrawFunds_ instruction.
@@ -76,12 +76,12 @@ export const withdrawFundsInstructionDiscriminator = 12
 export function createWithdrawFundsInstruction(
   accounts: WithdrawFundsInstructionAccounts,
   args: WithdrawFundsInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = WithdrawFundsStruct.serialize({
     instructionDiscriminator: withdrawFundsInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -128,12 +128,12 @@ export function createWithdrawFundsInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

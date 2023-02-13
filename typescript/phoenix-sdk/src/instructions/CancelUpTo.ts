@@ -5,13 +5,13 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as splToken from "@solana/spl-token";
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 import {
   CancelUpToParams,
   cancelUpToParamsBeet,
-} from '../types/CancelUpToParams'
+} from "../types/CancelUpToParams";
 
 /**
  * @category Instructions
@@ -19,8 +19,8 @@ import {
  * @category generated
  */
 export type CancelUpToInstructionArgs = {
-  params: CancelUpToParams
-}
+  params: CancelUpToParams;
+};
 /**
  * @category Instructions
  * @category CancelUpTo
@@ -28,15 +28,15 @@ export type CancelUpToInstructionArgs = {
  */
 export const CancelUpToStruct = new beet.FixableBeetArgsStruct<
   CancelUpToInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['params', cancelUpToParamsBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["params", cancelUpToParamsBeet],
   ],
-  'CancelUpToInstructionArgs'
-)
+  "CancelUpToInstructionArgs"
+);
 /**
  * Accounts required by the _CancelUpTo_ instruction
  *
@@ -53,18 +53,18 @@ export const CancelUpToStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type CancelUpToInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  baseAccount: web3.PublicKey
-  quoteAccount: web3.PublicKey
-  baseVault: web3.PublicKey
-  quoteVault: web3.PublicKey
-  tokenProgram?: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  baseAccount: web3.PublicKey;
+  quoteAccount: web3.PublicKey;
+  baseVault: web3.PublicKey;
+  quoteVault: web3.PublicKey;
+  tokenProgram?: web3.PublicKey;
+};
 
-export const cancelUpToInstructionDiscriminator = 8
+export const cancelUpToInstructionDiscriminator = 8;
 
 /**
  * Creates a _CancelUpTo_ instruction.
@@ -79,12 +79,12 @@ export const cancelUpToInstructionDiscriminator = 8
 export function createCancelUpToInstruction(
   accounts: CancelUpToInstructionAccounts,
   args: CancelUpToInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = CancelUpToStruct.serialize({
     instructionDiscriminator: cancelUpToInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -131,12 +131,12 @@ export function createCancelUpToInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

@@ -5,8 +5,8 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 
 /**
  * @category Instructions
@@ -14,11 +14,11 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export const CancelAllOrdersWithFreeFundsStruct = new beet.BeetArgsStruct<{
-  instructionDiscriminator: number
+  instructionDiscriminator: number;
 }>(
-  [['instructionDiscriminator', beet.u8]],
-  'CancelAllOrdersWithFreeFundsInstructionArgs'
-)
+  [["instructionDiscriminator", beet.u8]],
+  "CancelAllOrdersWithFreeFundsInstructionArgs"
+);
 /**
  * Accounts required by the _CancelAllOrdersWithFreeFunds_ instruction
  *
@@ -31,13 +31,13 @@ export const CancelAllOrdersWithFreeFundsStruct = new beet.BeetArgsStruct<{
  * @category generated
  */
 export type CancelAllOrdersWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+};
 
-export const cancelAllOrdersWithFreeFundsInstructionDiscriminator = 7
+export const cancelAllOrdersWithFreeFundsInstructionDiscriminator = 7;
 
 /**
  * Creates a _CancelAllOrdersWithFreeFunds_ instruction.
@@ -49,12 +49,12 @@ export const cancelAllOrdersWithFreeFundsInstructionDiscriminator = 7
  */
 export function createCancelAllOrdersWithFreeFundsInstruction(
   accounts: CancelAllOrdersWithFreeFundsInstructionAccounts,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = CancelAllOrdersWithFreeFundsStruct.serialize({
     instructionDiscriminator:
       cancelAllOrdersWithFreeFundsInstructionDiscriminator,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -76,12 +76,12 @@ export function createCancelAllOrdersWithFreeFundsInstruction(
       isWritable: false,
       isSigner: true,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

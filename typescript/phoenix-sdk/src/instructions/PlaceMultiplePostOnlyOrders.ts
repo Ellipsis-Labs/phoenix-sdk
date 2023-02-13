@@ -5,13 +5,13 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as splToken from "@solana/spl-token";
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 import {
   MultipleOrderPacket,
   multipleOrderPacketBeet,
-} from '../types/MultipleOrderPacket'
+} from "../types/MultipleOrderPacket";
 
 /**
  * @category Instructions
@@ -19,8 +19,8 @@ import {
  * @category generated
  */
 export type PlaceMultiplePostOnlyOrdersInstructionArgs = {
-  multipleOrderPacket: MultipleOrderPacket
-}
+  multipleOrderPacket: MultipleOrderPacket;
+};
 /**
  * @category Instructions
  * @category PlaceMultiplePostOnlyOrders
@@ -28,15 +28,15 @@ export type PlaceMultiplePostOnlyOrdersInstructionArgs = {
  */
 export const PlaceMultiplePostOnlyOrdersStruct = new beet.FixableBeetArgsStruct<
   PlaceMultiplePostOnlyOrdersInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['multipleOrderPacket', multipleOrderPacketBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["multipleOrderPacket", multipleOrderPacketBeet],
   ],
-  'PlaceMultiplePostOnlyOrdersInstructionArgs'
-)
+  "PlaceMultiplePostOnlyOrdersInstructionArgs"
+);
 /**
  * Accounts required by the _PlaceMultiplePostOnlyOrders_ instruction
  *
@@ -54,19 +54,19 @@ export const PlaceMultiplePostOnlyOrdersStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type PlaceMultiplePostOnlyOrdersInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  seat: web3.PublicKey
-  baseAccount: web3.PublicKey
-  quoteAccount: web3.PublicKey
-  baseVault: web3.PublicKey
-  quoteVault: web3.PublicKey
-  tokenProgram?: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  seat: web3.PublicKey;
+  baseAccount: web3.PublicKey;
+  quoteAccount: web3.PublicKey;
+  baseVault: web3.PublicKey;
+  quoteVault: web3.PublicKey;
+  tokenProgram?: web3.PublicKey;
+};
 
-export const placeMultiplePostOnlyOrdersInstructionDiscriminator = 16
+export const placeMultiplePostOnlyOrdersInstructionDiscriminator = 16;
 
 /**
  * Creates a _PlaceMultiplePostOnlyOrders_ instruction.
@@ -81,13 +81,13 @@ export const placeMultiplePostOnlyOrdersInstructionDiscriminator = 16
 export function createPlaceMultiplePostOnlyOrdersInstruction(
   accounts: PlaceMultiplePostOnlyOrdersInstructionAccounts,
   args: PlaceMultiplePostOnlyOrdersInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = PlaceMultiplePostOnlyOrdersStruct.serialize({
     instructionDiscriminator:
       placeMultiplePostOnlyOrdersInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -139,12 +139,12 @@ export function createPlaceMultiplePostOnlyOrdersInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

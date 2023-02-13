@@ -5,8 +5,8 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 
 /**
  * @category Instructions
@@ -15,9 +15,9 @@ import * as web3 from '@solana/web3.js'
  */
 export const CancelMultipleOrdersByIdWithFreeFundsStruct =
   new beet.BeetArgsStruct<{ instructionDiscriminator: number }>(
-    [['instructionDiscriminator', beet.u8]],
-    'CancelMultipleOrdersByIdWithFreeFundsInstructionArgs'
-  )
+    [["instructionDiscriminator", beet.u8]],
+    "CancelMultipleOrdersByIdWithFreeFundsInstructionArgs"
+  );
 /**
  * Accounts required by the _CancelMultipleOrdersByIdWithFreeFunds_ instruction
  *
@@ -30,13 +30,13 @@ export const CancelMultipleOrdersByIdWithFreeFundsStruct =
  * @category generated
  */
 export type CancelMultipleOrdersByIdWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+};
 
-export const cancelMultipleOrdersByIdWithFreeFundsInstructionDiscriminator = 11
+export const cancelMultipleOrdersByIdWithFreeFundsInstructionDiscriminator = 11;
 
 /**
  * Creates a _CancelMultipleOrdersByIdWithFreeFunds_ instruction.
@@ -48,12 +48,12 @@ export const cancelMultipleOrdersByIdWithFreeFundsInstructionDiscriminator = 11
  */
 export function createCancelMultipleOrdersByIdWithFreeFundsInstruction(
   accounts: CancelMultipleOrdersByIdWithFreeFundsInstructionAccounts,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = CancelMultipleOrdersByIdWithFreeFundsStruct.serialize({
     instructionDiscriminator:
       cancelMultipleOrdersByIdWithFreeFundsInstructionDiscriminator,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -75,12 +75,12 @@ export function createCancelMultipleOrdersByIdWithFreeFundsInstruction(
       isWritable: false,
       isSigner: true,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

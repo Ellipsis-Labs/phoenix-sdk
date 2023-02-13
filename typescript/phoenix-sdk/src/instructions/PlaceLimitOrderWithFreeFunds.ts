@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
-import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
+import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
 
 /**
  * @category Instructions
@@ -15,8 +15,8 @@ import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
  * @category generated
  */
 export type PlaceLimitOrderWithFreeFundsInstructionArgs = {
-  orderPacket: OrderPacket
-}
+  orderPacket: OrderPacket;
+};
 /**
  * @category Instructions
  * @category PlaceLimitOrderWithFreeFunds
@@ -25,15 +25,15 @@ export type PlaceLimitOrderWithFreeFundsInstructionArgs = {
 export const PlaceLimitOrderWithFreeFundsStruct =
   new beet.FixableBeetArgsStruct<
     PlaceLimitOrderWithFreeFundsInstructionArgs & {
-      instructionDiscriminator: number
+      instructionDiscriminator: number;
     }
   >(
     [
-      ['instructionDiscriminator', beet.u8],
-      ['orderPacket', orderPacketBeet],
+      ["instructionDiscriminator", beet.u8],
+      ["orderPacket", orderPacketBeet],
     ],
-    'PlaceLimitOrderWithFreeFundsInstructionArgs'
-  )
+    "PlaceLimitOrderWithFreeFundsInstructionArgs"
+  );
 /**
  * Accounts required by the _PlaceLimitOrderWithFreeFunds_ instruction
  *
@@ -47,14 +47,14 @@ export const PlaceLimitOrderWithFreeFundsStruct =
  * @category generated
  */
 export type PlaceLimitOrderWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  seat: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  seat: web3.PublicKey;
+};
 
-export const placeLimitOrderWithFreeFundsInstructionDiscriminator = 3
+export const placeLimitOrderWithFreeFundsInstructionDiscriminator = 3;
 
 /**
  * Creates a _PlaceLimitOrderWithFreeFunds_ instruction.
@@ -69,13 +69,13 @@ export const placeLimitOrderWithFreeFundsInstructionDiscriminator = 3
 export function createPlaceLimitOrderWithFreeFundsInstruction(
   accounts: PlaceLimitOrderWithFreeFundsInstructionAccounts,
   args: PlaceLimitOrderWithFreeFundsInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = PlaceLimitOrderWithFreeFundsStruct.serialize({
     instructionDiscriminator:
       placeLimitOrderWithFreeFundsInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -102,12 +102,12 @@ export function createPlaceLimitOrderWithFreeFundsInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }
