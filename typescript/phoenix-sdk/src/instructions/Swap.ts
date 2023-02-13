@@ -5,10 +5,10 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
-import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
+import * as splToken from "@solana/spl-token";
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
+import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
 
 /**
  * @category Instructions
@@ -16,8 +16,8 @@ import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
  * @category generated
  */
 export type SwapInstructionArgs = {
-  orderPacket: OrderPacket
-}
+  orderPacket: OrderPacket;
+};
 /**
  * @category Instructions
  * @category Swap
@@ -25,15 +25,15 @@ export type SwapInstructionArgs = {
  */
 export const SwapStruct = new beet.FixableBeetArgsStruct<
   SwapInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['orderPacket', orderPacketBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["orderPacket", orderPacketBeet],
   ],
-  'SwapInstructionArgs'
-)
+  "SwapInstructionArgs"
+);
 /**
  * Accounts required by the _Swap_ instruction
  *
@@ -50,18 +50,18 @@ export const SwapStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type SwapInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  baseAccount: web3.PublicKey
-  quoteAccount: web3.PublicKey
-  baseVault: web3.PublicKey
-  quoteVault: web3.PublicKey
-  tokenProgram?: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  baseAccount: web3.PublicKey;
+  quoteAccount: web3.PublicKey;
+  baseVault: web3.PublicKey;
+  quoteVault: web3.PublicKey;
+  tokenProgram?: web3.PublicKey;
+};
 
-export const swapInstructionDiscriminator = 0
+export const swapInstructionDiscriminator = 0;
 
 /**
  * Creates a _Swap_ instruction.
@@ -76,12 +76,12 @@ export const swapInstructionDiscriminator = 0
 export function createSwapInstruction(
   accounts: SwapInstructionAccounts,
   args: SwapInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = SwapStruct.serialize({
     instructionDiscriminator: swapInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -128,12 +128,12 @@ export function createSwapInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

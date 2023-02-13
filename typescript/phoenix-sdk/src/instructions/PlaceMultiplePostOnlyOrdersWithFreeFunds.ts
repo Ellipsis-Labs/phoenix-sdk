@@ -5,12 +5,12 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 import {
   MultipleOrderPacket,
   multipleOrderPacketBeet,
-} from '../types/MultipleOrderPacket'
+} from "../types/MultipleOrderPacket";
 
 /**
  * @category Instructions
@@ -18,8 +18,8 @@ import {
  * @category generated
  */
 export type PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionArgs = {
-  multipleOrderPacket: MultipleOrderPacket
-}
+  multipleOrderPacket: MultipleOrderPacket;
+};
 /**
  * @category Instructions
  * @category PlaceMultiplePostOnlyOrdersWithFreeFunds
@@ -28,15 +28,15 @@ export type PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionArgs = {
 export const PlaceMultiplePostOnlyOrdersWithFreeFundsStruct =
   new beet.FixableBeetArgsStruct<
     PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionArgs & {
-      instructionDiscriminator: number
+      instructionDiscriminator: number;
     }
   >(
     [
-      ['instructionDiscriminator', beet.u8],
-      ['multipleOrderPacket', multipleOrderPacketBeet],
+      ["instructionDiscriminator", beet.u8],
+      ["multipleOrderPacket", multipleOrderPacketBeet],
     ],
-    'PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionArgs'
-  )
+    "PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionArgs"
+  );
 /**
  * Accounts required by the _PlaceMultiplePostOnlyOrdersWithFreeFunds_ instruction
  *
@@ -50,14 +50,14 @@ export const PlaceMultiplePostOnlyOrdersWithFreeFundsStruct =
  * @category generated
  */
 export type PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  seat: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  seat: web3.PublicKey;
+};
 
-export const placeMultiplePostOnlyOrdersWithFreeFundsInstructionDiscriminator = 17
+export const placeMultiplePostOnlyOrdersWithFreeFundsInstructionDiscriminator = 17;
 
 /**
  * Creates a _PlaceMultiplePostOnlyOrdersWithFreeFunds_ instruction.
@@ -72,13 +72,13 @@ export const placeMultiplePostOnlyOrdersWithFreeFundsInstructionDiscriminator = 
 export function createPlaceMultiplePostOnlyOrdersWithFreeFundsInstruction(
   accounts: PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionAccounts,
   args: PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = PlaceMultiplePostOnlyOrdersWithFreeFundsStruct.serialize({
     instructionDiscriminator:
       placeMultiplePostOnlyOrdersWithFreeFundsInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -105,12 +105,12 @@ export function createPlaceMultiplePostOnlyOrdersWithFreeFundsInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

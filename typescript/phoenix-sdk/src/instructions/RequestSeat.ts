@@ -5,8 +5,8 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 
 /**
  * @category Instructions
@@ -14,8 +14,8 @@ import * as web3 from '@solana/web3.js'
  * @category generated
  */
 export const RequestSeatStruct = new beet.BeetArgsStruct<{
-  instructionDiscriminator: number
-}>([['instructionDiscriminator', beet.u8]], 'RequestSeatInstructionArgs')
+  instructionDiscriminator: number;
+}>([["instructionDiscriminator", beet.u8]], "RequestSeatInstructionArgs");
 /**
  * Accounts required by the _RequestSeat_ instruction
  *
@@ -29,15 +29,15 @@ export const RequestSeatStruct = new beet.BeetArgsStruct<{
  * @category generated
  */
 export type RequestSeatInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  payer: web3.PublicKey
-  seat: web3.PublicKey
-  systemProgram?: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  payer: web3.PublicKey;
+  seat: web3.PublicKey;
+  systemProgram?: web3.PublicKey;
+};
 
-export const requestSeatInstructionDiscriminator = 14
+export const requestSeatInstructionDiscriminator = 14;
 
 /**
  * Creates a _RequestSeat_ instruction.
@@ -49,11 +49,11 @@ export const requestSeatInstructionDiscriminator = 14
  */
 export function createRequestSeatInstruction(
   accounts: RequestSeatInstructionAccounts,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = RequestSeatStruct.serialize({
     instructionDiscriminator: requestSeatInstructionDiscriminator,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -85,12 +85,12 @@ export function createRequestSeatInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

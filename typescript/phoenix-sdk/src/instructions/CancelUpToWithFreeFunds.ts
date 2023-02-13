@@ -5,12 +5,12 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 import {
   CancelUpToParams,
   cancelUpToParamsBeet,
-} from '../types/CancelUpToParams'
+} from "../types/CancelUpToParams";
 
 /**
  * @category Instructions
@@ -18,8 +18,8 @@ import {
  * @category generated
  */
 export type CancelUpToWithFreeFundsInstructionArgs = {
-  params: CancelUpToParams
-}
+  params: CancelUpToParams;
+};
 /**
  * @category Instructions
  * @category CancelUpToWithFreeFunds
@@ -27,15 +27,15 @@ export type CancelUpToWithFreeFundsInstructionArgs = {
  */
 export const CancelUpToWithFreeFundsStruct = new beet.FixableBeetArgsStruct<
   CancelUpToWithFreeFundsInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['params', cancelUpToParamsBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["params", cancelUpToParamsBeet],
   ],
-  'CancelUpToWithFreeFundsInstructionArgs'
-)
+  "CancelUpToWithFreeFundsInstructionArgs"
+);
 /**
  * Accounts required by the _CancelUpToWithFreeFunds_ instruction
  *
@@ -48,13 +48,13 @@ export const CancelUpToWithFreeFundsStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type CancelUpToWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+};
 
-export const cancelUpToWithFreeFundsInstructionDiscriminator = 9
+export const cancelUpToWithFreeFundsInstructionDiscriminator = 9;
 
 /**
  * Creates a _CancelUpToWithFreeFunds_ instruction.
@@ -69,12 +69,12 @@ export const cancelUpToWithFreeFundsInstructionDiscriminator = 9
 export function createCancelUpToWithFreeFundsInstruction(
   accounts: CancelUpToWithFreeFundsInstructionAccounts,
   args: CancelUpToWithFreeFundsInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = CancelUpToWithFreeFundsStruct.serialize({
     instructionDiscriminator: cancelUpToWithFreeFundsInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -96,12 +96,12 @@ export function createCancelUpToWithFreeFundsInstruction(
       isWritable: false,
       isSigner: true,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

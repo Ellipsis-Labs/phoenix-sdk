@@ -5,10 +5,10 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
-import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
+import * as splToken from "@solana/spl-token";
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
+import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
 
 /**
  * @category Instructions
@@ -16,8 +16,8 @@ import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
  * @category generated
  */
 export type PlaceLimitOrderInstructionArgs = {
-  orderPacket: OrderPacket
-}
+  orderPacket: OrderPacket;
+};
 /**
  * @category Instructions
  * @category PlaceLimitOrder
@@ -25,15 +25,15 @@ export type PlaceLimitOrderInstructionArgs = {
  */
 export const PlaceLimitOrderStruct = new beet.FixableBeetArgsStruct<
   PlaceLimitOrderInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['orderPacket', orderPacketBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["orderPacket", orderPacketBeet],
   ],
-  'PlaceLimitOrderInstructionArgs'
-)
+  "PlaceLimitOrderInstructionArgs"
+);
 /**
  * Accounts required by the _PlaceLimitOrder_ instruction
  *
@@ -51,19 +51,19 @@ export const PlaceLimitOrderStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type PlaceLimitOrderInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  seat: web3.PublicKey
-  baseAccount: web3.PublicKey
-  quoteAccount: web3.PublicKey
-  baseVault: web3.PublicKey
-  quoteVault: web3.PublicKey
-  tokenProgram?: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  seat: web3.PublicKey;
+  baseAccount: web3.PublicKey;
+  quoteAccount: web3.PublicKey;
+  baseVault: web3.PublicKey;
+  quoteVault: web3.PublicKey;
+  tokenProgram?: web3.PublicKey;
+};
 
-export const placeLimitOrderInstructionDiscriminator = 2
+export const placeLimitOrderInstructionDiscriminator = 2;
 
 /**
  * Creates a _PlaceLimitOrder_ instruction.
@@ -78,12 +78,12 @@ export const placeLimitOrderInstructionDiscriminator = 2
 export function createPlaceLimitOrderInstruction(
   accounts: PlaceLimitOrderInstructionAccounts,
   args: PlaceLimitOrderInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = PlaceLimitOrderStruct.serialize({
     instructionDiscriminator: placeLimitOrderInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -135,12 +135,12 @@ export function createPlaceLimitOrderInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

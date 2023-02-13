@@ -5,13 +5,13 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as splToken from "@solana/spl-token";
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 import {
   ReduceOrderParams,
   reduceOrderParamsBeet,
-} from '../types/ReduceOrderParams'
+} from "../types/ReduceOrderParams";
 
 /**
  * @category Instructions
@@ -19,8 +19,8 @@ import {
  * @category generated
  */
 export type ReduceOrderInstructionArgs = {
-  params: ReduceOrderParams
-}
+  params: ReduceOrderParams;
+};
 /**
  * @category Instructions
  * @category ReduceOrder
@@ -28,15 +28,15 @@ export type ReduceOrderInstructionArgs = {
  */
 export const ReduceOrderStruct = new beet.BeetArgsStruct<
   ReduceOrderInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['params', reduceOrderParamsBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["params", reduceOrderParamsBeet],
   ],
-  'ReduceOrderInstructionArgs'
-)
+  "ReduceOrderInstructionArgs"
+);
 /**
  * Accounts required by the _ReduceOrder_ instruction
  *
@@ -53,18 +53,18 @@ export const ReduceOrderStruct = new beet.BeetArgsStruct<
  * @category generated
  */
 export type ReduceOrderInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  baseAccount: web3.PublicKey
-  quoteAccount: web3.PublicKey
-  baseVault: web3.PublicKey
-  quoteVault: web3.PublicKey
-  tokenProgram?: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  baseAccount: web3.PublicKey;
+  quoteAccount: web3.PublicKey;
+  baseVault: web3.PublicKey;
+  quoteVault: web3.PublicKey;
+  tokenProgram?: web3.PublicKey;
+};
 
-export const reduceOrderInstructionDiscriminator = 4
+export const reduceOrderInstructionDiscriminator = 4;
 
 /**
  * Creates a _ReduceOrder_ instruction.
@@ -79,12 +79,12 @@ export const reduceOrderInstructionDiscriminator = 4
 export function createReduceOrderInstruction(
   accounts: ReduceOrderInstructionAccounts,
   args: ReduceOrderInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = ReduceOrderStruct.serialize({
     instructionDiscriminator: reduceOrderInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -131,12 +131,12 @@ export function createReduceOrderInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }

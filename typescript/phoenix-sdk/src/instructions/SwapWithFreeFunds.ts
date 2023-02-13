@@ -5,9 +5,9 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
-import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
+import { OrderPacket, orderPacketBeet } from "../types/OrderPacket";
 
 /**
  * @category Instructions
@@ -15,8 +15,8 @@ import { OrderPacket, orderPacketBeet } from '../types/OrderPacket'
  * @category generated
  */
 export type SwapWithFreeFundsInstructionArgs = {
-  orderPacket: OrderPacket
-}
+  orderPacket: OrderPacket;
+};
 /**
  * @category Instructions
  * @category SwapWithFreeFunds
@@ -24,15 +24,15 @@ export type SwapWithFreeFundsInstructionArgs = {
  */
 export const SwapWithFreeFundsStruct = new beet.FixableBeetArgsStruct<
   SwapWithFreeFundsInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['orderPacket', orderPacketBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["orderPacket", orderPacketBeet],
   ],
-  'SwapWithFreeFundsInstructionArgs'
-)
+  "SwapWithFreeFundsInstructionArgs"
+);
 /**
  * Accounts required by the _SwapWithFreeFunds_ instruction
  *
@@ -46,14 +46,14 @@ export const SwapWithFreeFundsStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type SwapWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  seat: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  seat: web3.PublicKey;
+};
 
-export const swapWithFreeFundsInstructionDiscriminator = 1
+export const swapWithFreeFundsInstructionDiscriminator = 1;
 
 /**
  * Creates a _SwapWithFreeFunds_ instruction.
@@ -68,12 +68,12 @@ export const swapWithFreeFundsInstructionDiscriminator = 1
 export function createSwapWithFreeFundsInstruction(
   accounts: SwapWithFreeFundsInstructionAccounts,
   args: SwapWithFreeFundsInstructionArgs,
-  programId = new web3.PublicKey('phnxNHfGNVjpVVuHkceK3MgwZ1bW25ijfWACKhVFbBH')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = SwapWithFreeFundsStruct.serialize({
     instructionDiscriminator: swapWithFreeFundsInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -100,12 +100,12 @@ export function createSwapWithFreeFundsInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }
