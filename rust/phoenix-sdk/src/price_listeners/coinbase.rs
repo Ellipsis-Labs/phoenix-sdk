@@ -3,7 +3,7 @@ use coinbase_pro_rs::structs::reqs::OrderSide;
 use coinbase_pro_rs::wsfeed::{CBSink, CBStream};
 use coinbase_pro_rs::{structs::wsfeed::*, WSFeed};
 use futures::StreamExt;
-use phoenix_types::enums::*;
+use phoenix::state::enums::*;
 use rust_decimal::prelude::*;
 use std::{
     collections::BTreeMap,

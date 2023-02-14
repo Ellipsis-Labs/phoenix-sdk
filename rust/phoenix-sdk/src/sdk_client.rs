@@ -1,15 +1,15 @@
-use borsh::BorshDeserialize;
 use ellipsis_client::EllipsisClient;
+use phoenix::program::dispatch_market::*;
+use phoenix::program::instruction::PhoenixInstruction;
+use phoenix::program::MarketHeader;
+use phoenix::state::enums::*;
+use phoenix::state::markets::*;
+use phoenix::state::TraderState;
 use phoenix_sdk_core::sdk_client_core::MarketState;
 pub use phoenix_sdk_core::{
     market_event::{Evict, Fill, FillSummary, MarketEventDetails, PhoenixEvent, Place, Reduce},
     sdk_client_core::{get_decimal_string, MarketMetadata, PhoenixOrder, SDKClientCore},
 };
-use phoenix_types as phoenix;
-use phoenix_types::dispatch::*;
-use phoenix_types::enums::*;
-use phoenix_types::instructions::PhoenixInstruction;
-use phoenix_types::market::*;
 use rand::{rngs::StdRng, SeedableRng};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_program::instruction::Instruction;
@@ -108,8 +108,8 @@ impl SDKClient {
             .await
             .expect("Failed to get market account data");
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes)
-            .expect("Failed to deserialize market header");
+        let header: &MarketHeader =
+            bytemuck::try_from_bytes(header_bytes).expect("Failed to deserialize market header");
         let market = load_with_dispatch(&header.market_size_params, bytes)
             .expect("Market configuration not found")
             .inner;
@@ -136,7 +136,7 @@ impl SDKClient {
             return default;
         }
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        MarketHeader::try_from_slice(header_bytes)
+        bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
             .ok()
             .map(|header| {
                 load_with_dispatch(&header.market_size_params, bytes)
@@ -147,7 +147,7 @@ impl SDKClient {
                             self.ticks_to_float_price_multiplier(),
                         )
                     })
-                    .unwrap_or_else(|| default.clone())
+                    .unwrap_or_else(|_| default.clone())
             })
             .unwrap_or(default)
     }
@@ -164,7 +164,7 @@ impl SDKClient {
                 Err(_) => return BTreeMap::new(),
             };
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes)
+        let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
             .expect("Failed to deserialize market header");
         let market = load_with_dispatch(&header.market_size_params, bytes)
             .expect("Market configuration not found")
@@ -199,7 +199,7 @@ impl SDKClient {
                 }
             };
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes)
+        let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
             .expect("Failed to deserialize market header");
         let market = load_with_dispatch(&header.market_size_params, bytes)
             .expect("Market configuration not found")
@@ -226,7 +226,7 @@ impl SDKClient {
             .await
             .expect("Failed to find market account");
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let header = MarketHeader::try_from_slice(header_bytes)
+        let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
             .expect("Failed to deserialize market header");
         let market = load_with_dispatch(&header.market_size_params, bytes)
             .expect("Market configuration not found")

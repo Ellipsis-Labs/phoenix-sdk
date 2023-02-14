@@ -1,10 +1,9 @@
 use anyhow::anyhow;
-use borsh::BorshDeserialize;
 use clap::Parser;
 use ellipsis_client::EllipsisClient;
+use phoenix::program::accounts::MarketHeader;
+use phoenix::program::dispatch_market::load_with_dispatch;
 use phoenix_sdk::sdk_client::SDKClient;
-use phoenix_types::dispatch::load_with_dispatch_mut;
-use phoenix_types::market::MarketHeader;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcAccountInfoConfig;
@@ -29,7 +28,7 @@ struct Args {
 
 fn get_discriminant(type_name: &str) -> u64 {
     u64::from_le_bytes(
-        keccak::hashv(&[phoenix_types::ID.as_ref(), type_name.as_bytes()]).as_ref()[..8]
+        keccak::hashv(&[phoenix::ID.as_ref(), type_name.as_bytes()]).as_ref()[..8]
             .try_into()
             .unwrap(),
     )
@@ -67,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
     #[allow(deprecated)]
     let program_accounts = client
         .get_program_accounts_with_config(
-            &phoenix_types::ID,
+            &phoenix::ID,
             RpcProgramAccountsConfig {
                 filters: Some(vec![RpcFilterType::Memcmp(Memcmp {
                     offset: 0,
@@ -89,16 +88,15 @@ async fn main() -> anyhow::Result<()> {
     let mut sol_usdc_market: Option<Pubkey> = None;
 
     for (market_pubkey, account) in program_accounts {
-        let mut account_cloned = account.clone();
+        let account_cloned = account.clone();
         // MarketHeader is fixed size; split the market account bytes into header bytes and market bytes
-        let (header_bytes, market_bytes) =
-            account_cloned.data.split_at_mut(size_of::<MarketHeader>());
+        let (header_bytes, market_bytes) = account_cloned.data.split_at(size_of::<MarketHeader>());
 
         // deserialize the header
-        let header = MarketHeader::try_from_slice(header_bytes).unwrap();
+        let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes).unwrap();
 
         // use params from the header to deserialize the market
-        let _market = load_with_dispatch_mut(&header.market_size_params, market_bytes)
+        let _market = load_with_dispatch(&header.market_size_params, market_bytes)
             .unwrap()
             .inner;
 
