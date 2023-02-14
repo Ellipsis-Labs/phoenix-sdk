@@ -6,10 +6,10 @@ use phoenix::{
         create_cancel_up_to_instruction, create_new_order_instruction,
     },
     program::{
-        processor::cancel_multiple_orders::{CancelMultipleOrdersByIdParams, CancelUpToParams},
+        cancel_multiple_orders::{CancelMultipleOrdersByIdParams, CancelUpToParams},
         EvictEvent, FeeEvent, FillEvent, FillSummaryEvent, PlaceEvent,
     },
-    program::{processor::reduce_order::CancelOrderParams, ReduceEvent},
+    program::{reduce_order::CancelOrderParams, ReduceEvent},
     quantities::WrapperU64,
     state::enums::{SelfTradeBehavior, Side},
     state::markets::FIFOOrderId,

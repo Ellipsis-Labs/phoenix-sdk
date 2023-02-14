@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use clap::Parser;
 use ellipsis_client::EllipsisClient;
 use phoenix::program::accounts::MarketHeader;
-use phoenix::program::dispatch_market::load_with_dispatch_mut;
+use phoenix::program::dispatch_market::load_with_dispatch;
 use phoenix_sdk::sdk_client::SDKClient;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -88,16 +88,15 @@ async fn main() -> anyhow::Result<()> {
     let mut sol_usdc_market: Option<Pubkey> = None;
 
     for (market_pubkey, account) in program_accounts {
-        let mut account_cloned = account.clone();
+        let account_cloned = account.clone();
         // MarketHeader is fixed size; split the market account bytes into header bytes and market bytes
-        let (header_bytes, market_bytes) =
-            account_cloned.data.split_at_mut(size_of::<MarketHeader>());
+        let (header_bytes, market_bytes) = account_cloned.data.split_at(size_of::<MarketHeader>());
 
         // deserialize the header
         let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes).unwrap();
 
         // use params from the header to deserialize the market
-        let _market = load_with_dispatch_mut(&header.market_size_params, market_bytes)
+        let _market = load_with_dispatch(&header.market_size_params, market_bytes)
             .unwrap()
             .inner;
 

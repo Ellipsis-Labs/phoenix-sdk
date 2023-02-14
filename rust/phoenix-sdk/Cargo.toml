@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = { workspace = true }
 solana-program = { workspace = true }
-phoenix = { workspace = true }
+phoenix-v1 = { workspace = true }
 clap = { workspace = true }
 borsh = { workspace = true }
 rand = { workspace = true }
