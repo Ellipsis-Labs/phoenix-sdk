@@ -1,10 +1,10 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
 import CONFIG from "../config.json";
+import { getClusterFromEndpoint } from "./utils";
 import { Token } from "./token";
 import { Market } from "./market";
 import { Trader } from "./trader";
-import { clusterFromEndpoint } from "./utils";
 
 export class Client {
   connection: Connection;
@@ -39,7 +39,7 @@ export class Client {
     connection: Connection,
     trader?: PublicKey
   ): Promise<Client> {
-    const cluster = clusterFromEndpoint(connection.rpcEndpoint);
+    const cluster = getClusterFromEndpoint(connection.rpcEndpoint);
 
     const markets = [];
     const tokens = [];

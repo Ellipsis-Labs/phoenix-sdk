@@ -12,7 +12,7 @@ import {
   printUiLadder,
   getMarketSwapTransaction,
   getMarketExpectedOutAmount,
-  clusterFromEndpoint,
+  getClusterFromEndpoint,
   toNum,
 } from "./utils";
 import { Token } from "./token";
@@ -107,7 +107,7 @@ export class Market {
     const marketData = deserializeMarketData(buffer);
 
     const allTokens =
-      CONFIG[clusterFromEndpoint(connection.rpcEndpoint)].tokens;
+      CONFIG[getClusterFromEndpoint(connection.rpcEndpoint)].tokens;
 
     const baseTokenConfig = allTokens.find(
       (token) => token.mint === marketData.header.baseParams.mintKey.toBase58()

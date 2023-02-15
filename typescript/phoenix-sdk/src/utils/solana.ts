@@ -1,12 +1,9 @@
-export enum Cluster {
-  MainnetBeta = "mainnet-beta",
-  Devnet = "devnet",
-  Localhost = "localhost",
-}
+export type Cluster = "mainnet-beta" | "devnet" | "localhost";
 
-export function clusterFromEndpoint(endpoint: string): Cluster {
-  if (endpoint.includes("devnet")) return Cluster.Devnet;
+export function getClusterFromEndpoint(endpoint: string): Cluster {
+  if (endpoint.includes("devnet")) return "devnet";
   if (endpoint.includes("local") || endpoint.includes("127.0.0.1"))
-    return Cluster.Localhost;
-  return Cluster.MainnetBeta;
+    return "localhost";
+
+  return "mainnet-beta";
 }
