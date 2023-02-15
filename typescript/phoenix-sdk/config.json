@@ -21,8 +21,8 @@
       }
     ],
     "markets": [
-      "3PgJmaEKQqVzQNAT3WtMaSQxBFPL3WqnvyahRM28PGJH",
-      "snFwGhLMrzS9YmnKyyiromxZ1oWE9vX7ZpoNHv23cCC"
+      "6EvJccKnfxXvbAoCwf2iGTAEgckWuU834XAgT7tV4oxm",
+      "7EBrdSbDLvAJEMjigvSrBGkuRNdH9whvzkeojsHSVQib"
     ]
   },
   "mainnet-beta": {
@@ -40,19 +40,19 @@
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       },
       {
-        "name": "Wrapped Ethereum (Sollet)",
-        "symbol": "wETH",
-        "mint": "2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk",
-        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk/logo.png"
+        "name": "BASE",
+        "symbol": "BASE",
+        "mint": "7Z6Kczxo8ViRpfnsVvVaATB5fQ8bN2CQpxP8DHfd1vz5",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       },
       {
-        "name": "Wrapped Bitcoin (Sollet)",
-        "symbol": "wBTC",
-        "mint": "9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E",
-        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/2FPyTwcZLUg1MDrwsyoP4D6s1tM7hAkHYRjkNb5w6Pxk/logo.png"
+        "name": "QUOTE",
+        "symbol": "QUOTE",
+        "mint": "5zUmtDCDeR17UYjvKKqvYp3S9pqcZA69cDoYPtojseJ4",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       }
     ],
-    "markets": []
+    "markets": ["14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5"]
   },
   "localhost": {
     "tokens": [

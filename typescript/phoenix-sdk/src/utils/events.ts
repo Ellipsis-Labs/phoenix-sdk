@@ -7,7 +7,7 @@ import { BinaryReader } from "borsh";
 import base58 from "bs58";
 import BN from "bn.js";
 
-import { PROGRAM_ID } from "./index";
+import { PROGRAM_ID } from "../index";
 import {
   AuditLogHeader,
   EvictEvent,
@@ -17,8 +17,8 @@ import {
   PlaceEvent,
   ReduceEvent,
   PhoenixMarketEvent,
-} from "./types";
-import { logInstructionDiscriminator } from "./instructions";
+} from "../types";
+import { logInstructionDiscriminator } from "../instructions";
 
 export type PhoenixTransaction = {
   instructions: Array<PhoenixEvent>;
