@@ -1,5 +1,9 @@
 [
     {
-        "market": "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5"
+        "market": "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5",
+        "base_ticker": "BASE",
+        "quote_ticker": "QUOTE",
+        "base_pubkey": "7Z6Kczxo8ViRpfnsVvVaATB5fQ8bN2CQpxP8DHfd1vz5",
+        "quote_pubkey": "5zUmtDCDeR17UYjvKKqvYp3S9pqcZA69cDoYPtojseJ4"
     }
 ]
