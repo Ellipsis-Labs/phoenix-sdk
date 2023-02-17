@@ -2,7 +2,6 @@ import * as bs58 from 'bs58';
 import { CancelUpToParams, cancelUpToParamsBeet, depositParamsBeet, MarketStatus, marketStatusBeet, MultipleOrderPacket, multipleOrderPacketBeet, OrderPacket, orderPacketBeet, OrderPacketRecord, ReduceOrderParams, reduceOrderParamsBeet, SeatApprovalStatus, seatApprovalStatusBeet, Side, WithdrawParams, withdrawParamsBeet } from './types';
 import { InitializeParams, initializeParamsBeet } from './types/InitializeParams';
 import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { PublicKey } from '@solana/web3.js'
 
 // Example usage
 async function main() {
