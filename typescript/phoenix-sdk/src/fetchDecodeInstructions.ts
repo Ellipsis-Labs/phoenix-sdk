@@ -19,7 +19,7 @@ async function main() {
 
 }
 
-main().then(() => console.log("Done"));
+main().then();
 
 // Decode the instruction data and return a json string with the instruction name, accounts, and decoded data
 function decodeInstructionData(data: Buffer, idl: any): string {
@@ -31,6 +31,10 @@ function decodeInstructionData(data: Buffer, idl: any): string {
     let matched_idl_instruction = idl.instructions.filter(instruction => {
         return instruction.discriminant.value === instructionEnum
     });
+
+    if (matched_idl_instruction.length === 0) {
+        return "UNKNOWN INSTRUCTION";
+    }
 
     let instructionName = matched_idl_instruction[0].name;
     let accounts = matched_idl_instruction[0].accounts;
