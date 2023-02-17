@@ -3,11 +3,13 @@ import { match } from 'assert';
 import * as bs58 from 'bs58';
 import { CancelUpToParams, cancelUpToParamsBeet, depositParamsBeet, MultipleOrderPacket, multipleOrderPacketBeet, OrderPacket, orderPacketBeet, OrderPacketRecord, ReduceOrderParams, reduceOrderParamsBeet, Side, WithdrawParams, withdrawParamsBeet } from './types';
 
+// Example usage
 async function main() {
     // Fetch the idl from the network https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-v1/master/idl/phoenix_v1.json
     const idl: any = await fetch("https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-v1/master/idl/phoenix_v1.json").then(res => res.json());
-    // console.log(idl);
-    let bs58Data = '5Mtz4UqydbWLGnMU5XotrTZ';
+
+    // Get the instruction data from a phoenix instruction
+    let bs58Data = 'XTDweLmeW3oQjZ5GKG4aTqCXMPBQoYYatsoWtbhupDb6a';
 
     let inputBuffer = Buffer.from(bs58Data);
 
@@ -54,11 +56,11 @@ function decodeInstructionData(data: Buffer, idl: any): string {
         case 15: decodedData = []; break;
         case 16: decodedData = decodeMultipleOrderPacket(argData); break;
         case 17: decodedData = decodeMultipleOrderPacket(argData); break;
-        case 100: decodedData = matched_idl_instruction.args[0].Name; break;
+        case 100: decodedData = matched_idl_instruction[0].args; break;
         case 101: decodedData = []; break;
-        case 102: decodedData = matched_idl_instruction.args[0].Name; break;
-        case 103: decodedData = matched_idl_instruction.args[0].Name; break;
-        case 104: decodedData = matched_idl_instruction.args[0].Name; break;
+        case 102: decodedData = matched_idl_instruction[0].args; break;
+        case 103: decodedData = matched_idl_instruction[0].args; break;
+        case 104: decodedData = matched_idl_instruction[0].Args; break;
         case 105: decodedData = []; break;
         case 106: decodedData = []; break;
         case 107: decodedData = decodeCancelUpToParams(argData); break;
