@@ -1,7 +1,6 @@
-console.log("Start");
-import { match } from 'assert';
 import * as bs58 from 'bs58';
 import { CancelUpToParams, cancelUpToParamsBeet, depositParamsBeet, MultipleOrderPacket, multipleOrderPacketBeet, OrderPacket, orderPacketBeet, OrderPacketRecord, ReduceOrderParams, reduceOrderParamsBeet, Side, WithdrawParams, withdrawParamsBeet } from './types';
+import { initializeParamsBeet } from './types/InitializeParams';
 
 // Example usage
 async function main() {
@@ -9,7 +8,7 @@ async function main() {
     const idl: any = await fetch("https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-v1/master/idl/phoenix_v1.json").then(res => res.json());
 
     // Get the instruction data from a phoenix instruction
-    let bs58Data = 'XTDweLmeW3oQjZ5GKG4aTqCXMPBQoYYatsoWtbhupDb6a';
+    let bs58Data = 'ofHewyBvVAxXDemT8VUMiiJqSEt8a1BG5pD1TAEhzoSDdwpQpWtUjKnVWhhWQrSDa1uaZhPv1sjxNc5YHSeNZbEBtT8kLbYw27yrY6x4GvowJqUDJ8kUoF9y';
 
     let inputBuffer = Buffer.from(bs58Data);
 
@@ -56,7 +55,7 @@ function decodeInstructionData(data: Buffer, idl: any): string {
         case 15: decodedData = []; break;
         case 16: decodedData = decodeMultipleOrderPacket(argData); break;
         case 17: decodedData = decodeMultipleOrderPacket(argData); break;
-        case 100: decodedData = matched_idl_instruction[0].args; break;
+        case 100: decodedData = decodeInitializeParams(argData); break;
         case 101: decodedData = []; break;
         case 102: decodedData = matched_idl_instruction[0].args; break;
         case 103: decodedData = matched_idl_instruction[0].args; break;
@@ -115,4 +114,11 @@ function decodeMultipleOrderPacket(data: Uint8Array): MultipleOrderPacket {
     let multipleOrders = multipleOrderPackets.read(buffer, 0);
     console.log("Multiple order packets, ", multipleOrders);
     return multipleOrders;
+}
+
+function decodeInitializeParams(data: Uint8Array): any {
+    let buffer: Buffer = Buffer.from(data);
+    let initializeParams = initializeParamsBeet.toFixedFromData(buffer, 0);
+    let packetDetails = initializeParams.read(buffer, 0);
+    return packetDetails;
 }
