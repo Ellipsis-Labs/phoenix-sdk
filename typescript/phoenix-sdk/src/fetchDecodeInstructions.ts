@@ -6,20 +6,23 @@ import { PublicKey } from '@solana/web3.js'
 
 // Example usage
 async function main() {
-    // Fetch the idl from the network https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-v1/master/idl/phoenix_v1.json
+    // Fetch the idl from github
     const idl: any = await fetch("https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-v1/master/idl/phoenix_v1.json").then(res => res.json());
 
-    // Get the instruction data from a phoenix instruction
-    let bs58Data = 'XTDweLmeW3oQjZ5GKG4aTqCXMPBQoYYatsoWtbhupDb6a';
+    // Get the instruction data from a phoenix instruction. Pulled from this tx: 5zYtXpdWFy5c2x5tyeNoPDnCqSdyRMNYq86wvE3xc5fe5WwopC4NVDSuNoqu1wqSvPZL5XTUD21gdLuaqsjTz9ez
+    let bs58Data = '17vFw6LXVhPFhWco4rFGJUiZENR4NU4fMnk5tpPgHUaTSAu7VU44Yne62ga5kJUf5eVgvX2gCqEFjtiyN3GaB';
 
+    // Example input data
     let inputBuffer = Buffer.from(bs58Data);
 
+    // Result
     console.log(decodeInstructionData(inputBuffer, idl));
 
 }
 
 main().then(() => console.log("Done"));
 
+// Decode the instruction data and return a json string with the instruction name, accounts, and decoded data
 function decodeInstructionData(data: Buffer, idl: any): string {
 
     let decoded = bs58.decode(data.toString());
@@ -79,34 +82,35 @@ function decodeOrderPacket(data: Uint8Array): OrderPacket {
     let buffer: Buffer = Buffer.from(data);
     let orderPacket = orderPacketBeet.toFixedFromData(buffer, 0);
     let packetDetails = orderPacket.read(buffer, 0);
+    console.log("Order packet: ", packetDetails);
     return packetDetails;
 }
 
 function decodeReduceOrder(data: Uint8Array): ReduceOrderParams {
     let buffer: Buffer = Buffer.from(data);
     let reduceOrderParams: ReduceOrderParams = reduceOrderParamsBeet.deserialize(buffer, 0)[0];
-    console.log("Reduce order params, ", reduceOrderParams);
+    console.log("Reduce order params: ", reduceOrderParams);
     return reduceOrderParams;
 }
 
 function decodeCancelUpToParams(data: Uint8Array): CancelUpToParams {
     let buffer: Buffer = Buffer.from(data);
     let cancelUptToParams: CancelUpToParams = cancelUpToParamsBeet.deserialize(buffer, 0)[0];
-    console.log("Cancel up to params, ", cancelUptToParams);
+    console.log("Cancel up to params: ", cancelUptToParams);
     return cancelUptToParams;
 }
 
 function decodeWithdrawParams(data: Uint8Array): WithdrawParams {
     let buffer: Buffer = Buffer.from(data);
     let withdrawParams: WithdrawParams = withdrawParamsBeet.deserialize(buffer, 0)[0];
-    console.log("Withdraw params, ", withdrawParams);
+    console.log("Withdraw params: ", withdrawParams);
     return withdrawParams;
 }
 
 function decodeDepositParams(data: Uint8Array): any {
     let buffer: Buffer = Buffer.from(data);
     let depositParams: any = depositParamsBeet.deserialize(buffer, 0)[0];
-    console.log("Deposit params, ", depositParams);
+    console.log("Deposit params: ", depositParams);
     return depositParams;
 }
 
@@ -114,27 +118,30 @@ function decodeMultipleOrderPacket(data: Uint8Array): MultipleOrderPacket {
     let buffer: Buffer = Buffer.from(data);
     let multipleOrderPackets = multipleOrderPacketBeet.toFixedFromData(buffer, 0);
     let multipleOrders = multipleOrderPackets.read(buffer, 0);
-    console.log("Multiple order packets, ", multipleOrders);
+    console.log("Multiple order packets: ", multipleOrders);
     return multipleOrders;
 }
 
 function decodeInitializeParams(data: Uint8Array): InitializeParams {
     let buffer: Buffer = Buffer.from(data);
     let initializeParams = initializeParamsBeet.toFixedFromData(buffer, 0);
-    let packetDetails = initializeParams.read(buffer, 0);
-    return packetDetails;
+    let params = initializeParams.read(buffer, 0);
+    console.log("Initialize params: ", params)
+    return params;
 }
 
 function decodeMarketStatus(data: Uint8Array): MarketStatus {
     let buffer: Buffer = Buffer.from(data);
     let marketStatus = marketStatusBeet.read(buffer, 0);
+    console.log("Market status: ", MarketStatus[marketStatus]);
     return marketStatus;
 }
 
 function decodeSuccessor(data: Uint8Array): any {
     let buffer: Buffer = Buffer.from(data);
     let pubkey = beetSolana.publicKey.read(buffer, 0);
-    let result = { successor: pubkey };
+    let result = { successor: pubkey.toBase58() };
+    console.log(result);
 
     return result;
 }
@@ -142,5 +149,6 @@ function decodeSuccessor(data: Uint8Array): any {
 function decodeSeatApprovalStatus(data: Uint8Array): SeatApprovalStatus {
     let buffer: Buffer = Buffer.from(data);
     let seatApprovalStatus = seatApprovalStatusBeet.read(buffer, 0);
+    console.log("Seat approval status: ", SeatApprovalStatus[seatApprovalStatus]);
     return seatApprovalStatus;
 }
