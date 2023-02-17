@@ -1,6 +1,8 @@
 import * as bs58 from 'bs58';
-import { CancelUpToParams, cancelUpToParamsBeet, depositParamsBeet, MultipleOrderPacket, multipleOrderPacketBeet, OrderPacket, orderPacketBeet, OrderPacketRecord, ReduceOrderParams, reduceOrderParamsBeet, Side, WithdrawParams, withdrawParamsBeet } from './types';
-import { initializeParamsBeet } from './types/InitializeParams';
+import { CancelUpToParams, cancelUpToParamsBeet, depositParamsBeet, MarketStatus, marketStatusBeet, MultipleOrderPacket, multipleOrderPacketBeet, OrderPacket, orderPacketBeet, OrderPacketRecord, ReduceOrderParams, reduceOrderParamsBeet, SeatApprovalStatus, seatApprovalStatusBeet, Side, WithdrawParams, withdrawParamsBeet } from './types';
+import { InitializeParams, initializeParamsBeet } from './types/InitializeParams';
+import * as beetSolana from '@metaplex-foundation/beet-solana'
+import { PublicKey } from '@solana/web3.js'
 
 // Example usage
 async function main() {
@@ -8,7 +10,7 @@ async function main() {
     const idl: any = await fetch("https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-v1/master/idl/phoenix_v1.json").then(res => res.json());
 
     // Get the instruction data from a phoenix instruction
-    let bs58Data = 'ofHewyBvVAxXDemT8VUMiiJqSEt8a1BG5pD1TAEhzoSDdwpQpWtUjKnVWhhWQrSDa1uaZhPv1sjxNc5YHSeNZbEBtT8kLbYw27yrY6x4GvowJqUDJ8kUoF9y';
+    let bs58Data = 'XTDweLmeW3oQjZ5GKG4aTqCXMPBQoYYatsoWtbhupDb6a';
 
     let inputBuffer = Buffer.from(bs58Data);
 
@@ -57,9 +59,9 @@ function decodeInstructionData(data: Buffer, idl: any): string {
         case 17: decodedData = decodeMultipleOrderPacket(argData); break;
         case 100: decodedData = decodeInitializeParams(argData); break;
         case 101: decodedData = []; break;
-        case 102: decodedData = matched_idl_instruction[0].args; break;
-        case 103: decodedData = matched_idl_instruction[0].args; break;
-        case 104: decodedData = matched_idl_instruction[0].Args; break;
+        case 102: decodedData = decodeSuccessor(argData); break;
+        case 103: decodedData = MarketStatus[decodeMarketStatus(argData)]; break;
+        case 104: decodedData = SeatApprovalStatus[decodeSeatApprovalStatus(argData)]; break;
         case 105: decodedData = []; break;
         case 106: decodedData = []; break;
         case 107: decodedData = decodeCancelUpToParams(argData); break;
@@ -116,9 +118,29 @@ function decodeMultipleOrderPacket(data: Uint8Array): MultipleOrderPacket {
     return multipleOrders;
 }
 
-function decodeInitializeParams(data: Uint8Array): any {
+function decodeInitializeParams(data: Uint8Array): InitializeParams {
     let buffer: Buffer = Buffer.from(data);
     let initializeParams = initializeParamsBeet.toFixedFromData(buffer, 0);
     let packetDetails = initializeParams.read(buffer, 0);
     return packetDetails;
+}
+
+function decodeMarketStatus(data: Uint8Array): MarketStatus {
+    let buffer: Buffer = Buffer.from(data);
+    let marketStatus = marketStatusBeet.read(buffer, 0);
+    return marketStatus;
+}
+
+function decodeSuccessor(data: Uint8Array): any {
+    let buffer: Buffer = Buffer.from(data);
+    let pubkey = beetSolana.publicKey.read(buffer, 0);
+    let result = { successor: pubkey };
+
+    return result;
+}
+
+function decodeSeatApprovalStatus(data: Uint8Array): SeatApprovalStatus {
+    let buffer: Buffer = Buffer.from(data);
+    let seatApprovalStatus = seatApprovalStatusBeet.read(buffer, 0);
+    return seatApprovalStatus;
 }
