@@ -5,19 +5,38 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
+import {
+  CancelMultipleOrdersByIdParams,
+  cancelMultipleOrdersByIdParamsBeet,
+} from '../types/CancelMultipleOrdersByIdParams'
 
 /**
  * @category Instructions
  * @category CancelMultipleOrdersByIdWithFreeFunds
  * @category generated
  */
+export type CancelMultipleOrdersByIdWithFreeFundsInstructionArgs = {
+  params: CancelMultipleOrdersByIdParams
+}
+/**
+ * @category Instructions
+ * @category CancelMultipleOrdersByIdWithFreeFunds
+ * @category generated
+ */
 export const CancelMultipleOrdersByIdWithFreeFundsStruct =
-  new beet.BeetArgsStruct<{ instructionDiscriminator: number }>(
-    [["instructionDiscriminator", beet.u8]],
-    "CancelMultipleOrdersByIdWithFreeFundsInstructionArgs"
-  );
+  new beet.FixableBeetArgsStruct<
+    CancelMultipleOrdersByIdWithFreeFundsInstructionArgs & {
+      instructionDiscriminator: number
+    }
+  >(
+    [
+      ['instructionDiscriminator', beet.u8],
+      ['params', cancelMultipleOrdersByIdParamsBeet],
+    ],
+    'CancelMultipleOrdersByIdWithFreeFundsInstructionArgs'
+  )
 /**
  * Accounts required by the _CancelMultipleOrdersByIdWithFreeFunds_ instruction
  *
@@ -30,30 +49,34 @@ export const CancelMultipleOrdersByIdWithFreeFundsStruct =
  * @category generated
  */
 export type CancelMultipleOrdersByIdWithFreeFundsInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+}
 
-export const cancelMultipleOrdersByIdWithFreeFundsInstructionDiscriminator = 11;
+export const cancelMultipleOrdersByIdWithFreeFundsInstructionDiscriminator = 11
 
 /**
  * Creates a _CancelMultipleOrdersByIdWithFreeFunds_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
  * @category CancelMultipleOrdersByIdWithFreeFunds
  * @category generated
  */
 export function createCancelMultipleOrdersByIdWithFreeFundsInstruction(
   accounts: CancelMultipleOrdersByIdWithFreeFundsInstructionAccounts,
-  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
+  args: CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
+  programId = new web3.PublicKey('PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY')
 ) {
   const [data] = CancelMultipleOrdersByIdWithFreeFundsStruct.serialize({
     instructionDiscriminator:
       cancelMultipleOrdersByIdWithFreeFundsInstructionDiscriminator,
-  });
+    ...args,
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -75,12 +98,12 @@ export function createCancelMultipleOrdersByIdWithFreeFundsInstruction(
       isWritable: false,
       isSigner: true,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }

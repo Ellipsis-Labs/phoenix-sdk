@@ -1,5 +1,5 @@
 import * as bs58 from 'bs58';
-import { CancelUpToParams, cancelUpToParamsBeet, depositParamsBeet, MarketStatus, marketStatusBeet, MultipleOrderPacket, multipleOrderPacketBeet, OrderPacket, orderPacketBeet, OrderPacketRecord, ReduceOrderParams, reduceOrderParamsBeet, SeatApprovalStatus, seatApprovalStatusBeet, Side, WithdrawParams, withdrawParamsBeet } from './types';
+import { CancelMultipleOrdersByIdParams, cancelMultipleOrdersByIdParamsBeet, CancelUpToParams, cancelUpToParamsBeet, depositParamsBeet, MarketStatus, marketStatusBeet, MultipleOrderPacket, multipleOrderPacketBeet, OrderPacket, orderPacketBeet, OrderPacketRecord, ReduceOrderParams, reduceOrderParamsBeet, SeatApprovalStatus, seatApprovalStatusBeet, Side, WithdrawParams, withdrawParamsBeet } from './types';
 import { InitializeParams, initializeParamsBeet } from './types/InitializeParams';
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 
@@ -9,7 +9,7 @@ async function main() {
     const idl: any = await fetch("https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-v1/master/idl/phoenix_v1.json").then(res => res.json());
 
     // Get the instruction data from a phoenix instruction. Pulled from this tx: 5zYtXpdWFy5c2x5tyeNoPDnCqSdyRMNYq86wvE3xc5fe5WwopC4NVDSuNoqu1wqSvPZL5XTUD21gdLuaqsjTz9ez
-    let bs58Data = '17vFw6LXVhPFhWco4rFGJUiZENR4NU4fMnk5tpPgHUaTSAu7VU44Yne62ga5kJUf5eVgvX2gCqEFjtiyN3GaB';
+    let bs58Data = '3iUqJd5FZ4PsUgsZvmhvWQUhxPAW2B';
 
     // Example input data
     let inputBuffer = Buffer.from(bs58Data);
@@ -22,7 +22,7 @@ async function main() {
 main().then();
 
 // Decode the instruction data and return a json string with the instruction name, accounts, and decoded data
-function decodeInstructionData(data: Buffer, idl: any): string {
+export function decodeInstructionData(data: Buffer, idl: any): string {
 
     let decoded = bs58.decode(data.toString());
 
@@ -55,8 +55,8 @@ function decodeInstructionData(data: Buffer, idl: any): string {
         case 7: decodedData = []; break;
         case 8: decodedData = decodeCancelUpToParams(argData); break;
         case 9: decodedData = decodeCancelUpToParams(argData); break;
-        case 10: decodedData = []; break;
-        case 11: decodedData = []; break;
+        case 10: decodedData = decodeCancelMultipleOrdersByIdParams(argData); break;
+        case 11: decodedData = decodeCancelMultipleOrdersByIdParams(argData); break;
         case 12: decodedData = decodeWithdrawParams(argData); break;
         case 13: decodedData = decodeDepositParams(argData); break;
         case 14: decodedData = []; break;
@@ -81,7 +81,7 @@ function decodeInstructionData(data: Buffer, idl: any): string {
 
 }
 
-function decodeOrderPacket(data: Uint8Array): OrderPacket {
+export function decodeOrderPacket(data: Uint8Array): OrderPacket {
     let buffer: Buffer = Buffer.from(data);
     let orderPacket = orderPacketBeet.toFixedFromData(buffer, 0);
     let packetDetails = orderPacket.read(buffer, 0);
@@ -89,35 +89,35 @@ function decodeOrderPacket(data: Uint8Array): OrderPacket {
     return packetDetails;
 }
 
-function decodeReduceOrder(data: Uint8Array): ReduceOrderParams {
+export function decodeReduceOrder(data: Uint8Array): ReduceOrderParams {
     let buffer: Buffer = Buffer.from(data);
     let reduceOrderParams: ReduceOrderParams = reduceOrderParamsBeet.deserialize(buffer, 0)[0];
     console.log("Reduce order params: ", reduceOrderParams);
     return reduceOrderParams;
 }
 
-function decodeCancelUpToParams(data: Uint8Array): CancelUpToParams {
+export function decodeCancelUpToParams(data: Uint8Array): CancelUpToParams {
     let buffer: Buffer = Buffer.from(data);
     let cancelUptToParams: CancelUpToParams = cancelUpToParamsBeet.deserialize(buffer, 0)[0];
     console.log("Cancel up to params: ", cancelUptToParams);
     return cancelUptToParams;
 }
 
-function decodeWithdrawParams(data: Uint8Array): WithdrawParams {
+export function decodeWithdrawParams(data: Uint8Array): WithdrawParams {
     let buffer: Buffer = Buffer.from(data);
     let withdrawParams: WithdrawParams = withdrawParamsBeet.deserialize(buffer, 0)[0];
     console.log("Withdraw params: ", withdrawParams);
     return withdrawParams;
 }
 
-function decodeDepositParams(data: Uint8Array): any {
+export function decodeDepositParams(data: Uint8Array): any {
     let buffer: Buffer = Buffer.from(data);
     let depositParams: any = depositParamsBeet.deserialize(buffer, 0)[0];
     console.log("Deposit params: ", depositParams);
     return depositParams;
 }
 
-function decodeMultipleOrderPacket(data: Uint8Array): MultipleOrderPacket {
+export function decodeMultipleOrderPacket(data: Uint8Array): MultipleOrderPacket {
     let buffer: Buffer = Buffer.from(data);
     let multipleOrderPackets = multipleOrderPacketBeet.toFixedFromData(buffer, 0);
     let multipleOrders = multipleOrderPackets.read(buffer, 0);
@@ -125,7 +125,7 @@ function decodeMultipleOrderPacket(data: Uint8Array): MultipleOrderPacket {
     return multipleOrders;
 }
 
-function decodeInitializeParams(data: Uint8Array): InitializeParams {
+export function decodeInitializeParams(data: Uint8Array): InitializeParams {
     let buffer: Buffer = Buffer.from(data);
     let initializeParams = initializeParamsBeet.toFixedFromData(buffer, 0);
     let params = initializeParams.read(buffer, 0);
@@ -133,14 +133,14 @@ function decodeInitializeParams(data: Uint8Array): InitializeParams {
     return params;
 }
 
-function decodeMarketStatus(data: Uint8Array): MarketStatus {
+export function decodeMarketStatus(data: Uint8Array): MarketStatus {
     let buffer: Buffer = Buffer.from(data);
     let marketStatus = marketStatusBeet.read(buffer, 0);
     console.log("Market status: ", MarketStatus[marketStatus]);
     return marketStatus;
 }
 
-function decodeSuccessor(data: Uint8Array): any {
+export function decodeSuccessor(data: Uint8Array): any {
     let buffer: Buffer = Buffer.from(data);
     let pubkey = beetSolana.publicKey.read(buffer, 0);
     let result = { successor: pubkey.toBase58() };
@@ -149,9 +149,17 @@ function decodeSuccessor(data: Uint8Array): any {
     return result;
 }
 
-function decodeSeatApprovalStatus(data: Uint8Array): SeatApprovalStatus {
+export function decodeSeatApprovalStatus(data: Uint8Array): SeatApprovalStatus {
     let buffer: Buffer = Buffer.from(data);
     let seatApprovalStatus = seatApprovalStatusBeet.read(buffer, 0);
     console.log("Seat approval status: ", SeatApprovalStatus[seatApprovalStatus]);
     return seatApprovalStatus;
+}
+
+export function decodeCancelMultipleOrdersByIdParams(data: Uint8Array): CancelMultipleOrdersByIdParams {
+    let buffer: Buffer = Buffer.from(data);
+    let cancelMultipleOrdersByIdParams = cancelMultipleOrdersByIdParamsBeet.toFixedFromData(buffer, 0);
+    let params = cancelMultipleOrdersByIdParams.read(buffer, 0);
+    console.log("Cancel multiple orders by id params: ", params);
+    return params;
 }
