@@ -3,24 +3,6 @@ import { CancelMultipleOrdersByIdParams, cancelMultipleOrdersByIdParamsBeet, Can
 import { InitializeParams, initializeParamsBeet } from './types/InitializeParams';
 import * as beetSolana from '@metaplex-foundation/beet-solana'
 
-// Example usage
-async function main() {
-    // Fetch the idl from github
-    const idl: any = await fetch("https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-v1/master/idl/phoenix_v1.json").then(res => res.json());
-
-    // Get the instruction data from a phoenix instruction. Pulled from this tx: 5zYtXpdWFy5c2x5tyeNoPDnCqSdyRMNYq86wvE3xc5fe5WwopC4NVDSuNoqu1wqSvPZL5XTUD21gdLuaqsjTz9ez
-    let bs58Data = '3iUqJd5FZ4PsUgsZvmhvWQUhxPAW2B';
-
-    // Example input data
-    let inputBuffer = Buffer.from(bs58Data);
-
-    // Result
-    console.log(decodeInstructionData(inputBuffer, idl));
-
-}
-
-main().then();
-
 // Decode the instruction data and return a json string with the instruction name, accounts, and decoded data
 export function decodeInstructionData(data: Buffer, idl: any): string {
 
