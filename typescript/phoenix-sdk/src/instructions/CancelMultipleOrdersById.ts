@@ -5,21 +5,38 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from "@solana/spl-token";
-import * as beet from "@metaplex-foundation/beet";
-import * as web3 from "@solana/web3.js";
+import * as splToken from '@solana/spl-token'
+import * as beet from '@metaplex-foundation/beet'
+import * as web3 from '@solana/web3.js'
+import {
+  CancelMultipleOrdersByIdParams,
+  cancelMultipleOrdersByIdParamsBeet,
+} from '../types/CancelMultipleOrdersByIdParams'
 
 /**
  * @category Instructions
  * @category CancelMultipleOrdersById
  * @category generated
  */
-export const CancelMultipleOrdersByIdStruct = new beet.BeetArgsStruct<{
-  instructionDiscriminator: number;
-}>(
-  [["instructionDiscriminator", beet.u8]],
-  "CancelMultipleOrdersByIdInstructionArgs"
-);
+export type CancelMultipleOrdersByIdInstructionArgs = {
+  params: CancelMultipleOrdersByIdParams
+}
+/**
+ * @category Instructions
+ * @category CancelMultipleOrdersById
+ * @category generated
+ */
+export const CancelMultipleOrdersByIdStruct = new beet.FixableBeetArgsStruct<
+  CancelMultipleOrdersByIdInstructionArgs & {
+    instructionDiscriminator: number
+  }
+>(
+  [
+    ['instructionDiscriminator', beet.u8],
+    ['params', cancelMultipleOrdersByIdParamsBeet],
+  ],
+  'CancelMultipleOrdersByIdInstructionArgs'
+)
 /**
  * Accounts required by the _CancelMultipleOrdersById_ instruction
  *
@@ -36,34 +53,38 @@ export const CancelMultipleOrdersByIdStruct = new beet.BeetArgsStruct<{
  * @category generated
  */
 export type CancelMultipleOrdersByIdInstructionAccounts = {
-  phoenixProgram: web3.PublicKey;
-  logAuthority: web3.PublicKey;
-  market: web3.PublicKey;
-  trader: web3.PublicKey;
-  baseAccount: web3.PublicKey;
-  quoteAccount: web3.PublicKey;
-  baseVault: web3.PublicKey;
-  quoteVault: web3.PublicKey;
-  tokenProgram?: web3.PublicKey;
-};
+  phoenixProgram: web3.PublicKey
+  logAuthority: web3.PublicKey
+  market: web3.PublicKey
+  trader: web3.PublicKey
+  baseAccount: web3.PublicKey
+  quoteAccount: web3.PublicKey
+  baseVault: web3.PublicKey
+  quoteVault: web3.PublicKey
+  tokenProgram?: web3.PublicKey
+}
 
-export const cancelMultipleOrdersByIdInstructionDiscriminator = 10;
+export const cancelMultipleOrdersByIdInstructionDiscriminator = 10
 
 /**
  * Creates a _CancelMultipleOrdersById_ instruction.
  *
  * @param accounts that will be accessed while the instruction is processed
+ * @param args to provide as instruction data to the program
+ *
  * @category Instructions
  * @category CancelMultipleOrdersById
  * @category generated
  */
 export function createCancelMultipleOrdersByIdInstruction(
   accounts: CancelMultipleOrdersByIdInstructionAccounts,
-  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
+  args: CancelMultipleOrdersByIdInstructionArgs,
+  programId = new web3.PublicKey('PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY')
 ) {
   const [data] = CancelMultipleOrdersByIdStruct.serialize({
     instructionDiscriminator: cancelMultipleOrdersByIdInstructionDiscriminator,
-  });
+    ...args,
+  })
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -110,12 +131,12 @@ export function createCancelMultipleOrdersByIdInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ];
+  ]
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  });
-  return ix;
+  })
+  return ix
 }
