@@ -19,7 +19,9 @@
     "@types/node": "^18.11.13",
     "bn.js": "^5.2.1",
     "borsh": "^0.7.0",
-    "bs58": "^5.0.0"
+    "bs58": "^5.0.0",
+    "node-fetch": "^2.6.1",
+    "xhr2": "^0.2.1"
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.1",
