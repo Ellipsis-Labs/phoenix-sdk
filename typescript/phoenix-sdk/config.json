@@ -35,7 +35,7 @@
       },
       {
         "name": "Wrapped SOL",
-        "symbol": "wSOL",
+        "symbol": "SOL",
         "mint": "So11111111111111111111111111111111111111112",
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       },
@@ -52,7 +52,9 @@
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       }
     ],
-    "markets": ["14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5"]
+    "markets": [
+      "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5, 4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg"
+    ]
   },
   "localhost": {
     "tokens": [
