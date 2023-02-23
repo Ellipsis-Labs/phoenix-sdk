@@ -1,9 +1,16 @@
 [
-    {
-        "market": "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5",
-        "base_ticker": "BASE",
-        "quote_ticker": "QUOTE",
-        "base_pubkey": "7Z6Kczxo8ViRpfnsVvVaATB5fQ8bN2CQpxP8DHfd1vz5",
-        "quote_pubkey": "5zUmtDCDeR17UYjvKKqvYp3S9pqcZA69cDoYPtojseJ4"
-    }
+  {
+    "market": "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5",
+    "base_ticker": "BASE",
+    "quote_ticker": "QUOTE",
+    "base_pubkey": "7Z6Kczxo8ViRpfnsVvVaATB5fQ8bN2CQpxP8DHfd1vz5",
+    "quote_pubkey": "5zUmtDCDeR17UYjvKKqvYp3S9pqcZA69cDoYPtojseJ4"
+  },
+  {
+    "market": "4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg",
+    "base_ticker": "SOL",
+    "quote_ticker": "USDC",
+    "base_pubkey": "So11111111111111111111111111111111111111112",
+    "quote_pubkey": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  }
 ]
