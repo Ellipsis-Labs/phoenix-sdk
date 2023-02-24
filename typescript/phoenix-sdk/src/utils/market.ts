@@ -202,7 +202,7 @@ export function deserializeRedBlackTree<Key, Value>(
  * @description Bids are ordered in descending order by price, and asks are ordered in ascending order by price
  *
  * @param marketData The `MarketData` to get the ladder from
- * @param levels The number of book levels to return
+ * @param levels The number of book levels to return, -1 to return the entire book
  */
 export function getMarketLadder(
   marketData: MarketData,
@@ -213,7 +213,6 @@ export function getMarketLadder(
   for (const [orderId, restingOrder] of marketData.bids) {
     const priceInTicks = toBN(orderId.priceInTicks);
     const numBaseLots = toBN(restingOrder.numBaseLots);
-
     if (bids.length === 0) {
       bids.push([priceInTicks, numBaseLots]);
     } else {
@@ -254,8 +253,8 @@ export function getMarketLadder(
   }
 
   return {
-    asks: asks.slice(0, levels),
-    bids: bids.slice(0, levels),
+    asks,
+    bids,
   };
 }
 
