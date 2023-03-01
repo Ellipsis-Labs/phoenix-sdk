@@ -1346,9 +1346,9 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "ellipsis-client"
-version = "0.1.15"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92efab2c0f9b9cb5b40190256544883b6bb02f90cf6301bfffecf1479bf74b5a"
+checksum = "388d2d33cf89f9f49e47ffc8420ffc2a12dd1f995f0c88c12d64797f88211d44"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -1485,8 +1485,8 @@ dependencies = [
  "clap 3.2.23",
  "devnet-token-faucet",
  "ellipsis-client",
+ "phoenix-common",
  "phoenix-sdk",
- "phoenix-v1",
  "rand 0.7.3",
  "shellexpand",
  "solana-account-decoder",
@@ -2720,53 +2720,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "phoenix-sdk"
+name = "phoenix-common"
 version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "borsh 0.9.3",
- "bytemuck",
- "clap 3.2.23",
- "coinbase-pro-rs",
- "ellipsis-client",
- "futures 0.3.26",
- "itertools",
- "num-traits",
- "phoenix-sdk-core",
- "phoenix-v1",
- "rand 0.7.3",
- "rust_decimal",
- "rust_decimal_macros",
- "solana-client",
- "solana-program",
- "solana-sdk",
- "solana-transaction-status",
- "spl-token",
- "tokio",
-]
-
-[[package]]
-name = "phoenix-sdk-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "borsh 0.9.3",
- "itertools",
- "num-traits",
- "phoenix-v1",
- "rand 0.7.3",
- "rust_decimal",
- "rust_decimal_macros",
- "solana-program",
- "solana-sdk",
-]
-
-[[package]]
-name = "phoenix-v1"
-version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64366b3a050af1ad0511ed9f247851bbfeb92ad8a6305e99e2f40f3405136b98"
+checksum = "44a782b072547dc427129656c3598d85d0523746a64b50a3673d456fc2b98bce"
 dependencies = [
  "borsh 0.9.3",
  "bytemuck",
@@ -2781,6 +2738,49 @@ dependencies = [
  "spl-token",
  "static_assertions",
  "thiserror",
+]
+
+[[package]]
+name = "phoenix-sdk"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "borsh 0.9.3",
+ "bytemuck",
+ "clap 3.2.23",
+ "coinbase-pro-rs",
+ "ellipsis-client",
+ "futures 0.3.26",
+ "itertools",
+ "num-traits",
+ "phoenix-common",
+ "phoenix-sdk-core",
+ "rand 0.7.3",
+ "rust_decimal",
+ "rust_decimal_macros",
+ "solana-client",
+ "solana-program",
+ "solana-sdk",
+ "solana-transaction-status",
+ "spl-token",
+ "tokio",
+]
+
+[[package]]
+name = "phoenix-sdk-core"
+version = "0.1.1"
+dependencies = [
+ "anyhow",
+ "borsh 0.9.3",
+ "itertools",
+ "num-traits",
+ "phoenix-common",
+ "rand 0.7.3",
+ "rust_decimal",
+ "rust_decimal_macros",
+ "solana-program",
+ "solana-sdk",
 ]
 
 [[package]]

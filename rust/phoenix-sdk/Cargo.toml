@@ -2,7 +2,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 name = "phoenix-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = "SDK for interacting with the Phoenix program"
 edition = "2021"
 license = "MIT"
@@ -11,7 +11,7 @@ license = "MIT"
 [dependencies]
 anyhow = { workspace = true }
 solana-program = { workspace = true }
-phoenix-v1 = { workspace = true }
+phoenix-common = { workspace = true }
 clap = { workspace = true }
 borsh = { workspace = true }
 rand = { workspace = true }

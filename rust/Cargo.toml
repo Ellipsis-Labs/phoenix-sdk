@@ -20,8 +20,8 @@ anyhow = "1.0.52"
 solana-sdk = "1.10.32"
 borsh = "0.9.3"
 rand = "0.7.3"
-ellipsis-client = "0.1.14"
-phoenix-v1 = "0.1.4" 
+ellipsis-client = "0.1.17"
+phoenix-common = "0.1.0" 
 tokio = { version = "1.23.0", features = ["full"] }
 solana-client = "1.10.32"
 clap = { version = "3.0.13", features = ["derive"] }
