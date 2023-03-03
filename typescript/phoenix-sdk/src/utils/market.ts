@@ -109,6 +109,16 @@ export function deserializeMarketData(data: Buffer): MarketData {
     traders.set(k.publicKey, traderState);
   }
 
+  let trader_index = new Map<PublicKey, number>();
+  for (const [k, index] of getNodeIndices(
+    traderBuffer,
+    publicKeyBeet,
+    traderStateBeet
+  )) {
+    trader_index.set(k.publicKey, index);
+  }
+  
+
   return {
     header,
     baseLotsPerBaseUnit,
@@ -120,6 +130,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
     bids,
     asks,
     traders,
+    trader_index
   };
 }
 
@@ -137,6 +148,69 @@ export function deserializeRedBlackTree<Key, Value>(
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): Map<Key, Value> {
   let tree = new Map<Key, Value>();
+  let tree_nodes = deserializeRedBlackTreeNodes(
+    data,
+    keyDeserializer,
+    valueDeserializer
+  );
+
+  let nodes = tree_nodes[0];
+  let freeNodes = tree_nodes[1];
+
+  for (let [index, [key, value]] of nodes.entries()) {
+    if (!freeNodes.has(index)) {
+      tree.set(key, value);
+    }
+  }
+
+  return tree;
+}
+
+
+/**
+ * Deserializes the RedBlackTree to return a map of keys to indices 
+ *
+ * @param data The trader data buffer to deserialize
+ * @param keyDeserializer The deserializer for the tree key
+ * @param valueDeserializer The deserializer for the tree value
+ */
+ export function getNodeIndices<Key, Value>(
+  data: Buffer,
+  keyDeserializer: beet.BeetArgsStruct<Key>,
+  valueDeserializer: beet.BeetArgsStruct<Value>
+): Map<Key, number> {
+  let index_map = new Map<Key, number>();
+  let tree_nodes = deserializeRedBlackTreeNodes(
+    data,
+    keyDeserializer,
+    valueDeserializer
+  );
+
+  let nodes = tree_nodes[0];
+  let freeNodes = tree_nodes[1];
+
+  for (let [index, [key, _]] of nodes.entries()) {
+    if (!freeNodes.has(index)) {
+      index_map.set(key, index);
+    }
+  }
+
+  return index_map;
+}
+
+/**
+ * Deserializes a RedBlackTree from a given buffer and returns the nodes and free nodes
+ * @description This deserialized the RedBlackTree defined in the sokoban library: https://github.com/Ellipsis-Labs/sokoban/tree/master
+ *
+ * @param data The data buffer to deserialize
+ * @param keyDeserializer The deserializer for the tree key
+ * @param valueDeserializer The deserializer for the tree value
+ */
+function deserializeRedBlackTreeNodes<Key, Value>(
+  data: Buffer,
+  keyDeserializer: beet.BeetArgsStruct<Key>,
+  valueDeserializer: beet.BeetArgsStruct<Value>
+): [Array<[Key, Value]> , Set<number>] {
   let offset = 0;
   let keySize = keyDeserializer.byteSize;
   let valueSize = valueDeserializer.byteSize;
@@ -187,14 +261,8 @@ export function deserializeRedBlackTree<Key, Value>(
       throw new Error("Infinite loop detected");
     }
   }
-
-  for (let [index, [key, value]] of nodes.entries()) {
-    if (!freeNodes.has(index)) {
-      tree.set(key, value);
-    }
-  }
-
-  return tree;
+  
+  return [nodes, freeNodes];
 }
 
 /**

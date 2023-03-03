@@ -57,6 +57,7 @@ export interface MarketData {
   bids: Array<[OrderId, RestingOrder]>;
   asks: Array<[OrderId, RestingOrder]>;
   traders: Map<PublicKey, TraderState>;
+  trader_index: Map<PublicKey, number>;
 }
 
 export class Market {
