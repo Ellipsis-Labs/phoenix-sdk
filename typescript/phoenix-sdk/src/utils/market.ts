@@ -210,10 +210,9 @@ export function deserializeRedBlackTree<Key, Value>(
 
 
 /**
- * Deserializes a RedBlackTree from a given buffer
- * @description This deserialized the RedBlackTree defined in the sokoban library: https://github.com/Ellipsis-Labs/sokoban/tree/master
+ * Deserializes the trader RedBlackTree to return a map of trader keys to index 
  *
- * @param data The data buffer to deserialize
+ * @param data The trader data buffer to deserialize
  * @param keyDeserializer The deserializer for the tree key
  * @param valueDeserializer The deserializer for the tree value
  */
