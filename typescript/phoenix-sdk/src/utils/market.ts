@@ -110,7 +110,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
   }
 
   let trader_index = new Map<PublicKey, number>();
-  for (const [k, index] of getTraderIndex(
+  for (const [k, index] of getNodeIndices(
     traderBuffer,
     publicKeyBeet,
     traderStateBeet
@@ -148,56 +148,14 @@ export function deserializeRedBlackTree<Key, Value>(
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): Map<Key, Value> {
   let tree = new Map<Key, Value>();
-  let offset = 0;
-  let keySize = keyDeserializer.byteSize;
-  let valueSize = valueDeserializer.byteSize;
+  let tree_nodes = deserializeRedBlackTreeNodes(
+    data,
+    keyDeserializer,
+    valueDeserializer
+  );
 
-  let nodes = new Array<[Key, Value]>();
-
-  // Skip RBTree header
-  offset += 16;
-
-  // Skip node allocator size
-  offset += 8;
-  let bumpIndex = data.readInt32LE(offset);
-  offset += 4;
-  let freeListHead = data.readInt32LE(offset);
-  offset += 4;
-
-  let freeListPointers = new Array<[number, number]>();
-
-  for (let index = 0; offset < data.length && index < bumpIndex; index++) {
-    let registers = new Array<number>();
-    for (let i = 0; i < 4; i++) {
-      registers.push(data.readInt32LE(offset)); // skip padding
-      offset += 4;
-    }
-    let [key] = keyDeserializer.deserialize(
-      data.subarray(offset, offset + keySize)
-    );
-    offset += keySize;
-    let [value] = valueDeserializer.deserialize(
-      data.subarray(offset, offset + valueSize)
-    );
-    offset += valueSize;
-    nodes.push([key, value]);
-    freeListPointers.push([index, registers[0]]);
-  }
-
-  let freeNodes = new Set<number>();
-  let indexToRemove = freeListHead - 1;
-  let counter = 0;
-  // If there's an infinite loop here, that means that the state is corrupted
-  while (freeListHead !== 0 && freeListHead < bumpIndex) {
-    // We need to subtract 1 because the node allocator is 1-indexed
-    let next = freeListPointers[freeListHead - 1];
-    [indexToRemove, freeListHead] = next;
-    freeNodes.add(indexToRemove);
-    counter += 1;
-    if (counter > bumpIndex) {
-      throw new Error("Infinite loop detected");
-    }
-  }
+  let nodes = tree_nodes[0];
+  let freeNodes = tree_nodes[1];
 
   for (let [index, [key, value]] of nodes.entries()) {
     if (!freeNodes.has(index)) {
@@ -210,18 +168,49 @@ export function deserializeRedBlackTree<Key, Value>(
 
 
 /**
- * Deserializes the trader RedBlackTree to return a map of trader keys to index 
+ * Deserializes the RedBlackTree to return a map of keys to indices 
  *
  * @param data The trader data buffer to deserialize
  * @param keyDeserializer The deserializer for the tree key
  * @param valueDeserializer The deserializer for the tree value
  */
- export function getTraderIndex<Key, Value>(
+ export function getNodeIndices<Key, Value>(
   data: Buffer,
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): Map<Key, number> {
   let index_map = new Map<Key, number>();
+  let tree_nodes = deserializeRedBlackTreeNodes(
+    data,
+    keyDeserializer,
+    valueDeserializer
+  );
+
+  let nodes = tree_nodes[0];
+  let freeNodes = tree_nodes[1];
+
+  for (let [index, [key, _]] of nodes.entries()) {
+    if (!freeNodes.has(index)) {
+      index_map.set(key, index);
+    }
+  }
+
+  return index_map;
+}
+
+/**
+ * Deserializes a RedBlackTree from a given buffer and returns the nodes and free nodes
+ * @description This deserialized the RedBlackTree defined in the sokoban library: https://github.com/Ellipsis-Labs/sokoban/tree/master
+ *
+ * @param data The data buffer to deserialize
+ * @param keyDeserializer The deserializer for the tree key
+ * @param valueDeserializer The deserializer for the tree value
+ */
+function deserializeRedBlackTreeNodes<Key, Value>(
+  data: Buffer,
+  keyDeserializer: beet.BeetArgsStruct<Key>,
+  valueDeserializer: beet.BeetArgsStruct<Value>
+): [Array<[Key, Value]> , Set<number>] {
   let offset = 0;
   let keySize = keyDeserializer.byteSize;
   let valueSize = valueDeserializer.byteSize;
@@ -272,16 +261,9 @@ export function deserializeRedBlackTree<Key, Value>(
       throw new Error("Infinite loop detected");
     }
   }
-
-  for (let [index, [key, value]] of nodes.entries()) {
-    if (!freeNodes.has(index)) {
-      index_map.set(key, index);
-    }
-  }
-
-  return index_map;
+  
+  return [nodes, freeNodes];
 }
-
 
 /**
  * Returns a ladder of bids and asks for given `MarketData`
