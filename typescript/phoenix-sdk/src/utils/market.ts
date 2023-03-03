@@ -109,6 +109,16 @@ export function deserializeMarketData(data: Buffer): MarketData {
     traders.set(k.publicKey, traderState);
   }
 
+  let trader_index = new Map<PublicKey, number>();
+  for (const [k, index] of getTraderIndex(
+    traderBuffer,
+    publicKeyBeet,
+    traderStateBeet
+  )) {
+    trader_index.set(k.publicKey, index);
+  }
+  
+
   return {
     header,
     baseLotsPerBaseUnit,
@@ -120,6 +130,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
     bids,
     asks,
     traders,
+    trader_index
   };
 }
 
@@ -196,6 +207,82 @@ export function deserializeRedBlackTree<Key, Value>(
 
   return tree;
 }
+
+
+/**
+ * Deserializes a RedBlackTree from a given buffer
+ * @description This deserialized the RedBlackTree defined in the sokoban library: https://github.com/Ellipsis-Labs/sokoban/tree/master
+ *
+ * @param data The data buffer to deserialize
+ * @param keyDeserializer The deserializer for the tree key
+ * @param valueDeserializer The deserializer for the tree value
+ */
+ export function getTraderIndex<Key, Value>(
+  data: Buffer,
+  keyDeserializer: beet.BeetArgsStruct<Key>,
+  valueDeserializer: beet.BeetArgsStruct<Value>
+): Map<Key, number> {
+  let index_map = new Map<Key, number>();
+  let offset = 0;
+  let keySize = keyDeserializer.byteSize;
+  let valueSize = valueDeserializer.byteSize;
+
+  let nodes = new Array<[Key, Value]>();
+
+  // Skip RBTree header
+  offset += 16;
+
+  // Skip node allocator size
+  offset += 8;
+  let bumpIndex = data.readInt32LE(offset);
+  offset += 4;
+  let freeListHead = data.readInt32LE(offset);
+  offset += 4;
+
+  let freeListPointers = new Array<[number, number]>();
+
+  for (let index = 0; offset < data.length && index < bumpIndex; index++) {
+    let registers = new Array<number>();
+    for (let i = 0; i < 4; i++) {
+      registers.push(data.readInt32LE(offset)); // skip padding
+      offset += 4;
+    }
+    let [key] = keyDeserializer.deserialize(
+      data.subarray(offset, offset + keySize)
+    );
+    offset += keySize;
+    let [value] = valueDeserializer.deserialize(
+      data.subarray(offset, offset + valueSize)
+    );
+    offset += valueSize;
+    nodes.push([key, value]);
+    freeListPointers.push([index, registers[0]]);
+  }
+
+  let freeNodes = new Set<number>();
+  let indexToRemove = freeListHead - 1;
+  let counter = 0;
+  // If there's an infinite loop here, that means that the state is corrupted
+  while (freeListHead !== 0 && freeListHead < bumpIndex) {
+    // We need to subtract 1 because the node allocator is 1-indexed
+    let next = freeListPointers[freeListHead - 1];
+    [indexToRemove, freeListHead] = next;
+    freeNodes.add(indexToRemove);
+    counter += 1;
+    if (counter > bumpIndex) {
+      throw new Error("Infinite loop detected");
+    }
+  }
+
+  for (let [index, [key, value]] of nodes.entries()) {
+    if (!freeNodes.has(index)) {
+      index_map.set(key, index);
+    }
+  }
+
+  return index_map;
+}
+
 
 /**
  * Returns a ladder of bids and asks for given `MarketData`
