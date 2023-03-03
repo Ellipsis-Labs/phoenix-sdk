@@ -36,7 +36,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
   // Deserialize the market header
   let offset = marketHeaderBeet.byteSize;
   const [header] = marketHeaderBeet.deserialize(data.subarray(0, offset));
-
+  
   // Parse market data
   let paddingLen = 8 * 32;
   let remaining = data.subarray(offset + paddingLen);
@@ -177,7 +177,7 @@ export function deserializeRedBlackTree<Key, Value>(
   let indexToRemove = freeListHead - 1;
   let counter = 0;
   // If there's an infinite loop here, that means that the state is corrupted
-  while (freeListHead !== 0) {
+  while (freeListHead !== 0 && freeListHead < bumpIndex) {
     // We need to subtract 1 because the node allocator is 1-indexed
     let next = freeListPointers[freeListHead - 1];
     [indexToRemove, freeListHead] = next;
