@@ -191,7 +191,7 @@ export function deserializeRedBlackTree<Key, Value>(
 
   for (let [index, [key, _]] of nodes.entries()) {
     if (!freeNodes.has(index)) {
-      index_map.set(key, index);
+      index_map.set(key, index + 1);
     }
   }
 
@@ -226,10 +226,11 @@ function deserializeRedBlackTreeNodes<Key, Value>(
   offset += 4;
   let freeListHead = data.readInt32LE(offset);
   offset += 4;
+  console.log("bumpIndex", bumpIndex);
 
   let freeListPointers = new Array<[number, number]>();
 
-  for (let index = 0; offset < data.length && index < bumpIndex; index++) {
+  for (let index = 0; offset < data.length && index < bumpIndex - 1; index++) {
     let registers = new Array<number>();
     for (let i = 0; i < 4; i++) {
       registers.push(data.readInt32LE(offset)); // skip padding
@@ -246,12 +247,14 @@ function deserializeRedBlackTreeNodes<Key, Value>(
     nodes.push([key, value]);
     freeListPointers.push([index, registers[0]]);
   }
-
+  console.log("nodes length", nodes.length);
+  console.log("freeList head", freeListHead);
   let freeNodes = new Set<number>();
   let indexToRemove = freeListHead - 1;
+
   let counter = 0;
   // If there's an infinite loop here, that means that the state is corrupted
-  while (freeListHead !== 0 && freeListHead < bumpIndex) {
+  while (freeListHead < bumpIndex) {
     // We need to subtract 1 because the node allocator is 1-indexed
     let next = freeListPointers[freeListHead - 1];
     [indexToRemove, freeListHead] = next;
@@ -261,7 +264,8 @@ function deserializeRedBlackTreeNodes<Key, Value>(
       throw new Error("Infinite loop detected");
     }
   }
-  
+
+
   return [nodes, freeNodes];
 }
 
