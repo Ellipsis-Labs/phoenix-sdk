@@ -7,7 +7,7 @@ use phoenix::{
     },
     program::{
         cancel_multiple_orders::{CancelMultipleOrdersByIdParams, CancelUpToParams},
-        EvictEvent, FeeEvent, FillEvent, FillSummaryEvent, PlaceEvent,
+        EvictEvent, FeeEvent, FillEvent, FillSummaryEvent, PlaceEvent, TimeInForceEvent,
     },
     program::{reduce_order::CancelOrderParams, ReduceEvent},
     quantities::WrapperU64,
@@ -29,7 +29,9 @@ use anyhow;
 use solana_program::{instruction::Instruction, pubkey::Pubkey};
 
 use crate::{
-    market_event::{Evict, Fill, FillSummary, MarketEventDetails, PhoenixEvent, Place, Reduce},
+    market_event::{
+        Evict, Fill, FillSummary, MarketEventDetails, PhoenixEvent, Place, Reduce, TimeInForce,
+    },
     orderbook::Orderbook,
 };
 
@@ -421,8 +423,27 @@ impl SDKClientCore {
                             fees_collected_in_quote_lots * self.quote_lot_size,
                         ),
                     }),
+                    PhoenixMarketEvent::TimeInForce(TimeInForceEvent {
+                        index,
+                        order_sequence_number,
+                        last_valid_slot,
+                        last_valid_unix_timestamp_in_seconds,
+                    }) => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::TimeInForce(TimeInForce {
+                            order_sequence_number,
+                            last_valid_slot,
+                            last_valid_unix_timestamp_in_seconds,
+                        }),
+                    }),
                     _ => {
-                        panic!("Unexpected Event!");
+                        println!("Unknown event: {:?}", phoenix_event);
                     }
                 }
             }
