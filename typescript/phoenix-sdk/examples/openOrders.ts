@@ -3,7 +3,7 @@ import { Connection } from "@solana/web3.js";
 import * as Phoenix from "../src";
 import BN from "bn.js";
 import { bignum } from "@metaplex-foundation/beet";
-import { getUiOrderSequenceNumber, toNum } from "../src";
+import { getUiOrderSequenceNumber } from "../src";
 
 // Run with `ts-node examples/openOrders.ts`
 // This example will find the first trader with locked orders and display them
