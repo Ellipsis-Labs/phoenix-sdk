@@ -226,7 +226,6 @@ function deserializeRedBlackTreeNodes<Key, Value>(
   offset += 4;
   let freeListHead = data.readInt32LE(offset);
   offset += 4;
-  console.log("bumpIndex", bumpIndex);
 
   let freeListPointers = new Array<[number, number]>();
 
@@ -247,8 +246,6 @@ function deserializeRedBlackTreeNodes<Key, Value>(
     nodes.push([key, value]);
     freeListPointers.push([index, registers[0]]);
   }
-  console.log("nodes length", nodes.length);
-  console.log("freeList head", freeListHead);
   let freeNodes = new Set<number>();
   let indexToRemove = freeListHead - 1;
 
