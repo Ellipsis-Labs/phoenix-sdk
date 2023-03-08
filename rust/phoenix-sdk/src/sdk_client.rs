@@ -555,12 +555,11 @@ impl SDKClient {
             instructions.push(claim_seat_ix);
         }
         instructions.push(limit_order_ix);
-
-        return instructions;
+        instructions
     }
 
     // Useful if known that trader has an ATA for the base or quote through prior interactions but may have been evicted
-    pub async fn get_limit_order_existing_maker(
+    pub async fn get_limit_order_existing_maker_ixs(
         &self,
         trader: &Pubkey,
         price: u64,
@@ -578,7 +577,6 @@ impl SDKClient {
             instructions.push(claim_seat_ix);
         }
         instructions.push(limit_order_ix);
-
-        return instructions;
+        instructions
     }
 }

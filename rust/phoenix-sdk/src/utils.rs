@@ -26,7 +26,7 @@ pub async fn create_ata_ix_if_needed(
         }
     }
 
-    return None;
+    None
 }
 
 pub async fn create_claim_seat_ix_if_needed(
@@ -43,5 +43,5 @@ pub async fn create_claim_seat_ix_if_needed(
         }
     }
 
-    return None;
+    None
 }
