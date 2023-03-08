@@ -31,3 +31,4 @@ rust_decimal = "1.26.1"
 rust_decimal_macros = "1.26"
 itertools = "0.10.5"
 bytemuck = "1.11.0"
+phoenix-seat-manager = { path = "../../phoenix-seat-manager" }

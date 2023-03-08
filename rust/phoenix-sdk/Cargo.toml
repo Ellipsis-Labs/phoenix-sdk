@@ -30,3 +30,5 @@ rust_decimal_macros = { workspace = true }
 bytemuck = { workspace = true }
 itertools = "0.10.5"
 phoenix-sdk-core = { version = "0.1.0", path = "../phoenix-sdk-core" }
+spl-associated-token-account = { workspace = true }
+phoenix-seat-manager = { workspace = true }

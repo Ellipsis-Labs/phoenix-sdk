@@ -25,6 +25,8 @@ use std::{collections::BTreeMap, mem::size_of, ops::DerefMut, sync::Arc};
 use std::{ops::Deref, sync::Mutex};
 
 use crate::orderbook::Orderbook;
+use crate::utils::create_ata_ix_if_needed;
+use crate::utils::create_claim_seat_ix_if_needed;
 
 pub struct SDKClient {
     pub client: EllipsisClient,
@@ -521,5 +523,62 @@ impl SDKClient {
 
         let cancels = self.parse_cancels(&signature).await;
         Some((signature, cancels))
+    }
+
+    // Useful if unsure trader has an ATA for the base or quote or has a seat on the market
+    pub async fn get_limit_order_new_maker_ixs(
+        &self,
+        trader: &Pubkey,
+        price: u64,
+        side: Side,
+        size: u64,
+    ) -> Vec<Instruction> {
+        let base_ata_instruction_option =
+            create_ata_ix_if_needed(&self.client, trader, trader, &self.base_mint).await;
+
+        let quote_ata_instruction_option =
+            create_ata_ix_if_needed(&self.client, trader, trader, &self.quote_mint).await;
+
+        let claim_seat_ix_option =
+            create_claim_seat_ix_if_needed(&self.client, &self.active_market_key, trader).await;
+
+        let limit_order_ix = self.get_limit_order_ix(price, side, size);
+
+        let mut instructions = Vec::with_capacity(4);
+        if let Some(base_ata_instruction) = base_ata_instruction_option {
+            instructions.push(base_ata_instruction);
+        }
+        if let Some(quote_ata_instruction) = quote_ata_instruction_option {
+            instructions.push(quote_ata_instruction);
+        }
+        if let Some(claim_seat_ix) = claim_seat_ix_option {
+            instructions.push(claim_seat_ix);
+        }
+        instructions.push(limit_order_ix);
+
+        return instructions;
+    }
+
+    // Useful if known that trader has an ATA for the base or quote through prior interactions but may have been evicted
+    pub async fn get_limit_order_existing_maker(
+        &self,
+        trader: &Pubkey,
+        price: u64,
+        side: Side,
+        size: u64,
+    ) -> Vec<Instruction> {
+        let claim_seat_ix_option =
+            create_claim_seat_ix_if_needed(&self.client, &self.active_market_key, trader).await;
+
+        let limit_order_ix = self.get_limit_order_ix(price, side, size);
+
+        let mut instructions = Vec::with_capacity(4);
+
+        if let Some(claim_seat_ix) = claim_seat_ix_option {
+            instructions.push(claim_seat_ix);
+        }
+        instructions.push(limit_order_ix);
+
+        return instructions;
     }
 }
