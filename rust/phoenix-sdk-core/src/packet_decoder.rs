@@ -8,7 +8,7 @@ pub enum OrderPacketEnum {
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct PostOnlyPacketDeprecated {
+struct DeprecatedPostOnlyPacket {
     side: Side,
 
     /// The price of the order, in ticks
@@ -32,35 +32,35 @@ pub struct PostOnlyPacketDeprecated {
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct PostOnlyPacket {
-    side: Side,
+    pub side: Side,
 
     /// The price of the order, in ticks
-    price_in_ticks: u64,
+    pub price_in_ticks: u64,
 
     /// Number of base lots to place on the book
-    num_base_lots: u64,
+    pub num_base_lots: u64,
 
     /// Client order id used to identify the order in the response to the client
-    client_order_id: u128,
+    pub client_order_id: u128,
 
     /// Flag for whether or not to reject the order if it would immediately match or amend it to the best non-crossing price
     /// Default value is true
-    reject_post_only: bool,
+    pub reject_post_only: bool,
 
     /// Flag for whether or not the order should only use funds that are already in the account
     /// Using only deposited funds will allow the trader to pass in less accounts per instruction and
     /// save transaction space as well as compute. This is only for traders who have a seat
-    use_only_deposited_funds: bool,
+    pub use_only_deposited_funds: bool,
 
     /// If this is set, the order will be invalid after the specified slot
-    last_valid_slot: Option<u64>,
+    pub last_valid_slot: Option<u64>,
 
     /// If this is set, the order will be invalid after the specified unix timestamp
-    last_valid_unix_timestamp_in_seconds: Option<u64>,
+    pub last_valid_unix_timestamp_in_seconds: Option<u64>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
-pub struct LimitPacketDeprecated {
+struct DeprecatedLimitPacket {
     side: Side,
 
     /// The price of the order, in ticks
@@ -86,33 +86,33 @@ pub struct LimitPacketDeprecated {
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct LimitPacket {
-    side: Side,
+    pub side: Side,
 
     /// The price of the order, in ticks
-    price_in_ticks: u64,
+    pub price_in_ticks: u64,
 
     /// Total number of base lots to place on the book or fill at a better price
-    num_base_lots: u64,
+    pub num_base_lots: u64,
 
     /// How the matching engine should handle a self trade
-    self_trade_behavior: SelfTradeBehavior,
+    pub self_trade_behavior: SelfTradeBehavior,
 
     /// Number of orders to match against. If this is `None` there is no limit
-    match_limit: Option<u64>,
+    pub match_limit: Option<u64>,
 
     /// Client order id used to identify the order in the response to the client
-    client_order_id: u128,
+    pub client_order_id: u128,
 
     /// Flag for whether or not the order should only use funds that are already in the account.
     /// Using only deposited funds will allow the trader to pass in less accounts per instruction and
     /// save transaction space as well as compute. This is only for traders who have a seat
-    use_only_deposited_funds: bool,
+    pub use_only_deposited_funds: bool,
 
     /// If this is set, the order will be invalid after the specified slot
-    last_valid_slot: Option<u64>,
+    pub last_valid_slot: Option<u64>,
 
     /// If this is set, the order will be invalid after the specified unix timestamp
-    last_valid_unix_timestamp_in_seconds: Option<u64>,
+    pub last_valid_unix_timestamp_in_seconds: Option<u64>,
 }
 
 pub fn decode_post_only_packet_data(bytes: &[u8]) -> anyhow::Result<PostOnlyPacket> {
@@ -124,12 +124,12 @@ pub fn decode_post_only_packet_data(bytes: &[u8]) -> anyhow::Result<PostOnlyPack
         OrderPacketEnum::PostOnly => {
             let packet = PostOnlyPacket::try_from_slice(bytes)
                 .map_err(|_| anyhow::Error::msg("Invalid Post-Only packet"));
-            let deprecated_packet_result = PostOnlyPacketDeprecated::try_from_slice(bytes);
+            let deprecated_packet_result = DeprecatedPostOnlyPacket::try_from_slice(bytes);
             if packet.is_ok() {
                 return packet;
             }
             let deprecated_packet = deprecated_packet_result?;
-            let PostOnlyPacketDeprecated {
+            let DeprecatedPostOnlyPacket {
                 side,
                 price_in_ticks,
                 num_base_lots,
@@ -161,12 +161,12 @@ pub fn decode_limit_packet_data(bytes: &[u8]) -> anyhow::Result<LimitPacket> {
         OrderPacketEnum::Limit => {
             let packet = LimitPacket::try_from_slice(bytes)
                 .map_err(|_| anyhow::Error::msg("Invalid Limit packet"));
-            let deprecated_packet_result = LimitPacketDeprecated::try_from_slice(bytes);
+            let deprecated_packet_result = DeprecatedLimitPacket::try_from_slice(bytes);
             if packet.is_ok() {
                 return packet;
             }
             let deprecated_packet = deprecated_packet_result?;
-            let LimitPacketDeprecated {
+            let DeprecatedLimitPacket {
                 side,
                 price_in_ticks,
                 self_trade_behavior,
