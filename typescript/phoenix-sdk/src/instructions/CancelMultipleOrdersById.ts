@@ -5,14 +5,14 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as splToken from '@solana/spl-token'
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
+import * as splToken from "@solana/spl-token";
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
 import {
   CancelMultipleOrdersByIdParams,
   cancelMultipleOrdersByIdParamsBeet,
-} from '../types/CancelMultipleOrdersByIdParams'
-import { Client } from 'client'
+} from "../types/CancelMultipleOrdersByIdParams";
+import { Client } from "client";
 
 /**
  * @category Instructions
@@ -20,8 +20,8 @@ import { Client } from 'client'
  * @category generated
  */
 export type CancelMultipleOrdersByIdInstructionArgs = {
-  params: CancelMultipleOrdersByIdParams
-}
+  params: CancelMultipleOrdersByIdParams;
+};
 /**
  * @category Instructions
  * @category CancelMultipleOrdersById
@@ -29,15 +29,15 @@ export type CancelMultipleOrdersByIdInstructionArgs = {
  */
 export const CancelMultipleOrdersByIdStruct = new beet.FixableBeetArgsStruct<
   CancelMultipleOrdersByIdInstructionArgs & {
-    instructionDiscriminator: number
+    instructionDiscriminator: number;
   }
 >(
   [
-    ['instructionDiscriminator', beet.u8],
-    ['params', cancelMultipleOrdersByIdParamsBeet],
+    ["instructionDiscriminator", beet.u8],
+    ["params", cancelMultipleOrdersByIdParamsBeet],
   ],
-  'CancelMultipleOrdersByIdInstructionArgs'
-)
+  "CancelMultipleOrdersByIdInstructionArgs"
+);
 /**
  * Accounts required by the _CancelMultipleOrdersById_ instruction
  *
@@ -54,18 +54,18 @@ export const CancelMultipleOrdersByIdStruct = new beet.FixableBeetArgsStruct<
  * @category generated
  */
 export type CancelMultipleOrdersByIdInstructionAccounts = {
-  phoenixProgram: web3.PublicKey
-  logAuthority: web3.PublicKey
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  baseAccount: web3.PublicKey
-  quoteAccount: web3.PublicKey
-  baseVault: web3.PublicKey
-  quoteVault: web3.PublicKey
-  tokenProgram?: web3.PublicKey
-}
+  phoenixProgram: web3.PublicKey;
+  logAuthority: web3.PublicKey;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  baseAccount: web3.PublicKey;
+  quoteAccount: web3.PublicKey;
+  baseVault: web3.PublicKey;
+  quoteVault: web3.PublicKey;
+  tokenProgram?: web3.PublicKey;
+};
 
-export const cancelMultipleOrdersByIdInstructionDiscriminator = 10
+export const cancelMultipleOrdersByIdInstructionDiscriminator = 10;
 
 /**
  * Creates a _CancelMultipleOrdersById_ instruction.
@@ -80,12 +80,12 @@ export const cancelMultipleOrdersByIdInstructionDiscriminator = 10
 export function createCancelMultipleOrdersByIdInstruction(
   accounts: CancelMultipleOrdersByIdInstructionAccounts,
   args: CancelMultipleOrdersByIdInstructionArgs,
-  programId = new web3.PublicKey('PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY')
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ) {
   const [data] = CancelMultipleOrdersByIdStruct.serialize({
     instructionDiscriminator: cancelMultipleOrdersByIdInstructionDiscriminator,
     ...args,
-  })
+  });
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.phoenixProgram,
@@ -132,86 +132,98 @@ export function createCancelMultipleOrdersByIdInstruction(
       isWritable: false,
       isSigner: false,
     },
-  ]
+  ];
 
   const ix = new web3.TransactionInstruction({
     programId,
     keys,
     data,
-  })
-  return ix
+  });
+  return ix;
 }
 
-export function  createCancelMultipleOrdersByIdInstructionWithClient( 
-  client: Client, 
+/**
+ * Creates a _CancelMultipleOrdersById_ instruction.
+ *
+ * @param client Phoenix SDK client to use
+ * @param args to provide as instruction data to the program
+ * @param marketAddress Market address string
+ * @param trader Trader public key
+ *
+ * @category Instructions
+ * @category CancelMultipleOrdersById
+ * @category generated
+ */
+export function createCancelMultipleOrdersByIdInstructionWithClient(
+  client: Client,
   args: CancelMultipleOrdersByIdInstructionArgs,
   marketAddress: String,
   trader: web3.PublicKey,
   tokenProgram?: web3.PublicKey,
-  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")  
-  ): web3.TransactionInstruction  {
-    const [data] = CancelMultipleOrdersByIdStruct.serialize({
-      instructionDiscriminator: cancelMultipleOrdersByIdInstructionDiscriminator,
-      ...args,
-    })
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
+): web3.TransactionInstruction {
+  const [data] = CancelMultipleOrdersByIdStruct.serialize({
+    instructionDiscriminator: cancelMultipleOrdersByIdInstructionDiscriminator,
+    ...args,
+  });
 
-    let market = client.markets.find(
-      (m) => m.address.toBase58() === marketAddress
-    );
-    if (!market) throw new Error("Market not found: " + marketAddress);
+  let market = client.markets.find(
+    (m) => m.address.toBase58() === marketAddress
+  );
+  if (!market) throw new Error("Market not found: " + marketAddress);
 
-    const keys: web3.AccountMeta[] = [
-      {
-        pubkey: programId,
-        isWritable: false,
-        isSigner: false,
-      },
-      {
-        pubkey: client.getLogAuthority(),
-        isWritable: false,
-        isSigner: false,
-      },
-      {
-        pubkey: new web3.PublicKey(marketAddress),
-        isWritable: true,
-        isSigner: false,
-      },
-      {
-        pubkey: trader,
-        isWritable: false,
-        isSigner: true,
-      },
-      {
-        pubkey: client.getBaseAccountKey(trader, marketAddress),
-        isWritable: true,
-        isSigner: false,
-      },
-      {
-        pubkey: client.getQuoteAccountKey(trader, marketAddress),
-        isWritable: true,
-        isSigner: false,
-      },
-      {
-        pubkey: market.data.header.baseParams.vaultKey,
-        isWritable: true,
-        isSigner: false,
-      },
-      {
-        pubkey: market.data.header.quoteParams.vaultKey,
-        isWritable: true,
-        isSigner: false,
-      },
-      {
-        pubkey: tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
-        isWritable: false,
-        isSigner: false,
-      },
-    ]
-  
-    const ix = new web3.TransactionInstruction({
-      programId,
-      keys,
-      data,
-    })
-    return ix
-  }
+  const keys: web3.AccountMeta[] = [
+    {
+      pubkey: programId,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: client.getLogAuthority(),
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: new web3.PublicKey(marketAddress),
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: trader,
+      isWritable: false,
+      isSigner: true,
+    },
+    {
+      pubkey: client.getBaseAccountKey(trader, marketAddress),
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: client.getQuoteAccountKey(trader, marketAddress),
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: market.data.header.baseParams.vaultKey,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: market.data.header.quoteParams.vaultKey,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
+      isWritable: false,
+      isSigner: false,
+    },
+  ];
+
+  const ix = new web3.TransactionInstruction({
+    programId,
+    keys,
+    data,
+  });
+  return ix;
+}

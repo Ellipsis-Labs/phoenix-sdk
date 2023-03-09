@@ -97,6 +97,16 @@ export function createRequestSeatInstruction(
   return ix;
 }
 
+/**
+ * Creates a _RequestSeat_ instruction.
+ *
+ * @param client Phoenix SDK client to use
+ * @param marketAddress Market address string
+ * @param payer Payer public key
+ * @param trader Trader public key
+ * 
+ * @category Instructions
+ */
 export function createRequestSeatInstructionWithClient(
   client: Client,
   marketAddress: String,

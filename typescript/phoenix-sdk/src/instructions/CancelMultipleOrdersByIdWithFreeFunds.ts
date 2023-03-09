@@ -109,12 +109,21 @@ export function createCancelMultipleOrdersByIdWithFreeFundsInstruction(
   return ix;
 }
 
+/**
+ * Creates a _CancelMultipleOrdersByIdWithFreeFunds_ instruction.
+ *
+ * @param client Phoenix SDK client to use
+ * @param args to provide as instruction data to the program
+ * @param marketAddress Market address string
+ * @param trader Trader public key
+ * 
+ * @category Instructions
+ */
 export function createCancelMultipleOrdersByIdWithFreeFundsInstructionWithClient(
   client: Client,
   args: CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
   marketAddress: String,
   trader: web3.PublicKey,
-  tokenProgram?: web3.PublicKey,
   programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ): web3.TransactionInstruction {
   const [data] = CancelMultipleOrdersByIdWithFreeFundsStruct.serialize({

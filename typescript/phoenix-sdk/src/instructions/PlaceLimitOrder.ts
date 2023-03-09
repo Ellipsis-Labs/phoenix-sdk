@@ -146,6 +146,16 @@ export function createPlaceLimitOrderInstruction(
   return ix;
 }
 
+/**
+ * Creates a _PlaceLimitOrder_ instruction.
+ *
+ * @param client Phoenix SDK client to use
+ * @param args to provide as instruction data to the program
+ * @param marketAddress Market address string
+ * @param trader Trader public key
+ *
+ * @category Instructions
+ */
 export function createPlaceLimitOrderInstructionWithClient(
   client: Client,
   args: PlaceLimitOrderInstructionArgs,

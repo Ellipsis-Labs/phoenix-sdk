@@ -62,6 +62,12 @@ export function createLogInstruction(
   return ix;
 }
 
+/**
+ * Creates a _Log_ instruction.
+ *
+ * @param client Phoenix SDK client to use
+ * @category Instructions
+ */
 export function createLogInstructionWithClient(
   client: Client,
   programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")

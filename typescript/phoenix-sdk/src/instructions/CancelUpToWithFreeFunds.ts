@@ -107,12 +107,21 @@ export function createCancelUpToWithFreeFundsInstruction(
   return ix;
 }
 
+/**
+ * Creates a _CancelUpToWithFreeFunds_ instruction.
+ *
+ * @param client Phoenix SDK client to use
+ * @param args to provide as instruction data to the program
+ * @param marketAddress Market address string
+ * @param trader Trader public key
+ *
+ * @category Instructions
+ */
 export function createCancelUpToWithFreeFundsInstructionWithClient(
   client: Client,
   args: CancelUpToWithFreeFundsInstructionArgs,
   marketAddress: String,
   trader: web3.PublicKey,
-  tokenProgram?: web3.PublicKey,
   programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
 ): web3.TransactionInstruction {
   const [data] = CancelUpToWithFreeFundsStruct.serialize({
