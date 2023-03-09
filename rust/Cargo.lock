@@ -1486,6 +1486,7 @@ dependencies = [
  "devnet-token-faucet",
  "ellipsis-client",
  "phoenix-sdk",
+ "phoenix-seat-manager",
  "phoenix-v1",
  "rand 0.7.3",
  "shellexpand",

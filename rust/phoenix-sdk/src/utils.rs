@@ -16,17 +16,16 @@ pub async fn create_ata_ix_if_needed(
     let ata_account = client.get_account(&ata_address).await;
 
     if let Ok(ata_account) = ata_account {
-        if ata_account.data.is_empty() {
-            return Some(create_associated_token_account(
-                payer,
-                trader,
-                mint,
-                &spl_token::ID,
-            ));
+        if !ata_account.data.is_empty() {
+            return None;
         }
     }
-
-    None
+    Some(create_associated_token_account(
+        payer,
+        trader,
+        mint,
+        &spl_token::ID,
+    ))
 }
 
 pub async fn create_claim_seat_ix_if_needed(
@@ -38,10 +37,10 @@ pub async fn create_claim_seat_ix_if_needed(
     let seat_account = client.get_account(&seat_address).await;
 
     if let Ok(seat_account) = seat_account {
-        if seat_account.data.is_empty() {
-            return Some(create_claim_seat_instruction(trader, market));
+        if !seat_account.data.is_empty() {
+            return None;
         }
     }
 
-    None
+    Some(create_claim_seat_instruction(trader, market))
 }
