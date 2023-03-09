@@ -573,7 +573,7 @@ impl SDKClient {
 
         let limit_order_ix = self.get_limit_order_ix(price, side, size);
 
-        let mut instructions = Vec::with_capacity(4);
+        let mut instructions = Vec::with_capacity(2);
 
         if let Some(claim_seat_ix) = claim_seat_ix_option {
             instructions.push(claim_seat_ix);
@@ -630,7 +630,7 @@ impl SDKClient {
 
         let post_only_ix = self.get_post_only_ix(price, side, size);
 
-        let mut instructions = Vec::with_capacity(4);
+        let mut instructions = Vec::with_capacity(2);
 
         if let Some(claim_seat_ix) = claim_seat_ix_option {
             instructions.push(claim_seat_ix);
