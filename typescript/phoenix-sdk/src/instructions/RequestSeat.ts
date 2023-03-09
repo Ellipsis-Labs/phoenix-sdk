@@ -7,6 +7,8 @@
 
 import * as beet from "@metaplex-foundation/beet";
 import * as web3 from "@solana/web3.js";
+import { Client } from "client";
+import * as splToken from "@solana/spl-token";
 
 /**
  * @category Instructions
@@ -82,6 +84,59 @@ export function createRequestSeatInstruction(
     },
     {
       pubkey: accounts.systemProgram ?? web3.SystemProgram.programId,
+      isWritable: false,
+      isSigner: false,
+    },
+  ];
+
+  const ix = new web3.TransactionInstruction({
+    programId,
+    keys,
+    data,
+  });
+  return ix;
+}
+
+export function createRequestSeatInstructionWithClient(
+  client: Client,
+  marketAddress: String,
+  payer: web3.PublicKey,
+  trader: web3.PublicKey,
+  tokenProgram?: web3.PublicKey,
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
+) {
+  const [data] = RequestSeatStruct.serialize({
+    instructionDiscriminator: requestSeatInstructionDiscriminator,
+  });
+
+  const keys: web3.AccountMeta[] = [
+    {
+      pubkey: programId,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: client.getLogAuthority(),
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: new web3.PublicKey(marketAddress),
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: payer,
+      isWritable: true,
+      isSigner: true,
+    },
+    {
+      pubkey: client.getSeatKey(trader, marketAddress),
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
       isWritable: false,
       isSigner: false,
     },

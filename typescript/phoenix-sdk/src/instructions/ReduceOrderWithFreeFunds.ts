@@ -11,6 +11,7 @@ import {
   ReduceOrderParams,
   reduceOrderParamsBeet,
 } from "../types/ReduceOrderParams";
+import { Client } from "client";
 
 /**
  * @category Instructions
@@ -94,6 +95,53 @@ export function createReduceOrderWithFreeFundsInstruction(
     {
       pubkey: accounts.trader,
       isWritable: true,
+      isSigner: true,
+    },
+  ];
+
+  const ix = new web3.TransactionInstruction({
+    programId,
+    keys,
+    data,
+  });
+  return ix;
+}
+
+export function createReduceOrderWithFreeFundsInstructionWithClient(
+  client: Client,
+  args: ReduceOrderWithFreeFundsInstructionArgs,
+  marketAddress: String,
+  trader: web3.PublicKey,
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
+) {
+  const [data] = ReduceOrderWithFreeFundsStruct.serialize({
+    instructionDiscriminator: reduceOrderWithFreeFundsInstructionDiscriminator,
+    ...args,
+  });
+  let market = client.markets.find(
+    (m) => m.address.toBase58() === marketAddress
+  );
+  if (!market) throw new Error("Market not found: " + marketAddress);
+
+  const keys: web3.AccountMeta[] = [
+    {
+      pubkey: programId,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: client.getLogAuthority(),
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: new web3.PublicKey(marketAddress),
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: trader,
+      isWritable: false,
       isSigner: true,
     },
   ];

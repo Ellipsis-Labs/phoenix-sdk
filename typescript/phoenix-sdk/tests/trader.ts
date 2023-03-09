@@ -8,7 +8,7 @@ export async function trader(pubkey: string) {
 
   const connection = new Connection("https://qn-devnet.solana.fm/");
   const traderKey = new PublicKey(pubkey);
-  const phoenix = await Phoenix.Client.create(connection, traderKey);
+  const phoenix = await Phoenix.Client.create(connection, "devnet", traderKey);
 
   console.log(phoenix.trader.tokenBalances);
 }

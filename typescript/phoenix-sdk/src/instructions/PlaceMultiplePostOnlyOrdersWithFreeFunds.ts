@@ -11,6 +11,7 @@ import {
   MultipleOrderPacket,
   multipleOrderPacketBeet,
 } from "../types/MultipleOrderPacket";
+import { Client } from "client";
 
 /**
  * @category Instructions
@@ -102,6 +103,60 @@ export function createPlaceMultiplePostOnlyOrdersWithFreeFundsInstruction(
     },
     {
       pubkey: accounts.seat,
+      isWritable: false,
+      isSigner: false,
+    },
+  ];
+
+  const ix = new web3.TransactionInstruction({
+    programId,
+    keys,
+    data,
+  });
+  return ix;
+}
+
+export function createPlaceMultiplePostOnlyOrdersWithFreeFundsInstructionWithClient(
+  client: Client,
+  args: PlaceMultiplePostOnlyOrdersWithFreeFundsInstructionArgs,
+  marketAddress: String,
+  trader: web3.PublicKey,
+  tokenProgram?: web3.PublicKey,
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
+) {
+  const [data] = PlaceMultiplePostOnlyOrdersWithFreeFundsStruct.serialize({
+    instructionDiscriminator:
+      placeMultiplePostOnlyOrdersWithFreeFundsInstructionDiscriminator,
+    ...args,
+  });
+  let market = client.markets.find(
+    (m) => m.address.toBase58() === marketAddress
+  );
+  if (!market) throw new Error("Market not found: " + marketAddress);
+
+  const keys: web3.AccountMeta[] = [
+    {
+      pubkey: programId,
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: client.getLogAuthority(),
+      isWritable: false,
+      isSigner: false,
+    },
+    {
+      pubkey: new web3.PublicKey(marketAddress),
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: trader,
+      isWritable: false,
+      isSigner: true,
+    },
+    {
+      pubkey: client.getSeatKey(trader, marketAddress),
       isWritable: false,
       isSigner: false,
     },

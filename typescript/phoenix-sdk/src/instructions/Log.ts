@@ -7,6 +7,7 @@
 
 import * as beet from "@metaplex-foundation/beet";
 import * as web3 from "@solana/web3.js";
+import { Client } from "client";
 
 /**
  * @category Instructions
@@ -48,6 +49,30 @@ export function createLogInstruction(
   const keys: web3.AccountMeta[] = [
     {
       pubkey: accounts.logAuthority,
+      isWritable: false,
+      isSigner: true,
+    },
+  ];
+
+  const ix = new web3.TransactionInstruction({
+    programId,
+    keys,
+    data,
+  });
+  return ix;
+}
+
+export function createLogInstructionWithClient(
+  client: Client,
+  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
+) {
+  const [data] = LogStruct.serialize({
+    instructionDiscriminator: logInstructionDiscriminator,
+  });
+
+  const keys: web3.AccountMeta[] = [
+    {
+      pubkey: client.getLogAuthority(),
       isWritable: false,
       isSigner: true,
     },

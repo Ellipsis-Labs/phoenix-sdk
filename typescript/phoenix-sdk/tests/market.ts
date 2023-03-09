@@ -6,7 +6,7 @@ import * as Phoenix from "../src";
 export async function market() {
 
   const connection = new Connection("https://api.mainnet-beta.solana.com");
-  const phoenix = await Phoenix.Client.create(connection);
+  const phoenix = await Phoenix.Client.create(connection, "mainnet");
   let m = phoenix.markets.find((market) => market.name === "SOL/USDC");
   let index = m?.data.trader_index; 
   console.log(index);
