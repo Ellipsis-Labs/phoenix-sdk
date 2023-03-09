@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use phoenix::state::Side;
 use phoenix_sdk::sdk_client::SDKClient;
+#[allow(unused_imports)]
 use solana_sdk::{
     instruction::Instruction,
     program_pack::Pack,
@@ -10,7 +11,6 @@ use solana_sdk::{
     signer::Signer,
 };
 use spl_token::state::Mint;
-
 #[tokio::main]
 async fn main() {
     // Connect to the solana network and get the market address
