@@ -109,5 +109,3 @@ export function createSwapWithFreeFundsInstruction(
   });
   return ix;
 }
-
-  

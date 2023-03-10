@@ -8,7 +8,6 @@
 import * as splToken from "@solana/spl-token";
 import * as beet from "@metaplex-foundation/beet";
 import * as web3 from "@solana/web3.js";
-
 import {
   CancelUpToParams,
   cancelUpToParamsBeet,
