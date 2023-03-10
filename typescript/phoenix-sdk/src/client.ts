@@ -4,7 +4,6 @@ import { getClusterFromEndpoint, toNum } from "./utils";
 import { Token } from "./token";
 import { Market } from "./market";
 import { Trader } from "./trader";
-import { StringTypeMap } from "@metaplex-foundation/beet";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
@@ -48,7 +47,7 @@ export class Client {
     trader?: PublicKey
   ): Promise<Client> {
     const cluster = getClusterFromEndpoint(endpoint);
-    let config_url =
+    const config_url =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
 
     const config = await axios.get(config_url).then((response) => {
@@ -95,7 +94,7 @@ export class Client {
    * @param marketAddress The `PublicKey` of the market account
    *
    */
-  public async addMarket(marketAddress: String) {
+  public async addMarket(marketAddress: string) {
     const market = await Market.load({
       connection: this.connection,
       address: new PublicKey(marketAddress),
@@ -115,9 +114,9 @@ export class Client {
   */
   public getBaseAccountKey(
     trader: PublicKey,
-    marketAddress: String
+    marketAddress: string
   ): PublicKey {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -138,9 +137,9 @@ export class Client {
   */
   public getQuoteAccountKey(
     trader: PublicKey,
-    marketAddress: String
+    marketAddress: string
   ): PublicKey {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -159,12 +158,12 @@ export class Client {
    * @param trader The `PublicKey` of the trader account
    * @param marketAddress The `PublicKey` of the market account
   */
-  public getSeatKey(trader: PublicKey, marketAddress: String): PublicKey {
-    let market = this.markets.find(
+  public getSeatKey(trader: PublicKey, marketAddress: string): PublicKey {
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
-    let market_pubkey = new PublicKey(
+    const market_pubkey = new PublicKey(
       "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5"
     );
     return PublicKey.findProgramAddressSync(
@@ -188,8 +187,8 @@ export class Client {
    * @param price The price to convert
    * @param marketAddress The `PublicKey` of the market account
   */
-  public floatPriceToTicks(price: number, marketAddress: String): number {
-    let market = this.markets.find(
+  public floatPriceToTicks(price: number, marketAddress: string): number {
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -204,8 +203,8 @@ export class Client {
    * @param ticks  The price in ticks to convert
    * @param marketAddress  The `PublicKey` of the market account
    */
-  public ticksToFloatPrice(ticks: number, marketAddress: String): number {
-    let market = this.markets.find(
+  public ticksToFloatPrice(ticks: number, marketAddress: string): number {
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -222,13 +221,13 @@ export class Client {
    */
   public rawBaseUnitsToBaseLots(
     rawBaseUnits: number,
-    marketAddress: String
+    marketAddress: string
   ): number {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
-    let base_units = rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
+    const base_units = rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
     return Math.floor(base_units * market.data.baseLotsPerBaseUnit);
   }
 
@@ -239,13 +238,13 @@ export class Client {
   */
   public rawBaseUnitsToBaseLotsRoundedUp(
     rawBaseUnits: number,
-    marketAddress: String
+    marketAddress: string
   ): number {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
-    let base_units = rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
+    const base_units = rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
     return Math.ceil(base_units * market.data.baseLotsPerBaseUnit);
   }
 
@@ -254,8 +253,8 @@ export class Client {
    * @param baseAtoms The amount of base atoms to convert
    * @param marketAddress The `PublicKey` of the market account
   */
-  public baseAtomsToBaseLots(baseAtoms: number, marketAddress: String): number {
-    let market = this.markets.find(
+  public baseAtomsToBaseLots(baseAtoms: number, marketAddress: string): number {
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -267,8 +266,8 @@ export class Client {
    * @param baseLots The amount of base lots to convert
    * @param marketAddress The `PublicKey` of the market account
   */
-  public baseLotsToBaseAtoms(baseLots: number, marketAddress: String): number {
-    let market = this.markets.find(
+  public baseLotsToBaseAtoms(baseLots: number, marketAddress: string): number {
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -282,9 +281,9 @@ export class Client {
   */
   public quoteUnitsToQuoteLots(
     quoteUnits: number,
-    marketAddress: String
+    marketAddress: string
   ): number {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -301,9 +300,9 @@ export class Client {
   */
   public quoteAtomsToQuoteLots(
     quoteAtoms: number,
-    marketAddress: String
+    marketAddress: string
   ): number {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -317,9 +316,9 @@ export class Client {
   */
   public quoteLotsToQuoteAtoms(
     quoteLots: number,
-    marketAddress: String
+    marketAddress: string
   ): number {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -333,9 +332,9 @@ export class Client {
   */
   public baseAtomsToBaseUnits(
     baseAtoms: number,
-    marketAddress: String
+    marketAddress: string
   ): number {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -349,9 +348,9 @@ export class Client {
   */
   public quoteAtomsToQuoteUnits(
     quoteAtoms: number,
-    marketAddress: String
+    marketAddress: string
   ): number {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -367,9 +366,9 @@ export class Client {
   public orderToQuoteAmount(
     baseLots: number,
     price_in_ticks: number,
-    marketAddress: String
+    marketAddress: string
   ): number {
-    let market = this.markets.find(
+    const market = this.markets.find(
       (m) => m.address.toBase58() === marketAddress
     );
     if (!market) throw new Error("Market not found: " + marketAddress);

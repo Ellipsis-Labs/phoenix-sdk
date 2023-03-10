@@ -9,7 +9,8 @@
   "license": "MIT",
   "scripts": {
     "build": "tsup",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "lint": "eslint . --ext .ts --fix"
   },
   "dependencies": {
     "@metaplex-foundation/beet": "^0.7.1",
@@ -24,6 +25,9 @@
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.1",
+    "@typescript-eslint/eslint-plugin": "^5.54.1",
+    "@typescript-eslint/parser": "^5.54.1",
+    "eslint": "^8.35.0",
     "tsup": "^6.6.0",
     "typescript": "^4.9.4"
   }

@@ -7,7 +7,6 @@
 
 import * as beet from "@metaplex-foundation/beet";
 import * as web3 from "@solana/web3.js";
-import { Client } from "client";
 import {
   CancelUpToParams,
   cancelUpToParamsBeet,
@@ -94,64 +93,6 @@ export function createCancelUpToWithFreeFundsInstruction(
     },
     {
       pubkey: accounts.trader,
-      isWritable: false,
-      isSigner: true,
-    },
-  ];
-
-  const ix = new web3.TransactionInstruction({
-    programId,
-    keys,
-    data,
-  });
-  return ix;
-}
-
-/**
- * Creates a _CancelUpToWithFreeFunds_ instruction.
- *
- * @param client Phoenix SDK client to use
- * @param args to provide as instruction data to the program
- * @param marketAddress Market address string
- * @param trader Trader public key
- *
- * @category Instructions
- */
-export function createCancelUpToWithFreeFundsInstructionWithClient(
-  client: Client,
-  args: CancelUpToWithFreeFundsInstructionArgs,
-  marketAddress: String,
-  trader: web3.PublicKey,
-  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
-): web3.TransactionInstruction {
-  const [data] = CancelUpToWithFreeFundsStruct.serialize({
-    instructionDiscriminator: cancelUpToWithFreeFundsInstructionDiscriminator,
-    ...args,
-  });
-
-  let market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
-  if (!market) throw new Error("Market not found: " + marketAddress);
-
-  const keys: web3.AccountMeta[] = [
-    {
-      pubkey: programId,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: client.getLogAuthority(),
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: new web3.PublicKey(marketAddress),
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: trader,
       isWritable: false,
       isSigner: true,
     },

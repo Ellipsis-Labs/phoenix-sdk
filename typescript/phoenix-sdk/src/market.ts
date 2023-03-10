@@ -263,7 +263,7 @@ export class Market {
       target /= 5;
       exp5 += 1;
     }
-    let precision = Math.max(exp2, exp5);
+    const precision = Math.max(exp2, exp5);
     return (
       Math.max(precision, 3) +
       Math.floor(

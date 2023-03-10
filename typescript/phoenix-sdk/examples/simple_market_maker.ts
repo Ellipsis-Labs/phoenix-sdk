@@ -5,17 +5,15 @@ import {
   TransactionMessage,
   VersionedTransaction,
 } from "@solana/web3.js";
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as Phoenix from "../src";
 const axios = require("axios");
+const fs = require("fs");
 
-// Ex: ts-node examples/simple_market_maker.ts
-export async function simple_market_maker() {
+// Ex: ts-node examples/simple_market_maker.ts {private_key_path}
+export async function simple_market_maker(privateKeyPath: string) {
   // mainnet test market (BASE/QUOTE)
-  let market_pubkey = new PublicKey(
+  const market_pubkey = new PublicKey(
     "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5"
   );
   // use custom RPC for better performance
@@ -34,16 +32,13 @@ export async function simple_market_maker() {
     address: market_pubkey,
   });
   const marketData = market.data;
+
   // load in keypair for the trader you wish to trade with (must have funds in the market)
-  const trader = Keypair.fromSeed(
-    Uint8Array.from(
-      [
-        // add keypair seed here
-      ].slice(0, 32)
-    )
-  );
+  const privateKey = JSON.parse(fs.readFileSync(privateKeyPath, "utf-8"));
+  const trader = Keypair.fromSeed(Uint8Array.from(privateKey.slice(0, 32)));
+
   // Create a Phoenix client
-  let client = await Phoenix.Client.create(connection, "mainnet");
+  const client = await Phoenix.Client.create(connection, "mainnet");
 
   // grab relevant accounts needed for sending instructions
   const baseAccount = client.getBaseAccountKey(
@@ -101,14 +96,14 @@ export async function simple_market_maker() {
 
   let count = 0;
   while (true) {
-    let cancel_all = Phoenix.createCancelAllOrdersInstructionWithClient(
+    const cancel_all = Phoenix.createCancelAllOrdersInstructionWithClient(
       client,
       market_pubkey.toString(),
       trader.publicKey
     );
 
     // Send cancel all transaction.
-    // Note we could bundle this with the place order transaction below, but we choose to cancel 
+    // Note we could bundle this with the place order transaction below, but we choose to cancel
     // seperately since getting the price could take an undeterministic amount of time
     try {
       blockhash = await connection
@@ -133,7 +128,7 @@ export async function simple_market_maker() {
     }
 
     // grab the price from coinbase
-    let price = await axios
+    const price = await axios
       .get("https://api.coinbase.com/v2/prices/SOL-USD/spot")
       .then((response) => response.data)
       .then((data) => {
@@ -141,8 +136,8 @@ export async function simple_market_maker() {
       })
       .catch((error) => console.error(error));
     console.log("price", price);
-    let bid_price = parseFloat(price) - QuoteEdge;
-    let ask_price = parseFloat(price) + QuoteEdge;
+    const bid_price = parseFloat(price) - QuoteEdge;
+    const ask_price = parseFloat(price) + QuoteEdge;
 
     // create bid and ask instructions for 1 SOL
     const bidOrderPacket: Phoenix.OrderPacket = {
@@ -185,7 +180,7 @@ export async function simple_market_maker() {
       trader.publicKey
     );
 
-    let instructions = [placeBuy, placeAsk];
+    const instructions = [placeBuy, placeAsk];
     //every 5th iteration, add a withdraw funds instruction
     if (count == 5) {
       instructions.push(placeWithdraw);
@@ -194,13 +189,13 @@ export async function simple_market_maker() {
       count++;
     }
 
-    // Send place orders/withdraw transaction 
+    // Send place orders/withdraw transaction
     try {
       blockhash = await connection
         .getLatestBlockhash()
         .then((res) => res.blockhash);
 
-      let place_quotes_message = new TransactionMessage({
+      const place_quotes_message = new TransactionMessage({
         payerKey: trader.publicKey,
         recentBlockhash: blockhash,
         instructions: instructions,
@@ -232,7 +227,7 @@ export async function simple_market_maker() {
 
 (async function () {
   try {
-    await simple_market_maker();
+    await simple_market_maker(process.argv[2]);
   } catch (err) {
     console.log("Error: ", err);
     process.exit(1);

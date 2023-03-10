@@ -12,7 +12,6 @@ import {
   CancelMultipleOrdersByIdParams,
   cancelMultipleOrdersByIdParamsBeet,
 } from "../types/CancelMultipleOrdersByIdParams";
-import { Client } from "client";
 
 /**
  * @category Instructions
@@ -129,92 +128,6 @@ export function createCancelMultipleOrdersByIdInstruction(
     },
     {
       pubkey: accounts.tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
-      isWritable: false,
-      isSigner: false,
-    },
-  ];
-
-  const ix = new web3.TransactionInstruction({
-    programId,
-    keys,
-    data,
-  });
-  return ix;
-}
-
-/**
- * Creates a _CancelMultipleOrdersById_ instruction.
- *
- * @param client Phoenix SDK client to use
- * @param args to provide as instruction data to the program
- * @param marketAddress Market address string
- * @param trader Trader public key
- *
- * @category Instructions
- * @category CancelMultipleOrdersById
- * @category generated
- */
-export function createCancelMultipleOrdersByIdInstructionWithClient(
-  client: Client,
-  args: CancelMultipleOrdersByIdInstructionArgs,
-  marketAddress: String,
-  trader: web3.PublicKey,
-  tokenProgram?: web3.PublicKey,
-  programId = new web3.PublicKey("PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY")
-): web3.TransactionInstruction {
-  const [data] = CancelMultipleOrdersByIdStruct.serialize({
-    instructionDiscriminator: cancelMultipleOrdersByIdInstructionDiscriminator,
-    ...args,
-  });
-
-  let market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
-  if (!market) throw new Error("Market not found: " + marketAddress);
-
-  const keys: web3.AccountMeta[] = [
-    {
-      pubkey: programId,
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: client.getLogAuthority(),
-      isWritable: false,
-      isSigner: false,
-    },
-    {
-      pubkey: new web3.PublicKey(marketAddress),
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: trader,
-      isWritable: false,
-      isSigner: true,
-    },
-    {
-      pubkey: client.getBaseAccountKey(trader, marketAddress),
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: client.getQuoteAccountKey(trader, marketAddress),
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: market.data.header.baseParams.vaultKey,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: market.data.header.quoteParams.vaultKey,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: tokenProgram ?? splToken.TOKEN_PROGRAM_ID,
       isWritable: false,
       isSigner: false,
     },

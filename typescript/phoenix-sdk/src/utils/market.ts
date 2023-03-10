@@ -38,7 +38,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
   const [header] = marketHeaderBeet.deserialize(data.subarray(0, offset));
   
   // Parse market data
-  let paddingLen = 8 * 32;
+  const paddingLen = 8 * 32;
   let remaining = data.subarray(offset + paddingLen);
   offset = 0;
   const baseLotsPerBaseUnit = Number(remaining.readBigUInt64LE(offset));
@@ -100,7 +100,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
     sign(toBN(a[0].priceInTicks).sub(toBN(b[0].priceInTicks)))
   );
 
-  let traders = new Map<PublicKey, TraderState>();
+  const traders = new Map<PublicKey, TraderState>();
   for (const [k, traderState] of deserializeRedBlackTree(
     traderBuffer,
     publicKeyBeet,
@@ -109,7 +109,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
     traders.set(k.publicKey, traderState);
   }
 
-  let trader_index = new Map<PublicKey, number>();
+  const trader_index = new Map<PublicKey, number>();
   for (const [k, index] of getNodeIndices(
     traderBuffer,
     publicKeyBeet,
@@ -147,17 +147,17 @@ export function deserializeRedBlackTree<Key, Value>(
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): Map<Key, Value> {
-  let tree = new Map<Key, Value>();
-  let tree_nodes = deserializeRedBlackTreeNodes(
+  const tree = new Map<Key, Value>();
+  const tree_nodes = deserializeRedBlackTreeNodes(
     data,
     keyDeserializer,
     valueDeserializer
   );
 
-  let nodes = tree_nodes[0];
-  let freeNodes = tree_nodes[1];
+  const nodes = tree_nodes[0];
+  const freeNodes = tree_nodes[1];
 
-  for (let [index, [key, value]] of nodes.entries()) {
+  for (const [index, [key, value]] of nodes.entries()) {
     if (!freeNodes.has(index)) {
       tree.set(key, value);
     }
@@ -179,17 +179,17 @@ export function deserializeRedBlackTree<Key, Value>(
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): Map<Key, number> {
-  let index_map = new Map<Key, number>();
-  let tree_nodes = deserializeRedBlackTreeNodes(
+  const index_map = new Map<Key, number>();
+  const tree_nodes = deserializeRedBlackTreeNodes(
     data,
     keyDeserializer,
     valueDeserializer
   );
 
-  let nodes = tree_nodes[0];
-  let freeNodes = tree_nodes[1];
+  const nodes = tree_nodes[0];
+  const freeNodes = tree_nodes[1];
 
-  for (let [index, [key, _]] of nodes.entries()) {
+  for (const [index, [key, _]] of nodes.entries()) {
     if (!freeNodes.has(index)) {
       index_map.set(key, index + 1);
     }
@@ -212,48 +212,48 @@ function deserializeRedBlackTreeNodes<Key, Value>(
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): [Array<[Key, Value]> , Set<number>] {
   let offset = 0;
-  let keySize = keyDeserializer.byteSize;
-  let valueSize = valueDeserializer.byteSize;
+  const keySize = keyDeserializer.byteSize;
+  const valueSize = valueDeserializer.byteSize;
 
-  let nodes = new Array<[Key, Value]>();
+  const nodes = new Array<[Key, Value]>();
 
   // Skip RBTree header
   offset += 16;
 
   // Skip node allocator size
   offset += 8;
-  let bumpIndex = data.readInt32LE(offset);
+  const bumpIndex = data.readInt32LE(offset);
   offset += 4;
   let freeListHead = data.readInt32LE(offset);
   offset += 4;
 
-  let freeListPointers = new Array<[number, number]>();
+  const freeListPointers = new Array<[number, number]>();
 
   for (let index = 0; offset < data.length && index < bumpIndex - 1; index++) {
-    let registers = new Array<number>();
+    const registers = new Array<number>();
     for (let i = 0; i < 4; i++) {
       registers.push(data.readInt32LE(offset)); // skip padding
       offset += 4;
     }
-    let [key] = keyDeserializer.deserialize(
+    const [key] = keyDeserializer.deserialize(
       data.subarray(offset, offset + keySize)
     );
     offset += keySize;
-    let [value] = valueDeserializer.deserialize(
+    const [value] = valueDeserializer.deserialize(
       data.subarray(offset, offset + valueSize)
     );
     offset += valueSize;
     nodes.push([key, value]);
     freeListPointers.push([index, registers[0]]);
   }
-  let freeNodes = new Set<number>();
+  const freeNodes = new Set<number>();
   let indexToRemove = freeListHead - 1;
 
   let counter = 0;
   // If there's an infinite loop here, that means that the state is corrupted
   while (freeListHead < bumpIndex) {
     // We need to subtract 1 because the node allocator is 1-indexed
-    let next = freeListPointers[freeListHead - 1];
+    const next = freeListPointers[freeListHead - 1];
     [indexToRemove, freeListHead] = next;
     freeNodes.add(indexToRemove);
     counter += 1;
@@ -277,8 +277,8 @@ export function getMarketLadder(
   marketData: MarketData,
   levels: number = DEFAULT_LADDER_DEPTH
 ): Ladder {
-  let bids: Array<[BN, BN]> = [];
-  let asks: Array<[BN, BN]> = [];
+  const bids: Array<[BN, BN]> = [];
+  const asks: Array<[BN, BN]> = [];
   for (const [orderId, restingOrder] of marketData.bids) {
     const priceInTicks = toBN(orderId.priceInTicks);
     const numBaseLots = toBN(restingOrder.numBaseLots);
@@ -602,7 +602,7 @@ export function getMarketExpectedOutAmount({
   let expectedUnitsReceived = 0;
   if (side === Side.Bid) {
     for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.asks) {
-      let totalQuoteUnitsAvailable =
+      const totalQuoteUnitsAvailable =
         sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
       if (totalQuoteUnitsAvailable > remainingUnits) {
         expectedUnitsReceived += remainingUnits / priceInQuoteUnitsPerBaseUnit;
