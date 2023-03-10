@@ -6,6 +6,7 @@ import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
 import base58 from "bs58";
 
 import * as Phoenix from "../src";
+import { isPhoenixMarketEventFillSummary } from "../src";
 
 export async function swap() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
@@ -143,9 +144,13 @@ export async function swap() {
 
   const fillEvents = txResult.instructions[0];
 
-  const summary = fillEvents.events[
-    fillEvents.events.length - 1
-  ] as Phoenix.FillSummaryEvent;
+  const summaryEvent = fillEvents.events[fillEvents.events.length - 1];
+  if (!isPhoenixMarketEventFillSummary(summaryEvent)) {
+    throw Error(`Unexpected event type: ${summaryEvent}`);
+  }
+
+  // This is pretty sketch
+  const summary: Phoenix.FillSummaryEvent = summaryEvent.fields[0];
 
   if (side == Phoenix.Side.Bid) {
     console.log(

@@ -25,7 +25,8 @@ export const restingOrderBeet = new beet.BeetArgsStruct<RestingOrder>(
   [
     ["traderIndex", beet.u64],
     ["numBaseLots", beet.u64],
-    ["padding", beet.uniformFixedSizeArray(beet.u64, 2)],
+    ["lastValidSlot", beet.u64],
+    ["lastValidUnixTimestampInSeconds", beet.u64],
   ],
   "fIFORestingOrder"
 );
