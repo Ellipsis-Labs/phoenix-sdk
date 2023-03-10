@@ -4,7 +4,7 @@ import * as Phoenix from "../src";
 
 export async function watch() {
   const connection = new Connection("https://qn-devnet.solana.fm/");
-  const phoenix = await Phoenix.Client.create(connection);
+  const phoenix = await Phoenix.Client.create(connection, "devnet");
 
   const market = phoenix.markets.find((market) => market.name === "wSOL/USDC");
   if (!market) throw new Error("Market not found");

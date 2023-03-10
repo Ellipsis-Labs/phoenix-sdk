@@ -103,6 +103,17 @@ impl SDKClient {
         Ok(())
     }
 
+    pub async fn add_and_change_active_market(&mut self, market: &Pubkey) -> anyhow::Result<()> {
+        if self.markets.get(market).is_some() {
+            self.active_market_key = *market;
+        } else {
+            self.add_market(market).await?;
+            self.change_active_market(market)?;
+        }
+
+        Ok(())
+    }
+
     pub async fn get_market_ladder(&self, levels: u64) -> Ladder {
         let market_account_data = (self.client.get_account_data(&self.active_market_key))
             .await

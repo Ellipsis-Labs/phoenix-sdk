@@ -51,7 +51,7 @@ export async function getEventsFromTransaction(
     return { instructions: [] };
   }
 
-  let logData = [];
+  const logData = [];
   for (const ix of innerIxs) {
     for (const inner of ix.instructions) {
       if (inner.programId.toBase58() != PROGRAM_ID.toBase58()) {
@@ -65,16 +65,16 @@ export async function getEventsFromTransaction(
       }
     }
   }
-  let instructions = new Array<PhoenixEvent>();
+  const instructions = new Array<PhoenixEvent>();
 
   for (const data of logData) {
-    let reader = new BinaryReader(Buffer.from(data));
-    let byte = reader.readU8() as PhoenixMarketEvent;
+    const reader = new BinaryReader(Buffer.from(data));
+    const byte = reader.readU8() as PhoenixMarketEvent;
     if (byte != PhoenixMarketEvent.Header) {
       throw new Error("early Unexpected event");
     }
 
-    let tradeEvents = new Array<
+    const tradeEvents = new Array<
       | FillEvent
       | PlaceEvent
       | ReduceEvent
@@ -83,9 +83,9 @@ export async function getEventsFromTransaction(
       | FeeEvent
     >();
 
-    let enums = new Array<PhoenixMarketEvent>();
+    const enums = new Array<PhoenixMarketEvent>();
 
-    let header = {
+    const header = {
       instruction: reader.readU8(),
       sequenceNumber: reader.readU64(),
       timestamp: reader.readU64(),

@@ -8,6 +8,7 @@ export * from "./token";
 export * from "./market";
 export * from "./trader";
 export * from "./client";
+export * from "./instructionCreationHelper";
 
 /**
  * Program address
