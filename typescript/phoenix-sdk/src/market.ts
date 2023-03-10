@@ -25,7 +25,8 @@ export type OrderId = {
 export type RestingOrder = {
   traderIndex: beet.bignum;
   numBaseLots: beet.bignum;
-  padding: beet.bignum[]; // size: 2
+  lastValidSlot: beet.bignum;
+  lastValidUnixTimestampInSeconds: beet.bignum;
 };
 
 export type TraderState = {
