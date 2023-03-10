@@ -486,6 +486,7 @@ export function getMarketSwapTransaction({
   });
 
   const ix = createSwapInstruction(orderAccounts, {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore TODO why is __kind incompatible?
     orderPacket: {
       __kind: "ImmediateOrCancel",
