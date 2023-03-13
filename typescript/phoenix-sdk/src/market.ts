@@ -213,8 +213,8 @@ export class Market {
   }: {
     side: Side;
     inAmount: number;
-    slot: bigint;
-    unixTimestamp: bigint;
+    slot: beet.bignum;
+    unixTimestamp: beet.bignum;
   }): number {
     const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
     const numAsks = toNum(this.data.header.marketSizeParams.asksSize);

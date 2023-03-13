@@ -1,3 +1,6 @@
+import * as beetSolana from "@metaplex-foundation/beet-solana";
+import * as beet from "@metaplex-foundation/beet";
+
 export type Cluster = "mainnet-beta" | "devnet" | "localhost";
 
 export function getClusterFromEndpoint(endpoint: string): Cluster {
@@ -8,38 +11,25 @@ export function getClusterFromEndpoint(endpoint: string): Cluster {
   return "mainnet-beta";
 }
 
-export interface iClock {
-  slot: bigint;
-  epochStartTime: bigint;
-  epoch: bigint;
-  leaderScheduleEpoch: bigint;
-  unixTimestamp: bigint;
-}
-export class Clock {
-  slot: bigint;
-  epochStartTime: bigint;
-  epoch: bigint;
-  leaderScheduleEpoch: bigint;
-  unixTimestamp: bigint;
-
-  constuctor(fields: iClock) {
-    Object.assign(this, fields);
-  }
+export function deserializeClockData(data: Buffer): ClockData {
+  const [clockData, _] = clockBeet.deserialize(data, 0);
+  return clockData;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const ClockSchema = new Map<any, any>([
+export type ClockData = {
+  slot: beet.bignum;
+  epochStartTime: beet.bignum;
+  epoch: beet.bignum;
+  leaderScheduleEpoch: beet.bignum;
+  unixTimestamp: beet.bignum;
+}
+
+export const clockBeet = new beet.BeetArgsStruct<ClockData>(
   [
-    Clock,
-    {
-      kind: "struct",
-      fields: [
-        ["slot", "u64"],
-        ["epochStartTime", "u64"],
-        ["epoch", "u64"],
-        ["leaderScheduleEpoch", "u64"],
-        ["unixTimestamp", "u64"],
-      ],
-    },
-  ],
-]);
+    ["slot", beet.u64],
+    ["epochStartTime", beet.i64],
+    ["epoch", beet.u64],
+    ["leaderScheduleEpoch", beet.u64],
+    ["unixTimestamp", beet.i64],
+  ], "ClockData"
+);

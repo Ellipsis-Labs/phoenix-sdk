@@ -14,13 +14,13 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
-  Clock,
-  ClockSchema,
+  ClockData,
   DEFAULT_LADDER_DEPTH,
   Ladder,
   PROGRAM_ID,
   Side,
   UiLadder,
+  deserializeClockData,
   getMarketLadder,
   getMarketUiLadder,
   printUiLadder,
@@ -40,7 +40,7 @@ export class Client {
   tokenConfig: Array<TokenConfig>;
   tokens: Array<Token>;
   markets: Map<string, Market>;
-  clock: Clock;
+  clock: ClockData;
 
   private constructor({
     connection,
@@ -55,7 +55,7 @@ export class Client {
     tokenConfig: Array<TokenConfig>;
     markets: Map<string, Market>;
     trader: Trader;
-    clock: Clock;
+    clock: ClockData;
   }) {
     this.connection = connection;
     this.tokens = tokens;
@@ -132,9 +132,7 @@ export class Client {
       throw new Error("Unable to get clock");
     }
 
-    console.log("Clock buffer", clockBuffer);
-    const clock = deserialize(ClockSchema, Clock, clockBuffer);
-    console.log("Clock", clock);
+    const clock = deserializeClockData(clockBuffer);
     const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
         return [marketAddress, accounts[index]];
@@ -152,10 +150,10 @@ export class Client {
       tokenConfig,
       trader: trader
         ? await Trader.create({
-            connection,
-            pubkey: trader,
-            tokens,
-          })
+          connection,
+          pubkey: trader,
+          tokens,
+        })
         : undefined,
       clock,
     });
@@ -184,7 +182,7 @@ export class Client {
     if (clockBuffer === undefined) {
       throw new Error("Unable to get clock");
     }
-    const clock = deserialize(ClockSchema, Clock, clockBuffer);
+    const clock = deserializeClockData(clockBuffer);
 
     const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
@@ -203,10 +201,10 @@ export class Client {
       tokenConfig,
       trader: trader
         ? await Trader.create({
-            connection,
-            pubkey: trader,
-            tokens,
-          })
+          connection,
+          pubkey: trader,
+          tokens,
+        })
         : undefined,
       clock,
     });
@@ -312,7 +310,7 @@ export class Client {
   }
 
   reloadClockFromBuffer(clockBuffer: Buffer) {
-    this.clock = deserialize(ClockSchema, Clock, clockBuffer);
+    this.clock = deserializeClockData(clockBuffer);
   }
 
   /**
@@ -499,7 +497,7 @@ export class Client {
     if (!market) throw new Error("Market not found: " + marketAddress);
     return Math.round(
       (price * 10 ** market.quoteToken.data.decimals) /
-        market.data.quoteLotsPerBaseUnitPerTick
+      market.data.quoteLotsPerBaseUnitPerTick
     );
   }
 
@@ -584,7 +582,7 @@ export class Client {
     if (!market) throw new Error("Market not found: " + marketAddress);
     return Math.round(
       (quoteUnits * 10 ** market.quoteToken.data.decimals) /
-        toNum(market.data.header.quoteLotSize)
+      toNum(market.data.header.quoteLotSize)
     );
   }
 
@@ -661,7 +659,7 @@ export class Client {
       (baseLots *
         price_in_ticks *
         toNum(market.data.header.tickSizeInQuoteAtomsPerBaseUnit)) /
-        market.data.baseLotsPerBaseUnit
+      market.data.baseLotsPerBaseUnit
     );
   }
 }

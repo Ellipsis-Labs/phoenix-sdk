@@ -273,21 +273,21 @@ function deserializeRedBlackTreeNodes<Key, Value>(
  */
 export function getMarketLadder(
   marketData: MarketData,
-  slot: bigint,
-  unixTimestamp: bigint,
+  slot: beet.bignum,
+  unixTimestamp: beet.bignum,
   levels: number = DEFAULT_LADDER_DEPTH
 ): Ladder {
   const bids: Array<[BN, BN]> = [];
   const asks: Array<[BN, BN]> = [];
   for (const [orderId, restingOrder] of marketData.bids) {
     if (restingOrder.lastValidSlot != 0) {
-      if (BigInt(restingOrder.lastValidSlot.toString()) < slot) {
+      if (restingOrder.lastValidSlot < slot) {
         continue;
       }
     }
     if (restingOrder.lastValidUnixTimestampInSeconds != 0) {
       if (
-        BigInt(restingOrder.lastValidUnixTimestampInSeconds.toString()) <
+        restingOrder.lastValidUnixTimestampInSeconds <
         unixTimestamp
       ) {
         continue;
@@ -315,13 +315,13 @@ export function getMarketLadder(
 
   for (const [orderId, restingOrder] of marketData.asks) {
     if (restingOrder.lastValidSlot != 0) {
-      if (BigInt(restingOrder.lastValidSlot.toString()) < slot) {
+      if (restingOrder.lastValidSlot < slot) {
         continue;
       }
     }
     if (restingOrder.lastValidUnixTimestampInSeconds != 0) {
       if (
-        BigInt(restingOrder.lastValidUnixTimestampInSeconds.toString()) <
+        restingOrder.lastValidUnixTimestampInSeconds <
         unixTimestamp
       ) {
         continue;
@@ -369,8 +369,8 @@ function levelToUiLevel(
 ): [number, number] {
   return [
     (toNum(priceInTicks) / quoteAtomsPerQuoteUnit) *
-      marketData.quoteLotsPerBaseUnitPerTick *
-      toNum(marketData.header.quoteLotSize),
+    marketData.quoteLotsPerBaseUnitPerTick *
+    toNum(marketData.header.quoteLotSize),
     toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit,
   ];
 }
@@ -384,8 +384,8 @@ function levelToUiLevel(
 export function getMarketUiLadder(
   marketData: MarketData,
   levels: number = DEFAULT_LADDER_DEPTH,
-  slot = BigInt(0),
-  unixTimestamp = BigInt(0)
+  slot: beet.bignum = 0,
+  unixTimestamp: beet.bignum = 0,
 ): UiLadder {
   const ladder = getMarketLadder(marketData, slot, unixTimestamp, levels);
 
@@ -576,7 +576,7 @@ export function getMarketSwapOrderPacket({
     minQuoteLotsToFill = Math.ceil(
       ((expectedOutAmount * quoteMul) /
         parseFloat(marketData.header.quoteLotSize.toString())) *
-        slippageDenom
+      slippageDenom
     );
   } else {
     numQuoteLots =
@@ -585,7 +585,7 @@ export function getMarketSwapOrderPacket({
     minBaseLotsToFill = Math.ceil(
       ((expectedOutAmount * baseMul) /
         parseFloat(marketData.header.baseLotSize.toString())) *
-        slippageDenom
+      slippageDenom
     );
   }
 
