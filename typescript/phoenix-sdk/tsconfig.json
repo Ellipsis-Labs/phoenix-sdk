@@ -2,7 +2,7 @@
     "compilerOptions": {
         "baseUrl": "src",
         "module": "commonjs",
-        "target": "es2015",
+        "target": "es2020",
         "esModuleInterop": true,
         "moduleResolution": "node",
         "resolveJsonModule": true,

@@ -36,7 +36,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
   // Deserialize the market header
   let offset = marketHeaderBeet.byteSize;
   const [header] = marketHeaderBeet.deserialize(data.subarray(0, offset));
-  
+
   // Parse market data
   const paddingLen = 8 * 32;
   let remaining = data.subarray(offset + paddingLen);
@@ -117,7 +117,6 @@ export function deserializeMarketData(data: Buffer): MarketData {
   )) {
     trader_index.set(k.publicKey, index);
   }
-  
 
   return {
     header,
@@ -130,7 +129,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
     bids,
     asks,
     traders,
-    trader_index
+    traderIndex: trader_index,
   };
 }
 
@@ -166,15 +165,14 @@ export function deserializeRedBlackTree<Key, Value>(
   return tree;
 }
 
-
 /**
- * Deserializes the RedBlackTree to return a map of keys to indices 
+ * Deserializes the RedBlackTree to return a map of keys to indices
  *
  * @param data The trader data buffer to deserialize
  * @param keyDeserializer The deserializer for the tree key
  * @param valueDeserializer The deserializer for the tree value
  */
- export function getNodeIndices<Key, Value>(
+export function getNodeIndices<Key, Value>(
   data: Buffer,
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
@@ -189,6 +187,7 @@ export function deserializeRedBlackTree<Key, Value>(
   const nodes = tree_nodes[0];
   const freeNodes = tree_nodes[1];
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   for (const [index, [key, _]] of nodes.entries()) {
     if (!freeNodes.has(index)) {
       index_map.set(key, index + 1);
@@ -210,7 +209,7 @@ function deserializeRedBlackTreeNodes<Key, Value>(
   data: Buffer,
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
-): [Array<[Key, Value]> , Set<number>] {
+): [Array<[Key, Value]>, Set<number>] {
   let offset = 0;
   const keySize = keyDeserializer.byteSize;
   const valueSize = valueDeserializer.byteSize;
@@ -262,7 +261,6 @@ function deserializeRedBlackTreeNodes<Key, Value>(
     }
   }
 
-
   return [nodes, freeNodes];
 }
 
@@ -275,11 +273,26 @@ function deserializeRedBlackTreeNodes<Key, Value>(
  */
 export function getMarketLadder(
   marketData: MarketData,
+  slot: bigint,
+  unixTimestamp: bigint,
   levels: number = DEFAULT_LADDER_DEPTH
 ): Ladder {
   const bids: Array<[BN, BN]> = [];
   const asks: Array<[BN, BN]> = [];
   for (const [orderId, restingOrder] of marketData.bids) {
+    if (restingOrder.lastValidSlot != 0) {
+      if (BigInt(restingOrder.lastValidSlot.toString()) < slot) {
+        continue;
+      }
+    }
+    if (restingOrder.lastValidUnixTimestampInSeconds != 0) {
+      if (
+        BigInt(restingOrder.lastValidUnixTimestampInSeconds.toString()) <
+        unixTimestamp
+      ) {
+        continue;
+      }
+    }
     const priceInTicks = toBN(orderId.priceInTicks);
     const numBaseLots = toBN(restingOrder.numBaseLots);
     if (bids.length === 0) {
@@ -301,6 +314,19 @@ export function getMarketLadder(
   }
 
   for (const [orderId, restingOrder] of marketData.asks) {
+    if (restingOrder.lastValidSlot != 0) {
+      if (BigInt(restingOrder.lastValidSlot.toString()) < slot) {
+        continue;
+      }
+    }
+    if (restingOrder.lastValidUnixTimestampInSeconds != 0) {
+      if (
+        BigInt(restingOrder.lastValidUnixTimestampInSeconds.toString()) <
+        unixTimestamp
+      ) {
+        continue;
+      }
+    }
     const priceInTicks = toBN(orderId.priceInTicks);
     const numBaseLots = toBN(restingOrder.numBaseLots);
     if (asks.length === 0) {
@@ -357,9 +383,11 @@ function levelToUiLevel(
  */
 export function getMarketUiLadder(
   marketData: MarketData,
-  levels: number = DEFAULT_LADDER_DEPTH
+  levels: number = DEFAULT_LADDER_DEPTH,
+  slot = BigInt(0),
+  unixTimestamp = BigInt(0)
 ): UiLadder {
-  const ladder = getMarketLadder(marketData, levels);
+  const ladder = getMarketLadder(marketData, slot, unixTimestamp, levels);
 
   const quoteAtomsPerQuoteUnit =
     10 ** toNum(marketData.header.quoteParams.decimals);

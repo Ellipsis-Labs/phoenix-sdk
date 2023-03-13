@@ -30,11 +30,14 @@ export async function swap() {
     );
   }
 
-  const market = await Phoenix.Market.load({
+  const client = await Phoenix.Client.createWithMarketAddresses(
     connection,
-    address: marketAddress,
-  });
-  const marketData = market.data;
+    "devnet",
+    [marketAddress]
+  );
+
+  const marketData = client.markets.get(marketAddress.toBase58())?.data;
+  if (marketData === undefined) throw Error("Market not found");
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
   const inAmount =

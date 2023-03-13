@@ -25,9 +25,7 @@ export function createCancelAllOrdersInstructionWithClient(
       instructions.cancelAllOrdersInstructionDiscriminator,
   });
 
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -103,9 +101,7 @@ export function createCancelAllOrdersWithFreeFundsInstructionWithClient(
     instructionDiscriminator:
       instructions.cancelAllOrdersWithFreeFundsInstructionDiscriminator,
   });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -165,9 +161,7 @@ export function createCancelMultipleOrdersByIdInstructionWithClient(
     ...args,
   });
 
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -250,9 +244,7 @@ export function createCancelMultipleOrdersByIdWithFreeFundsInstructionWithClient
       ...args,
     });
 
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -309,9 +301,7 @@ export function createCancelUpToInstructionWithClient(
     ...args,
   });
 
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -392,9 +382,7 @@ export function createCancelUpToWithFreeFundsInstructionWithClient(
     ...args,
   });
 
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -450,9 +438,7 @@ export function createDepositFundsInstructionWithClient(
     instructionDiscriminator: instructions.depositFundsInstructionDiscriminator,
     ...args,
   });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -569,9 +555,7 @@ export function createPlaceLimitOrderInstructionWithClient(
       instructions.placeLimitOrderInstructionDiscriminator,
     ...args,
   });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -658,9 +642,7 @@ export function createPlaceLimitOrderWithFreeFundsInstructionWithClient(
     ...args,
   });
 
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -722,9 +704,7 @@ export function createPlaceMultiplePostOnlyOrdersInstructionWithClient(
       instructions.placeMultiplePostOnlyOrdersInstructionDiscriminator,
     ...args,
   });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -811,9 +791,7 @@ export function createPlaceMultiplePostOnlyOrdersWithFreeFundsInstructionWithCli
         instructions.placeMultiplePostOnlyOrdersWithFreeFundsInstructionDiscriminator,
       ...args,
     });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -874,9 +852,7 @@ export function createReduceOrderInstructionWithClient(
     instructionDiscriminator: instructions.reduceOrderInstructionDiscriminator,
     ...args,
   });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -957,9 +933,7 @@ export function createReduceOrderWithFreeFundsInstructionWithClient(
       instructions.reduceOrderWithFreeFundsInstructionDiscriminator,
     ...args,
   });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -1078,9 +1052,7 @@ export function createSwapInstructionWithClient(
     instructionDiscriminator: instructions.swapInstructionDiscriminator,
     ...args,
   });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -1162,9 +1134,7 @@ export function createSwapWithFreeFundsInstructionWithClient(
     ...args,
   });
 
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
@@ -1226,9 +1196,7 @@ export function createWithdrawFundsInstructionWithClient(
       instructions.withdrawFundsInstructionDiscriminator,
     ...args,
   });
-  const market = client.markets.find(
-    (m) => m.address.toBase58() === marketAddress
-  );
+  const market = client.markets.get(marketAddress);
   if (!market) throw new Error("Market not found: " + marketAddress);
 
   const keys: web3.AccountMeta[] = [
