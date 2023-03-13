@@ -54,8 +54,8 @@ export class Client {
     tokens: Array<Token>;
     tokenConfig: Array<TokenConfig>;
     markets: Map<string, Market>;
-    trader?: Trader;
-    clock?: Clock;
+    trader: Trader;
+    clock: Clock;
   }) {
     this.connection = connection;
     this.tokens = tokens;
@@ -127,9 +127,14 @@ export class Client {
       "confirmed"
     );
 
-    const clockBuffer = accounts.pop().data;
+    const clockBuffer = accounts.pop()?.data;
+    if (clockBuffer === undefined) {
+      throw new Error("Unable to get clock");
+    }
 
+    console.log("Clock buffer", clockBuffer);
     const clock = deserialize(ClockSchema, Clock, clockBuffer);
+    console.log("Clock", clock);
     const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
         return [marketAddress, accounts[index]];
@@ -175,7 +180,11 @@ export class Client {
       "confirmed"
     );
 
-    const clock = deserialize(ClockSchema, Clock, accounts.pop().data);
+    const clockBuffer = accounts.pop()?.data;
+    if (clockBuffer === undefined) {
+      throw new Error("Unable to get clock");
+    }
+    const clock = deserialize(ClockSchema, Clock, clockBuffer);
 
     const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
@@ -230,7 +239,10 @@ export class Client {
     if (accounts.length !== 2)
       throw new Error("Account not found for market: " + marketKey.toBase58());
 
-    const buffer = Buffer.from(accounts[0].data);
+    const buffer = accounts[0]?.data;
+    if (buffer === undefined) {
+      throw new Error("Unable to get market account data");
+    }
 
     const market = await Market.load({
       address: marketKey,
@@ -243,7 +255,11 @@ export class Client {
       this.tokens.push(token);
     }
     this.markets.set(marketAddress, market);
-    this.reloadClockFromBuffer(Buffer.from(accounts[1].data));
+    const clockBuffer = accounts[1]?.data;
+    if (clockBuffer === undefined) {
+      throw new Error("Unable to get clock");
+    }
+    this.reloadClockFromBuffer(clockBuffer);
   }
 
   /**
@@ -268,9 +284,16 @@ export class Client {
     if (accounts.length !== 2)
       throw new Error("Account not found for market: " + marketKey.toBase58());
 
-    const buffer = Buffer.from(accounts[0].data);
+    const buffer = accounts[0]?.data;
+    if (buffer === undefined) {
+      throw new Error("Unable to get market account data");
+    }
     existingMarket.reload(buffer);
-    this.reloadClockFromBuffer(Buffer.from(accounts[1].data));
+    const clockBuffer = accounts[1]?.data;
+    if (clockBuffer === undefined) {
+      throw new Error("Unable to get clock");
+    }
+    this.reloadClockFromBuffer(clockBuffer);
 
     return existingMarket;
   }
@@ -280,7 +303,12 @@ export class Client {
       SYSVAR_CLOCK_PUBKEY,
       "confirmed"
     );
-    this.reloadClockFromBuffer(clockAccount.data);
+    const clockBuffer = clockAccount?.data;
+    if (clockBuffer === undefined) {
+      throw new Error("Unable to get clock");
+    }
+
+    this.reloadClockFromBuffer(clockBuffer);
   }
 
   reloadClockFromBuffer(clockBuffer: Buffer) {
@@ -349,6 +377,7 @@ export class Client {
     inAmount: number;
   }): number {
     const marketData = this.markets.get(marketAddress)?.data;
+    if (!marketData) throw new Error("Market not found: " + marketAddress);
     const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
     const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
     const ladder = this.getUiLadder(marketAddress, Math.max(numBids, numAsks));

@@ -1,6 +1,6 @@
 import * as splToken from "@solana/spl-token";
 import * as web3 from "@solana/web3.js";
-import { Client } from "client";
+import { Client } from "./client";
 // import all
 import * as instructions from "./instructions";
 

@@ -50,8 +50,13 @@ export async function getEventsFromTransaction(
 ): Promise<PhoenixTransaction> {
   const txData = await connection.getParsedTransaction(signature, "confirmed");
 
-  if (txData.meta.err !== null) {
-    console.log("Transaction failed", txData.meta.err);
+  const meta = txData?.meta;
+  if (meta === undefined) {
+    return { instructions: [] };
+  }
+
+  if (meta?.err !== undefined) {
+    console.log("Transaction failed", meta?.err);
     return { instructions: [] };
   }
 

@@ -34,20 +34,19 @@ export async function watch() {
   }
 
   const marketAddress = market.address.toBase58();
-  console.log(market.data.traderIndex);
-  const traderIndex = market.data.traderIndex.get(traderKey.toBase58());
+  const traderIndex = market.data.traderIndex.get(traderKey);
   if (traderIndex === undefined) {
     throw new Error(`Trader index not found for ${traderKey}`);
   }
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    console.clear();
-    console.log("Open Orders for trader:" + traderKey.toString() + "\n");
+    // console.clear();
+    console.log("Open Orders for trader: " + traderKey + "\n");
     const slot = phoenix.clock.slot;
     const time = phoenix.clock.unixTimestamp;
     for (const [orderId, order] of market.data.asks) {
-      if (order.traderIndex === traderIndex) {
+      if (Phoenix.toNum(order.traderIndex) === traderIndex) {
         let timeRemaining = "∞";
         if (order.lastValidSlot != 0) {
           if (BigInt(order.lastValidSlot.toString()) < slot) {
@@ -58,9 +57,11 @@ export async function watch() {
           if (BigInt(order.lastValidUnixTimestampInSeconds.toString()) < time) {
             continue;
           }
-          timeRemaining = (
-            BigInt(order.lastValidUnixTimestampInSeconds.toString()) - time
-          ).toString();
+          const expTime = BigInt(
+            order.lastValidUnixTimestampInSeconds.toString()
+          );
+          const diff = expTime - time;
+          timeRemaining = diff.toString();
         }
 
         console.log(
@@ -82,7 +83,7 @@ export async function watch() {
       }
 
       for (const [orderId, order] of market.data.bids) {
-        if (order.traderIndex === traderIndex) {
+        if (Phoenix.toNum(order.traderIndex) === traderIndex) {
           let timeRemaining = "∞";
           if (order.lastValidSlot != 0) {
             if (BigInt(order.lastValidSlot.toString()) < slot) {

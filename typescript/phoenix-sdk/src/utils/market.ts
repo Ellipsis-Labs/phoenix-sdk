@@ -100,22 +100,22 @@ export function deserializeMarketData(data: Buffer): MarketData {
     sign(toBN(a[0].priceInTicks).sub(toBN(b[0].priceInTicks)))
   );
 
-  const traders = new Map<PublicKey, TraderState>();
+  const traders = new Map<string, TraderState>();
   for (const [k, traderState] of deserializeRedBlackTree(
     traderBuffer,
     publicKeyBeet,
     traderStateBeet
   )) {
-    traders.set(k.publicKey, traderState);
+    traders.set(k.publicKey.toString(), traderState);
   }
 
-  const trader_index = new Map<PublicKey, number>();
+  const traderIndex = new Map<string, number>();
   for (const [k, index] of getNodeIndices(
     traderBuffer,
     publicKeyBeet,
     traderStateBeet
   )) {
-    trader_index.set(k.publicKey, index);
+    traderIndex.set(k.publicKey.toString(), index);
   }
 
   return {
@@ -129,7 +129,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
     bids,
     asks,
     traders,
-    traderIndex: trader_index,
+    traderIndex,
   };
 }
 

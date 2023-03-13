@@ -11,7 +11,7 @@ import {
   toNum,
 } from "./utils";
 import { Token } from "./token";
-import { TokenConfig } from "index";
+import { TokenConfig } from "./index";
 
 export type OrderId = {
   priceInTicks: beet.bignum;
@@ -53,8 +53,8 @@ export interface MarketData {
   unclaimedAdjustedQuoteLotFees: number;
   bids: Array<[OrderId, RestingOrder]>;
   asks: Array<[OrderId, RestingOrder]>;
-  traders: Map<PublicKey, TraderState>;
-  traderIndex: Map<PublicKey, number>;
+  traders: Map<string, TraderState>;
+  traderIndex: Map<string, number>;
 }
 
 export class Market {
