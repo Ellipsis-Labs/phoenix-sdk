@@ -55,7 +55,10 @@ impl EventPoller {
             for (i, signature) in self
                 .sdk
                 .client
-                .get_signatures_for_address_with_config(&self.sdk.core.active_market_key, config)
+                .get_signatures_for_address_with_config(
+                    &self.sdk.core.active_market_key.unwrap(),
+                    config,
+                )
                 .await
                 .unwrap_or_default()
                 .iter()

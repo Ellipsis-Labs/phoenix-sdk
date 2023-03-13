@@ -84,7 +84,6 @@ impl CoinbasePriceListener {
         sender: UnboundedSender<Vec<SDKMarketEvent>>,
     ) {
         loop {
-            // let event = rt.block_on(stream.next());
             let event = stream.next().await;
             let msg = if let Some(Ok(msg)) = event {
                 msg

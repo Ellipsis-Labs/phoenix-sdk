@@ -73,7 +73,7 @@ where
     format!("{}.{}", lhs, rhs)
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MarketMetadata {
     pub base_mint: Pubkey,
     pub quote_mint: Pubkey,
@@ -94,7 +94,7 @@ pub struct MarketMetadata {
 pub struct SDKClientCore {
     pub markets: BTreeMap<Pubkey, MarketMetadata>,
     pub rng: Arc<Mutex<StdRng>>,
-    pub active_market_key: Pubkey,
+    pub active_market_key: Option<Pubkey>,
     pub trader: Pubkey,
 }
 
@@ -102,7 +102,12 @@ impl Deref for SDKClientCore {
     type Target = MarketMetadata;
 
     fn deref(&self) -> &Self::Target {
-        self.markets.get(&self.active_market_key).unwrap()
+        match self.active_market_key {
+            Some(market_key) => self.markets.get(&market_key).unwrap(),
+            None => {
+                panic!("No active market set.");
+            }
+        }
     }
 }
 
@@ -225,10 +230,12 @@ impl SDKClientCore {
             / self.quote_multiplier as f64
     }
 
+    /// Multiplier used to convert base lots to base units
     pub fn base_lots_to_base_units_multiplier(&self) -> f64 {
         1.0 / self.num_base_lots_per_base_unit as f64
     }
 
+    /// Multiplier used to convert ticks to a floating point number price
     pub fn ticks_to_float_price_multiplier(&self) -> f64 {
         self.tick_size_in_quote_atoms_per_base_unit as f64 / self.quote_multiplier as f64
     }
@@ -241,7 +248,7 @@ impl SDKClientCore {
 
     pub fn change_active_market(&mut self, market: &Pubkey) -> anyhow::Result<()> {
         if self.markets.get(market).is_some() {
-            self.active_market_key = *market;
+            self.active_market_key = Some(*market);
             Ok(())
         } else {
             Err(anyhow::Error::msg("Market not found"))
@@ -249,7 +256,10 @@ impl SDKClientCore {
     }
 
     pub fn get_active_market_metadata(&self) -> &MarketMetadata {
-        self.markets.get(&self.active_market_key).unwrap()
+        match self.active_market_key {
+            Some(market) => self.markets.get(&market).unwrap(),
+            None => panic!("No active market"),
+        }
     }
 
     pub fn parse_phoenix_events(
@@ -479,9 +489,56 @@ impl SDKClientCore {
         self.get_ioc_generic_ix(price, side, num_base_lots, None, None, None, None)
     }
 
+    pub fn get_ioc_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        side: Side,
+        num_base_lots: u64,
+    ) -> Instruction {
+        self.get_ioc_generic_ix_with_market_key(
+            market_key,
+            price,
+            side,
+            num_base_lots,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn get_ioc_generic_ix(
         &self,
+        price: u64,
+        side: Side,
+        num_base_lots: u64,
+        self_trade_behavior: Option<SelfTradeBehavior>,
+        match_limit: Option<u64>,
+        client_order_id: Option<u128>,
+        use_only_deposited_funds: Option<bool>,
+    ) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_ioc_generic_ix_with_market_key(
+            &active_market_key,
+            price,
+            side,
+            num_base_lots,
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn get_ioc_generic_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
         price: u64,
         side: Side,
         num_base_lots: u64,
@@ -495,7 +552,7 @@ impl SDKClientCore {
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         create_new_order_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -515,6 +572,46 @@ impl SDKClientCore {
         self.get_fok_generic_ix(price, Side::Ask, size_in_base_lots, None, None, None, None)
     }
 
+    pub fn get_fok_sell_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        size_in_base_lots: u64,
+    ) -> Instruction {
+        self.get_fok_generic_ix_with_market_key(
+            market_key,
+            price,
+            Side::Ask,
+            size_in_base_lots,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    pub fn get_fok_buy_ix(&self, price: u64, size_in_base_lots: u64) -> Instruction {
+        self.get_fok_generic_ix(price, Side::Bid, size_in_base_lots, None, None, None, None)
+    }
+
+    pub fn get_fok_buy_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        size_in_base_lots: u64,
+    ) -> Instruction {
+        self.get_fok_generic_ix_with_market_key(
+            market_key,
+            price,
+            Side::Bid,
+            size_in_base_lots,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
     pub fn get_fok_buy_generic_ix(
         &self,
         price: u64,
@@ -525,6 +622,28 @@ impl SDKClientCore {
         use_only_deposited_funds: Option<bool>,
     ) -> Instruction {
         self.get_fok_generic_ix(
+            price,
+            Side::Bid,
+            size_in_quote_lots,
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+        )
+    }
+
+    pub fn get_fok_buy_generic_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        size_in_quote_lots: u64,
+        self_trade_behavior: Option<SelfTradeBehavior>,
+        match_limit: Option<u64>,
+        client_order_id: Option<u128>,
+        use_only_deposited_funds: Option<bool>,
+    ) -> Instruction {
+        self.get_fok_generic_ix_with_market_key(
+            market_key,
             price,
             Side::Bid,
             size_in_quote_lots,
@@ -555,9 +674,59 @@ impl SDKClientCore {
         )
     }
 
+    pub fn get_fok_sell_generic_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        size_in_base_lots: u64,
+        self_trade_behavior: Option<SelfTradeBehavior>,
+        match_limit: Option<u64>,
+        client_order_id: Option<u128>,
+        use_only_deposited_funds: Option<bool>,
+    ) -> Instruction {
+        self.get_fok_generic_ix_with_market_key(
+            market_key,
+            price,
+            Side::Ask,
+            size_in_base_lots,
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+        )
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn get_fok_generic_ix(
         &self,
+        price: u64,
+        side: Side,
+        size: u64,
+        self_trade_behavior: Option<SelfTradeBehavior>,
+        match_limit: Option<u64>,
+        client_order_id: Option<u128>,
+        use_only_deposited_funds: Option<bool>,
+    ) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_fok_generic_ix_with_market_key(
+            &active_market_key,
+            price,
+            side,
+            size,
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn get_fok_generic_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
@@ -574,7 +743,7 @@ impl SDKClientCore {
             Side::Bid => {
                 let quote_lot_budget = size / self.quote_lot_size;
                 create_new_order_instruction(
-                    &self.active_market_key.clone(),
+                    &market_key.clone(),
                     &self.trader,
                     &self.base_mint,
                     &self.quote_mint,
@@ -591,7 +760,7 @@ impl SDKClientCore {
             Side::Ask => {
                 let num_base_lots = size / self.base_lot_size;
                 create_new_order_instruction(
-                    &self.active_market_key.clone(),
+                    &market_key.clone(),
                     &self.trader,
                     &self.base_mint,
                     &self.quote_mint,
@@ -614,13 +783,32 @@ impl SDKClientCore {
         min_lots_out: u64,
         side: Side,
     ) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_ioc_with_slippage_ix_with_market_key(
+            &active_market_key,
+            lots_in,
+            min_lots_out,
+            side,
+        )
+    }
+
+    pub fn get_ioc_with_slippage_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        lots_in: u64,
+        min_lots_out: u64,
+        side: Side,
+    ) -> Instruction {
         let order_type = match side {
             Side::Bid => OrderPacket::new_ioc_buy_with_slippage(lots_in, min_lots_out),
             Side::Ask => OrderPacket::new_ioc_sell_with_slippage(lots_in, min_lots_out),
         };
 
         create_new_order_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -634,8 +822,22 @@ impl SDKClientCore {
         side: Side,
         size: u64,
     ) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_ioc_from_tick_price_ix_with_market_key(&active_market_key, tick_price, side, size)
+    }
+
+    pub fn get_ioc_from_tick_price_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        tick_price: u64,
+        side: Side,
+        size: u64,
+    ) -> Instruction {
         create_new_order_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -655,8 +857,45 @@ impl SDKClientCore {
         self.get_post_only_generic_ix(price, side, size, None, None, None)
     }
 
+    pub fn get_post_only_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        side: Side,
+        size: u64,
+    ) -> Instruction {
+        self.get_post_only_generic_ix_with_market_key(
+            market_key, price, side, size, None, None, None,
+        )
+    }
+
     pub fn get_post_only_generic_ix(
         &self,
+        price: u64,
+        side: Side,
+        size: u64,
+        client_order_id: Option<u128>,
+        reject_post_only: Option<bool>,
+        use_only_deposited_funds: Option<bool>,
+    ) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_post_only_generic_ix_with_market_key(
+            &active_market_key,
+            price,
+            side,
+            size,
+            client_order_id,
+            reject_post_only,
+            use_only_deposited_funds,
+        )
+    }
+
+    pub fn get_post_only_generic_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
@@ -669,7 +908,7 @@ impl SDKClientCore {
         let reject_post_only = reject_post_only.unwrap_or(false);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         create_new_order_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -692,8 +931,31 @@ impl SDKClientCore {
         client_order_id: u128,
         improve_price_on_cross: bool,
     ) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_post_only_ix_from_tick_price_with_market_key(
+            &active_market_key,
+            tick_price,
+            side,
+            size,
+            client_order_id,
+            improve_price_on_cross,
+        )
+    }
+
+    pub fn get_post_only_ix_from_tick_price_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        tick_price: u64,
+        side: Side,
+        size: u64,
+        client_order_id: u128,
+        improve_price_on_cross: bool,
+    ) -> Instruction {
         create_new_order_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -719,9 +981,49 @@ impl SDKClientCore {
         self.get_limit_order_generic_ix(price, side, size, None, None, None, None)
     }
 
+    pub fn get_limit_order_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        side: Side,
+        size: u64,
+    ) -> Instruction {
+        self.get_limit_order_generic_ix_with_market_key(
+            market_key, price, side, size, None, None, None, None,
+        )
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn get_limit_order_generic_ix(
         &self,
+        price: u64,
+        side: Side,
+        size: u64,
+        self_trade_behavior: Option<SelfTradeBehavior>,
+        match_limit: Option<u64>,
+        client_order_id: Option<u128>,
+        use_only_deposited_funds: Option<bool>,
+    ) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_limit_order_generic_ix_with_market_key(
+            &active_market_key,
+            price,
+            side,
+            size,
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn get_limit_order_generic_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
@@ -735,7 +1037,7 @@ impl SDKClientCore {
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         create_new_order_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -758,8 +1060,29 @@ impl SDKClientCore {
         size: u64,
         client_order_id: u128,
     ) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_limit_order_ix_from_tick_price_with_market_key(
+            &active_market_key,
+            tick_price,
+            side,
+            size,
+            client_order_id,
+        )
+    }
+
+    pub fn get_limit_order_ix_from_tick_price_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        tick_price: u64,
+        side: Side,
+        size: u64,
+        client_order_id: u128,
+    ) -> Instruction {
         create_new_order_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -773,6 +1096,18 @@ impl SDKClientCore {
     }
 
     pub fn get_cancel_ids_ix(&self, ids: Vec<FIFOOrderId>) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_cancel_ids_ix_with_market_key(&active_market_key, ids)
+    }
+
+    pub fn get_cancel_ids_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        ids: Vec<FIFOOrderId>,
+    ) -> Instruction {
         let mut cancel_orders = vec![];
         for &FIFOOrderId {
             price_in_ticks,
@@ -791,7 +1126,7 @@ impl SDKClientCore {
         };
 
         create_cancel_multiple_orders_by_id_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -800,6 +1135,19 @@ impl SDKClientCore {
     }
 
     pub fn get_cancel_up_to_ix(&self, tick_limit: Option<u64>, side: Side) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_cancel_up_to_ix_with_market_key(&active_market_key, tick_limit, side)
+    }
+
+    pub fn get_cancel_up_to_ix_with_market_key(
+        &self,
+        market_key: &Pubkey,
+        tick_limit: Option<u64>,
+        side: Side,
+    ) -> Instruction {
         let params = CancelUpToParams {
             side,
             tick_limit,
@@ -808,7 +1156,7 @@ impl SDKClientCore {
         };
 
         create_cancel_up_to_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
@@ -817,8 +1165,16 @@ impl SDKClientCore {
     }
 
     pub fn get_cancel_all_ix(&self) -> Instruction {
+        let active_market_key = match self.active_market_key {
+            Some(key) => key,
+            None => panic!("Active market key not set"),
+        };
+        self.get_cancel_all_ix_with_market_key(&active_market_key)
+    }
+
+    pub fn get_cancel_all_ix_with_market_key(&self, market_key: &Pubkey) -> Instruction {
         create_cancel_all_orders_instruction(
-            &self.active_market_key.clone(),
+            &market_key.clone(),
             &self.trader,
             &self.base_mint,
             &self.quote_mint,
