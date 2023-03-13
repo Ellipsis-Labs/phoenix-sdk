@@ -5,13 +5,13 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 export type TimeInForceEvent = {
-  index: number
-  orderSequenceNumber: beet.bignum
-  lastValidSlot: beet.bignum
-  lastValidUnixTimestampInSeconds: beet.bignum
-}
+  index: number;
+  orderSequenceNumber: beet.bignum;
+  lastValidSlot: beet.bignum;
+  lastValidUnixTimestampInSeconds: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -19,10 +19,10 @@ export type TimeInForceEvent = {
  */
 export const timeInForceEventBeet = new beet.BeetArgsStruct<TimeInForceEvent>(
   [
-    ['index', beet.u16],
-    ['orderSequenceNumber', beet.u64],
-    ['lastValidSlot', beet.u64],
-    ['lastValidUnixTimestampInSeconds', beet.u64],
+    ["index", beet.u16],
+    ["orderSequenceNumber", beet.u64],
+    ["lastValidSlot", beet.u64],
+    ["lastValidUnixTimestampInSeconds", beet.u64],
   ],
-  'TimeInForceEvent'
-)
+  "TimeInForceEvent"
+);

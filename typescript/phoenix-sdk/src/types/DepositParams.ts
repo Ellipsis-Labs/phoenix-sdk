@@ -5,11 +5,11 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 export type DepositParams = {
-  quoteLotsToDeposit: beet.bignum
-  baseLotsToDeposit: beet.bignum
-}
+  quoteLotsToDeposit: beet.bignum;
+  baseLotsToDeposit: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -17,8 +17,8 @@ export type DepositParams = {
  */
 export const depositParamsBeet = new beet.BeetArgsStruct<DepositParams>(
   [
-    ['quoteLotsToDeposit', beet.u64],
-    ['baseLotsToDeposit', beet.u64],
+    ["quoteLotsToDeposit", beet.u64],
+    ["baseLotsToDeposit", beet.u64],
   ],
-  'DepositParams'
-)
+  "DepositParams"
+);

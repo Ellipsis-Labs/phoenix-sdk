@@ -5,14 +5,14 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import { Side, sideBeet } from './Side'
+import * as beet from "@metaplex-foundation/beet";
+import { Side, sideBeet } from "./Side";
 export type CancelUpToParams = {
-  side: Side
-  tickLimit: beet.COption<beet.bignum>
-  numOrdersToSearch: beet.COption<number>
-  numOrdersToCancel: beet.COption<number>
-}
+  side: Side;
+  tickLimit: beet.COption<beet.bignum>;
+  numOrdersToSearch: beet.COption<number>;
+  numOrdersToCancel: beet.COption<number>;
+};
 
 /**
  * @category userTypes
@@ -21,10 +21,10 @@ export type CancelUpToParams = {
 export const cancelUpToParamsBeet =
   new beet.FixableBeetArgsStruct<CancelUpToParams>(
     [
-      ['side', sideBeet],
-      ['tickLimit', beet.coption(beet.u64)],
-      ['numOrdersToSearch', beet.coption(beet.u32)],
-      ['numOrdersToCancel', beet.coption(beet.u32)],
+      ["side", sideBeet],
+      ["tickLimit", beet.coption(beet.u64)],
+      ["numOrdersToSearch", beet.coption(beet.u32)],
+      ["numOrdersToCancel", beet.coption(beet.u32)],
     ],
-    'CancelUpToParams'
-  )
+    "CancelUpToParams"
+  );

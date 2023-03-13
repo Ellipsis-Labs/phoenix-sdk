@@ -5,14 +5,14 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 export type ReduceEvent = {
-  index: number
-  orderSequenceNumber: beet.bignum
-  priceInTicks: beet.bignum
-  baseLotsRemoved: beet.bignum
-  baseLotsRemaining: beet.bignum
-}
+  index: number;
+  orderSequenceNumber: beet.bignum;
+  priceInTicks: beet.bignum;
+  baseLotsRemoved: beet.bignum;
+  baseLotsRemaining: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -20,11 +20,11 @@ export type ReduceEvent = {
  */
 export const reduceEventBeet = new beet.BeetArgsStruct<ReduceEvent>(
   [
-    ['index', beet.u16],
-    ['orderSequenceNumber', beet.u64],
-    ['priceInTicks', beet.u64],
-    ['baseLotsRemoved', beet.u64],
-    ['baseLotsRemaining', beet.u64],
+    ["index", beet.u16],
+    ["orderSequenceNumber", beet.u64],
+    ["priceInTicks", beet.u64],
+    ["baseLotsRemoved", beet.u64],
+    ["baseLotsRemaining", beet.u64],
   ],
-  'ReduceEvent'
-)
+  "ReduceEvent"
+);

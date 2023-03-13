@@ -5,11 +5,11 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 export type FeeEvent = {
-  index: number
-  feesCollectedInQuoteLots: beet.bignum
-}
+  index: number;
+  feesCollectedInQuoteLots: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -17,8 +17,8 @@ export type FeeEvent = {
  */
 export const feeEventBeet = new beet.BeetArgsStruct<FeeEvent>(
   [
-    ['index', beet.u16],
-    ['feesCollectedInQuoteLots', beet.u64],
+    ["index", beet.u16],
+    ["feesCollectedInQuoteLots", beet.u64],
   ],
-  'FeeEvent'
-)
+  "FeeEvent"
+);

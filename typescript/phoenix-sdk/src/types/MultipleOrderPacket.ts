@@ -5,14 +5,14 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import { CondensedOrder, condensedOrderBeet } from './CondensedOrder'
+import * as beet from "@metaplex-foundation/beet";
+import { CondensedOrder, condensedOrderBeet } from "./CondensedOrder";
 export type MultipleOrderPacket = {
-  bids: CondensedOrder[]
-  asks: CondensedOrder[]
-  clientOrderId: beet.COption<beet.bignum>
-  rejectPostOnly: boolean
-}
+  bids: CondensedOrder[];
+  asks: CondensedOrder[];
+  clientOrderId: beet.COption<beet.bignum>;
+  rejectPostOnly: boolean;
+};
 
 /**
  * @category userTypes
@@ -21,10 +21,10 @@ export type MultipleOrderPacket = {
 export const multipleOrderPacketBeet =
   new beet.FixableBeetArgsStruct<MultipleOrderPacket>(
     [
-      ['bids', beet.array(condensedOrderBeet)],
-      ['asks', beet.array(condensedOrderBeet)],
-      ['clientOrderId', beet.coption(beet.u128)],
-      ['rejectPostOnly', beet.bool],
+      ["bids", beet.array(condensedOrderBeet)],
+      ["asks", beet.array(condensedOrderBeet)],
+      ["clientOrderId", beet.coption(beet.u128)],
+      ["rejectPostOnly", beet.bool],
     ],
-    'MultipleOrderPacket'
-  )
+    "MultipleOrderPacket"
+  );

@@ -5,16 +5,16 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
+import * as beetSolana from "@metaplex-foundation/beet-solana";
 export type Seat = {
-  discriminant: beet.bignum
-  market: web3.PublicKey
-  trader: web3.PublicKey
-  approvalStatus: beet.bignum
-  padding: beet.bignum[] /* size: 6 */
-}
+  discriminant: beet.bignum;
+  market: web3.PublicKey;
+  trader: web3.PublicKey;
+  approvalStatus: beet.bignum;
+  padding: beet.bignum[] /* size: 6 */;
+};
 
 /**
  * @category userTypes
@@ -22,11 +22,11 @@ export type Seat = {
  */
 export const seatBeet = new beet.BeetArgsStruct<Seat>(
   [
-    ['discriminant', beet.u64],
-    ['market', beetSolana.publicKey],
-    ['trader', beetSolana.publicKey],
-    ['approvalStatus', beet.u64],
-    ['padding', beet.uniformFixedSizeArray(beet.u64, 6)],
+    ["discriminant", beet.u64],
+    ["market", beetSolana.publicKey],
+    ["trader", beetSolana.publicKey],
+    ["approvalStatus", beet.u64],
+    ["padding", beet.uniformFixedSizeArray(beet.u64, 6)],
   ],
-  'Seat'
-)
+  "Seat"
+);

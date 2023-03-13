@@ -5,16 +5,16 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from '@solana/web3.js'
-import * as beet from '@metaplex-foundation/beet'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
+import * as web3 from "@solana/web3.js";
+import * as beet from "@metaplex-foundation/beet";
+import * as beetSolana from "@metaplex-foundation/beet-solana";
 export type ExpiredOrderEvent = {
-  index: number
-  makerId: web3.PublicKey
-  orderSequenceNumber: beet.bignum
-  priceInTicks: beet.bignum
-  baseLotsRemoved: beet.bignum
-}
+  index: number;
+  makerId: web3.PublicKey;
+  orderSequenceNumber: beet.bignum;
+  priceInTicks: beet.bignum;
+  baseLotsRemoved: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -22,11 +22,11 @@ export type ExpiredOrderEvent = {
  */
 export const expiredOrderEventBeet = new beet.BeetArgsStruct<ExpiredOrderEvent>(
   [
-    ['index', beet.u16],
-    ['makerId', beetSolana.publicKey],
-    ['orderSequenceNumber', beet.u64],
-    ['priceInTicks', beet.u64],
-    ['baseLotsRemoved', beet.u64],
+    ["index", beet.u16],
+    ["makerId", beetSolana.publicKey],
+    ["orderSequenceNumber", beet.u64],
+    ["priceInTicks", beet.u64],
+    ["baseLotsRemoved", beet.u64],
   ],
-  'ExpiredOrderEvent'
-)
+  "ExpiredOrderEvent"
+);
