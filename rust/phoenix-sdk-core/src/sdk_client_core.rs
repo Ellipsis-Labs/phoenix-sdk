@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+use anyhow::Result;
 use borsh::BorshDeserialize;
 use phoenix::{
     program::events::PhoenixMarketEvent,
@@ -100,14 +102,18 @@ impl SDKClientCore {
     /// Converts raw base units (whole tokens) to base lots. For example if the base currency was a Widget and you wanted to
     /// convert 3 Widget tokens to base lots you would call sdk.raw_base_units_to_base_lots(3.0). This would return
     /// the number of base lots that would be equivalent to 3 Widget tokens.
-    pub fn raw_base_units_to_base_lots(&self, market_key: &Pubkey, raw_base_units: f64) -> u64 {
+    pub fn raw_base_units_to_base_lots(
+        &self,
+        market_key: &Pubkey,
+        raw_base_units: f64,
+    ) -> Result<u64> {
         let market = self
             .markets
             .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+            .ok_or(anyhow!("Market not found! Please load in the market first"))?;
         // Convert to Phoenix BaseUnits
         let base_units = raw_base_units / market.raw_base_units_per_base_unit as f64;
-        (base_units * (market.num_base_lots_per_base_unit as f64)).floor() as u64
+        Ok((base_units * (market.num_base_lots_per_base_unit as f64)).floor() as u64)
     }
 
     /// The same function as raw_base_units_to_base_lots, but rounds up instead of down.
@@ -115,123 +121,125 @@ impl SDKClientCore {
         &self,
         market_key: &Pubkey,
         raw_base_units: f64,
-    ) -> u64 {
+    ) -> Result<u64> {
         let market = self
             .markets
             .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+            .ok_or(anyhow!("Market not found! Please load in the market first"))?;
         // Convert to Phoenix BaseUnits
         let base_units = raw_base_units / market.raw_base_units_per_base_unit as f64;
-        (base_units * (market.num_base_lots_per_base_unit as f64)).ceil() as u64
+        Ok((base_units * (market.num_base_lots_per_base_unit as f64)).ceil() as u64)
     }
 
     /// RECOMMENDED:
     /// Converts base atoms to base lots. For example if the base currency was a Widget with 9 decimals, where 1 atom is 1e-9 of one Widget and you wanted to
     /// convert 3 Widgets to base lots you would call sdk.base_amount_to_base_lots(3_000_000_000). This would return
     /// the number of base lots that would be equivalent to 3 Widgets or 3 * 1e9 Widget atoms.
-    pub fn base_atoms_to_base_lots(&self, market_key: &Pubkey, base_atoms: u64) -> u64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        base_atoms / market.base_lot_size // Lot size is the number of atoms in a lot
+    pub fn base_atoms_to_base_lots(&self, market_key: &Pubkey, base_atoms: u64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+
+        Ok(base_atoms / market.base_lot_size) // Lot size is the number of atoms in a lot
     }
 
     /// RECOMMENDED:
     /// Converts base lots to base atoms. For example if the base currency was a Widget where there are
     /// 1_000 base atoms per base lot of Widget, you would call sdk.base_lots_to_base_atoms(300) to convert 300 base lots
     /// to 300_000 Widget atoms.
-    pub fn base_lots_to_base_atoms(&self, market_key: &Pubkey, base_lots: u64) -> u64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        base_lots * market.base_lot_size // Lot size is the number of atoms in a lot
+    pub fn base_lots_to_base_atoms(&self, market_key: &Pubkey, base_lots: u64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(base_lots * market.base_lot_size) // Lot size is the number of atoms in a lot
     }
 
     /// RECOMMENDED:
     /// Converts quote units to quote lots. For example if the quote currency was USDC you wanted to
     /// convert 3 USDC to quote lots you would call sdk.quote_unit_to_quote_lots(3.0). This would return
     /// the number of quote lots that would be equivalent to 3 USDC.
-    pub fn quote_units_to_quote_lots(&self, market_key: &Pubkey, quote_units: f64) -> u64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        (quote_units * market.quote_multiplier as f64 / market.quote_lot_size as f64) as u64
+    pub fn quote_units_to_quote_lots(&self, market_key: &Pubkey, quote_units: f64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok((quote_units * market.quote_multiplier as f64 / market.quote_lot_size as f64) as u64)
     }
 
     /// RECOMMENDED:
     /// Converts quote atoms to quote lots. For example if the quote currency was USDC with 6 decimals and you wanted to
     /// convert 3 USDC, or 3_000_000 USDC atoms, to quote lots you would call sdk.quote_atoms_to_quote_lots(3_000_000). This would return
     /// the number of quote lots that would be equivalent to 3_000_000 USDC atoms.
-    pub fn quote_atoms_to_quote_lots(&self, market_key: &Pubkey, quote_atoms: u64) -> u64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        quote_atoms / market.quote_lot_size
+    pub fn quote_atoms_to_quote_lots(&self, market_key: &Pubkey, quote_atoms: u64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(quote_atoms / market.quote_lot_size)
     }
 
     /// RECOMMENDED:
     /// Converts quote lots to quote atoms. For example if the quote currency was USDC and there are
     /// 100 quote atoms per quote lot of USDC, you would call sdk.quote_lots_to_quote_atoms(300) to convert 300 quote lots
     /// to 30_000 USDC atoms.
-    pub fn quote_lots_to_quote_atoms(&self, market_key: &Pubkey, quote_lots: u64) -> u64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        quote_lots * market.quote_lot_size
+    pub fn quote_lots_to_quote_atoms(&self, market_key: &Pubkey, quote_lots: u64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(quote_lots * market.quote_lot_size)
     }
 
     /// Converts a number of base atoms to a floating point number of base units. For example if the base currency
     /// is a Widget where the token has 9 decimals and you wanted to convert 1_000_000_000 base atoms to
     /// a floating point number of whole Widget tokens you would call sdk.base_amount_to_float(1_000_000_000). This
     /// would return 1.0. This is useful for displaying the base amount in a human readable format.
-    pub fn base_atoms_to_base_unit_as_float(&self, market_key: &Pubkey, base_atoms: u64) -> f64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        base_atoms as f64 / market.base_multiplier as f64
+    pub fn base_atoms_to_base_unit_as_float(
+        &self,
+        market_key: &Pubkey,
+        base_atoms: u64,
+    ) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(base_atoms as f64 / market.base_multiplier as f64)
     }
 
     /// Converts a number of quote atoms to a floating point number of quote units. For example if the quote currency
     /// is USDC the token has 6 decimals and you wanted to convert 1_000_000 USDC atoms to
     /// a floating point number of whole USDC tokens you would call sdk.quote_amount_to_float(1_000_000). This
     /// would return 1.0. This is useful for displaying the quote amount in a human readable format.
-    pub fn quote_atoms_to_quote_unit_as_float(&self, market_key: &Pubkey, quote_atoms: u64) -> f64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        quote_atoms as f64 / market.quote_multiplier as f64
+    pub fn quote_atoms_to_quote_unit_as_float(
+        &self,
+        market_key: &Pubkey,
+        quote_atoms: u64,
+    ) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(quote_atoms as f64 / market.quote_multiplier as f64)
     }
 
     /// Takes in a number of quote atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
-    pub fn print_quote_amount(&self, market_key: &Pubkey, quote_amount: u64) {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    pub fn print_quote_amount(&self, market_key: &Pubkey, quote_amount: u64) -> Result<()> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         println!(
             "{}",
             get_decimal_string(quote_amount, market.quote_decimals)
         );
+        Ok(())
     }
 
     /// Takes in a number of base atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
-    pub fn print_base_amount(&self, market_key: &Pubkey, base_amount: u64) {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    pub fn print_base_amount(&self, market_key: &Pubkey, base_amount: u64) -> Result<()> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         println!("{}", get_decimal_string(base_amount, market.base_decimals));
+        Ok(())
     }
 
     /// Takes in information from a fill event and converts it into the equivalent quote amount
-    pub fn fill_event_to_quote_amount(&self, market_key: &Pubkey, fill: &Fill) -> u64 {
+    pub fn fill_event_to_quote_amount(&self, market_key: &Pubkey, fill: &Fill) -> Result<u64> {
         let &Fill {
             base_lots_filled: base_lots,
             price_in_ticks,
@@ -246,62 +254,64 @@ impl SDKClientCore {
         market_key: &Pubkey,
         base_lots: u64,
         price_in_ticks: u64,
-    ) -> u64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        base_lots * price_in_ticks * market.tick_size_in_quote_atoms_per_base_unit
-            / market.num_base_lots_per_base_unit
+    ) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(
+            base_lots * price_in_ticks * market.tick_size_in_quote_atoms_per_base_unit
+                / market.num_base_lots_per_base_unit,
+        )
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded down)
-    pub fn float_price_to_ticks(&self, market_key: &Pubkey, price: f64) -> u64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        ((price * market.raw_base_units_per_base_unit as f64 * market.quote_multiplier as f64)
-            / market.tick_size_in_quote_atoms_per_base_unit as f64) as u64
+    pub fn float_price_to_ticks(&self, market_key: &Pubkey, price: f64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(
+            ((price * market.raw_base_units_per_base_unit as f64 * market.quote_multiplier as f64)
+                / market.tick_size_in_quote_atoms_per_base_unit as f64) as u64,
+        )
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded up)
-    pub fn float_price_to_ticks_rounded_up(&self, market_key: &Pubkey, price: f64) -> u64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        ((price * market.raw_base_units_per_base_unit as f64 * market.quote_multiplier as f64)
-            / market.tick_size_in_quote_atoms_per_base_unit as f64)
-            .ceil() as u64
+    pub fn float_price_to_ticks_rounded_up(&self, market_key: &Pubkey, price: f64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(
+            ((price * market.raw_base_units_per_base_unit as f64 * market.quote_multiplier as f64)
+                / market.tick_size_in_quote_atoms_per_base_unit as f64)
+                .ceil() as u64,
+        )
     }
 
     /// Takes in a number of ticks and converts it to a floating point number price
-    pub fn ticks_to_float_price(&self, market_key: &Pubkey, ticks: u64) -> f64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        (ticks as f64 * market.tick_size_in_quote_atoms_per_base_unit as f64)
-            / market.quote_multiplier as f64
+    pub fn ticks_to_float_price(&self, market_key: &Pubkey, ticks: u64) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(
+            (ticks as f64 * market.tick_size_in_quote_atoms_per_base_unit as f64)
+                / market.quote_multiplier as f64,
+        )
     }
 
     /// Multiplier used to convert base lots to base units
-    pub fn base_lots_to_base_units_multiplier(&self, market_key: &Pubkey) -> f64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        1.0 / market.num_base_lots_per_base_unit as f64
+    pub fn base_lots_to_base_units_multiplier(&self, market_key: &Pubkey) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(1.0 / market.num_base_lots_per_base_unit as f64)
     }
 
     /// Multiplier used to convert ticks to a floating point number price
-    pub fn ticks_to_float_price_multiplier(&self, market_key: &Pubkey) -> f64 {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        market.tick_size_in_quote_atoms_per_base_unit as f64 / market.quote_multiplier as f64
+    pub fn ticks_to_float_price_multiplier(&self, market_key: &Pubkey) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(market.tick_size_in_quote_atoms_per_base_unit as f64 / market.quote_multiplier as f64)
     }
 }
 
@@ -564,7 +574,6 @@ impl SDKClientCore {
         )
     }
 
-
     #[allow(clippy::too_many_arguments)]
     pub fn get_ioc_generic_ix(
         &self,
@@ -620,7 +629,6 @@ impl SDKClientCore {
         )
     }
 
-
     pub fn get_fok_buy_ix(
         &self,
         market_key: &Pubkey,
@@ -638,7 +646,6 @@ impl SDKClientCore {
             None,
         )
     }
-
 
     pub fn get_fok_buy_generic_ix(
         &self,
@@ -661,7 +668,6 @@ impl SDKClientCore {
             use_only_deposited_funds,
         )
     }
-
 
     pub fn get_fok_sell_generic_ix(
         &self,
@@ -768,7 +774,6 @@ impl SDKClientCore {
         )
     }
 
-
     pub fn get_ioc_from_tick_price_ix(
         &self,
         market_key: &Pubkey,
@@ -804,9 +809,7 @@ impl SDKClientCore {
         side: Side,
         size: u64,
     ) -> Instruction {
-        self.get_post_only_generic_ix(
-            market_key, price, side, size, None, None, None,
-        )
+        self.get_post_only_generic_ix(market_key, price, side, size, None, None, None)
     }
 
     pub fn get_post_only_generic_ix(
@@ -886,11 +889,8 @@ impl SDKClientCore {
         side: Side,
         size: u64,
     ) -> Instruction {
-        self.get_limit_order_generic_ix(
-            market_key, price, side, size, None, None, None, None,
-        )
+        self.get_limit_order_generic_ix(market_key, price, side, size, None, None, None, None)
     }
-
 
     #[allow(clippy::too_many_arguments)]
     pub fn get_limit_order_generic_ix(
@@ -955,11 +955,7 @@ impl SDKClientCore {
         )
     }
 
-    pub fn get_cancel_ids_ix(
-        &self,
-        market_key: &Pubkey,
-        ids: Vec<FIFOOrderId>,
-    ) -> Instruction {
+    pub fn get_cancel_ids_ix(&self, market_key: &Pubkey, ids: Vec<FIFOOrderId>) -> Instruction {
         let market = self
             .markets
             .get(market_key)

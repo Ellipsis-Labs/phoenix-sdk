@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use phoenix::program::dispatch_market::*;
 use phoenix::program::instruction::PhoenixInstruction;
@@ -21,7 +23,6 @@ use solana_sdk::{
     signature::{Signature, Signer},
     signer::keypair::Keypair,
 };
-
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::{collections::BTreeMap, mem::size_of, ops::DerefMut, sync::Arc};
@@ -54,6 +55,9 @@ impl DerefMut for SDKClient {
 }
 
 impl SDKClient {
+    /// Create a new SDKClient from an EllipsisClient.
+    /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
+    /// add markets to the SDKClient.
     pub async fn new_from_ellipsis_client(client: EllipsisClient) -> Self {
         let markets = BTreeMap::new();
 
@@ -65,11 +69,16 @@ impl SDKClient {
         SDKClient { client, core }
     }
 
+    /// Create a new SDKClient from an EllipsisClient.
+    /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
+    /// add markets to the SDKClient.
     pub fn new_from_ellipsis_client_sync(client: EllipsisClient) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(Self::new_from_ellipsis_client(client))
     }
 
+    /// Recommended way to create a new SDKClient from an EllipsisClient.
+    /// This will use a list of markets from a pre-defined config file to add all known markets to the SDKClient.
     pub async fn new_from_ellipsis_client_with_all_markets(client: EllipsisClient) -> Self {
         let markets = BTreeMap::new();
 
@@ -84,11 +93,15 @@ impl SDKClient {
         sdk
     }
 
+    /// Recommended way to create a new SDKClient from an EllipsisClient.
+    /// This will use a list of markets from a pre-defined config file to add all known markets to the SDKClient.
     pub fn new_from_ellipsis_client_with_all_markets_sync(client: EllipsisClient) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(Self::new_from_ellipsis_client_with_all_markets(client))
     }
 
+    /// Create a new SDKClient from an EllipsisClient.
+    /// Pass in a list of market keys to add to the SDKClient.
     pub async fn new_from_ellipsis_client_with_market_keys(
         market_keys: Vec<&Pubkey>,
         client: EllipsisClient,
@@ -106,6 +119,8 @@ impl SDKClient {
         SDKClient { client, core }
     }
 
+    /// Create a new SDKClient from an EllipsisClient.
+    /// Pass in a list of market keys to add to the SDKClient.
     pub fn new_from_ellipsis_client_sync_with_market_keys(
         market_keys: Vec<&Pubkey>,
         client: EllipsisClient,
@@ -117,6 +132,9 @@ impl SDKClient {
         ))
     }
 
+    /// Create a new SDKClient.
+    /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
+    /// add markets to the SDKClient.
     pub async fn new(payer: &Keypair, url: &str) -> Self {
         let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
         let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
@@ -124,11 +142,16 @@ impl SDKClient {
         SDKClient::new_from_ellipsis_client(client).await
     }
 
+    /// Create a new SDKClient.
+    /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
+    /// add markets to the SDKClient.
     pub fn new_sync(payer: &Keypair, url: &str) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(Self::new(payer, url))
     }
 
+    /// Recommended way to create a new SDKClient.
+    /// This will use a list of markets from a pre-defined config file to add all known markets to the SDKClient.
     pub async fn new_with_all_markets(payer: &Keypair, url: &str) -> Self {
         let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
         let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
@@ -136,11 +159,15 @@ impl SDKClient {
         SDKClient::new_from_ellipsis_client_with_all_markets(client).await
     }
 
+    /// Recommended way to create a new SDKClient.
+    /// This will use a list of markets from a pre-defined config file to add all known markets to the SDKClient.
     pub fn new_with_all_markets_sync(payer: &Keypair, url: &str) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(Self::new_with_all_markets(payer, url))
     }
 
+    /// Create a new SDKClient.
+    /// Pass in a list of market keys to add to the SDKClient.
     pub async fn new_with_market_keys(
         market_keys: Vec<&Pubkey>,
         payer: &Keypair,
@@ -152,6 +179,8 @@ impl SDKClient {
         SDKClient::new_from_ellipsis_client_with_market_keys(market_keys, client).await
     }
 
+    /// Create a new SDKClient.
+    /// Pass in a list of market keys to add to the SDKClient.
     pub fn new_with_market_keys_sync(
         market_keys: Vec<&Pubkey>,
         payer: &Keypair,
@@ -161,11 +190,12 @@ impl SDKClient {
         rt.block_on(Self::new_with_market_keys(market_keys, payer, url))
     }
 
+    /// Load in all known markets from a pre-defined config file located in the SDK github.
     pub async fn add_all_markets(&mut self) {
         let config_url = "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
-        
+
         let genesis = self.client.get_genesis_hash().await.unwrap();
-        
+
         //hardcoded in the genesis hashes for mainnet and devnet
         let cluster = match genesis.to_string().as_str() {
             "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d" => "mainnet-beta",
@@ -237,7 +267,7 @@ impl SDKClient {
     pub async fn get_market_orderbook(
         &self,
         market_key: &Pubkey,
-    ) -> Orderbook<FIFOOrderId, PhoenixOrder> {
+    ) -> Result<Orderbook<FIFOOrderId, PhoenixOrder>> {
         let market_account_data = (self.client.get_account_data(market_key))
             .await
             .unwrap_or_default();
@@ -248,29 +278,31 @@ impl SDKClient {
             asks: BTreeMap::new(),
         };
         if market_account_data.is_empty() {
-            return default;
+            return Ok(default);
         }
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
+        let base_lots_multiplier = self.base_lots_to_base_units_multiplier(market_key)?;
+        let ticks_multiplier = self.ticks_to_float_price_multiplier(market_key)?;
+        Ok(bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
             .ok()
             .map(|header| {
                 load_with_dispatch(&header.market_size_params, bytes)
                     .map(|market| {
                         Orderbook::from_market(
                             market.inner,
-                            self.base_lots_to_base_units_multiplier(market_key),
-                            self.ticks_to_float_price_multiplier(market_key),
+                            base_lots_multiplier,
+                            ticks_multiplier,
                         )
                     })
                     .unwrap_or_else(|_| default.clone())
             })
-            .unwrap_or(default)
+            .unwrap_or(default))
     }
 
     pub async fn get_market_orderbook_sync(
         &self,
         market_key: &Pubkey,
-    ) -> Orderbook<FIFOOrderId, PhoenixOrder> {
+    ) -> Result<Orderbook<FIFOOrderId, PhoenixOrder>> {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(self.get_market_orderbook(market_key))
     }
@@ -305,11 +337,11 @@ impl SDKClient {
         rt.block_on(self.get_traders_with_market_key(market_key))
     }
 
-    pub async fn get_market_state(&self, market_key: &Pubkey) -> MarketState {
+    pub async fn get_market_state(&self, market_key: &Pubkey) -> Result<MarketState> {
         let market_account_data = match (self.client.get_account_data(market_key)).await {
             Ok(data) => data,
             Err(_) => {
-                return MarketState {
+                return Ok(MarketState {
                     orderbook: Orderbook {
                         size_mult: 0.0,
                         price_mult: 0.0,
@@ -317,7 +349,7 @@ impl SDKClient {
                         asks: BTreeMap::new(),
                     },
                     traders: BTreeMap::new(),
-                }
+                })
             }
         };
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
@@ -329,8 +361,8 @@ impl SDKClient {
 
         let orderbook = Orderbook::from_market(
             market,
-            self.base_lots_to_base_units_multiplier(market_key),
-            self.ticks_to_float_price_multiplier(market_key),
+            self.base_lots_to_base_units_multiplier(market_key)?,
+            self.ticks_to_float_price_multiplier(market_key)?,
         );
 
         let traders = market
@@ -339,7 +371,7 @@ impl SDKClient {
             .map(|(k, v)| (*k, *v))
             .collect();
 
-        MarketState { orderbook, traders }
+        Ok(MarketState { orderbook, traders })
     }
 
     #[allow(clippy::useless_conversion)]
@@ -535,8 +567,7 @@ impl SDKClient {
         price: u64,
         size_in_quote_lots: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix =
-            self.get_fok_buy_ix(market_key, price, size_in_quote_lots);
+        let new_order_ix = self.get_fok_buy_ix(market_key, price, size_in_quote_lots);
 
         let signature = self
             .client
@@ -553,8 +584,7 @@ impl SDKClient {
         price: u64,
         size_in_base_lots: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix =
-            self.get_fok_sell_ix(market_key, price, size_in_base_lots);
+        let new_order_ix = self.get_fok_sell_ix(market_key, price, size_in_base_lots);
 
         let signature = self
             .client
@@ -572,8 +602,7 @@ impl SDKClient {
         min_lots_out: u64,
         side: Side,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix =
-            self.get_ioc_with_slippage_ix(market_key, lots_in, min_lots_out, side);
+        let new_order_ix = self.get_ioc_with_slippage_ix(market_key, lots_in, min_lots_out, side);
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
