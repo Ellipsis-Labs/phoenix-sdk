@@ -177,24 +177,24 @@ export function getNodeIndices<Key, Value>(
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): Map<Key, number> {
-  const index_map = new Map<Key, number>();
-  const tree_nodes = deserializeRedBlackTreeNodes(
+  const indexMap = new Map<Key, number>();
+  const treeNodes = deserializeRedBlackTreeNodes(
     data,
     keyDeserializer,
     valueDeserializer
   );
 
-  const nodes = tree_nodes[0];
-  const freeNodes = tree_nodes[1];
+  const nodes = treeNodes[0];
+  const freeNodes = treeNodes[1];
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  for (const [index, [key, _]] of nodes.entries()) {
+  for (const [index, [key]] of nodes.entries()) {
     if (!freeNodes.has(index)) {
-      index_map.set(key, index + 1);
+      indexMap.set(key, index + 1);
     }
   }
 
-  return index_map;
+  return indexMap;
 }
 
 /**

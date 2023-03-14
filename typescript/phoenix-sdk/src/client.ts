@@ -111,10 +111,10 @@ export class Client {
     trader?: PublicKey
   ): Promise<Client> {
     const cluster = getClusterFromEndpoint(endpoint);
-    const config_url =
+    const configUrl =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
 
-    const marketConfigs = await axios.get(config_url).then((response) => {
+    const marketConfigs = await axios.get(configUrl).then((response) => {
       return response.data;
     });
 
@@ -170,10 +170,10 @@ export class Client {
     trader?: PublicKey
   ): Promise<Client> {
     const cluster = getClusterFromEndpoint(endpoint);
-    const config_url =
+    const configUrl =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
 
-    const marketConfigs = await axios.get(config_url).then((response) => {
+    const marketConfigs = await axios.get(configUrl).then((response) => {
       return response.data;
     });
     const tokenConfig = marketConfigs[cluster].tokens;
@@ -541,9 +541,8 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    const base_units =
-      rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
-    return Math.ceil(base_units * market.data.baseLotsPerBaseUnit);
+    const baseUnits = rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
+    return Math.ceil(baseUnits * market.data.baseLotsPerBaseUnit);
   }
 
   /**
@@ -644,19 +643,19 @@ export class Client {
   /**
    * Get the amount of quote atoms for an order with a given amount of base lots and a price in ticks
    * @param baseLots The amount of base lots to convert
-   * @param price_in_ticks The price in ticks
+   * @param priceInTicks The price in ticks
    * @param marketAddress The `PublicKey` of the market account
    */
   public orderToQuoteAmount(
     baseLots: number,
-    price_in_ticks: number,
+    priceInTicks: number,
     marketAddress: string
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return Math.round(
       (baseLots *
-        price_in_ticks *
+        priceInTicks *
         toNum(market.data.header.tickSizeInQuoteAtomsPerBaseUnit)) /
         market.data.baseLotsPerBaseUnit
     );

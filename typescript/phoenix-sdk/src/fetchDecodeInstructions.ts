@@ -31,17 +31,17 @@ export function decodeInstructionData(data: Buffer, idl: any): string {
 
   const instructionEnum = decoded[0];
 
-  const matched_idl_instruction = idl.instructions.filter((instruction) => {
+  const matchedIdlInstruction = idl.instructions.filter((instruction) => {
     return instruction.discriminant.value === instructionEnum;
   });
 
-  if (matched_idl_instruction.length === 0) {
+  if (matchedIdlInstruction.length === 0) {
     return "UNKNOWN INSTRUCTION";
   }
 
-  const instructionName = matched_idl_instruction[0].name;
-  const accounts = matched_idl_instruction[0].accounts;
-  console.log("Instruction Name: ", matched_idl_instruction[0].name);
+  const instructionName = matchedIdlInstruction[0].name;
+  const accounts = matchedIdlInstruction[0].accounts;
+  console.log("Instruction Name: ", matchedIdlInstruction[0].name);
   console.log("Accounts: ", accounts);
 
   const argData = decoded.slice(1, decoded.length);
