@@ -137,7 +137,7 @@ export async function swap() {
 
   let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
   let counter = 1;
-  while (txResult.instructions.length == 0 && txResult.retry) {
+  while (!txResult.txReceived) {
     txResult = await Phoenix.getEventsFromTransaction(connection, txId);
     counter += 1;
     if (counter == 10) {
@@ -185,7 +185,7 @@ export async function swap() {
     expiredTxId
   );
   let expiredCounter = 1;
-  while (expiredTxResult.retry) {
+  while (!expiredTxResult.txReceived) {
     console.log(expiredTxResult);
     expiredTxResult = await Phoenix.getEventsFromTransaction(
       connection,
