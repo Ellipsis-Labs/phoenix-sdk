@@ -147,14 +147,14 @@ export function deserializeRedBlackTree<Key, Value>(
   valueDeserializer: beet.BeetArgsStruct<Value>
 ): Map<Key, Value> {
   const tree = new Map<Key, Value>();
-  const tree_nodes = deserializeRedBlackTreeNodes(
+  const treeNodes = deserializeRedBlackTreeNodes(
     data,
     keyDeserializer,
     valueDeserializer
   );
 
-  const nodes = tree_nodes[0];
-  const freeNodes = tree_nodes[1];
+  const nodes = treeNodes[0];
+  const freeNodes = treeNodes[1];
 
   for (const [index, [key, value]] of nodes.entries()) {
     if (!freeNodes.has(index)) {
@@ -280,15 +280,14 @@ export function getMarketLadder(
   const bids: Array<[BN, BN]> = [];
   const asks: Array<[BN, BN]> = [];
   for (const [orderId, restingOrder] of marketData.bids) {
-    if (restingOrder.lastValidSlot != 0) {
-      if (restingOrder.lastValidSlot < slot) {
-        continue;
-      }
+    if (restingOrder.lastValidSlot != 0 && restingOrder.lastValidSlot < slot) {
+      continue;
     }
-    if (restingOrder.lastValidUnixTimestampInSeconds != 0) {
-      if (restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp) {
-        continue;
-      }
+    if (
+      restingOrder.lastValidUnixTimestampInSeconds != 0 &&
+      restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
+    ) {
+      continue;
     }
     const priceInTicks = toBN(orderId.priceInTicks);
     const numBaseLots = toBN(restingOrder.numBaseLots);
@@ -311,15 +310,14 @@ export function getMarketLadder(
   }
 
   for (const [orderId, restingOrder] of marketData.asks) {
-    if (restingOrder.lastValidSlot != 0) {
-      if (restingOrder.lastValidSlot < slot) {
-        continue;
-      }
+    if (restingOrder.lastValidSlot != 0 && restingOrder.lastValidSlot < slot) {
+      continue;
     }
-    if (restingOrder.lastValidUnixTimestampInSeconds != 0) {
-      if (restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp) {
-        continue;
-      }
+    if (
+      restingOrder.lastValidUnixTimestampInSeconds != 0 &&
+      restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
+    ) {
+      continue;
     }
     const priceInTicks = toBN(orderId.priceInTicks);
     const numBaseLots = toBN(restingOrder.numBaseLots);
