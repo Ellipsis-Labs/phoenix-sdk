@@ -5,13 +5,13 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import { Side, sideBeet } from './Side'
+import * as beet from "@metaplex-foundation/beet";
+import { Side, sideBeet } from "./Side";
 export type CancelOrderParams = {
-  side: Side
-  priceInTicks: beet.bignum
-  orderSequenceNumber: beet.bignum
-}
+  side: Side;
+  priceInTicks: beet.bignum;
+  orderSequenceNumber: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -19,9 +19,9 @@ export type CancelOrderParams = {
  */
 export const cancelOrderParamsBeet = new beet.BeetArgsStruct<CancelOrderParams>(
   [
-    ['side', sideBeet],
-    ['priceInTicks', beet.u64],
-    ['orderSequenceNumber', beet.u64],
+    ["side", sideBeet],
+    ["priceInTicks", beet.u64],
+    ["orderSequenceNumber", beet.u64],
   ],
-  'CancelOrderParams'
-)
+  "CancelOrderParams"
+);

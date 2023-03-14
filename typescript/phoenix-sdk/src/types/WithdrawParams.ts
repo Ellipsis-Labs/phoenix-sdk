@@ -5,11 +5,11 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 export type WithdrawParams = {
-  quoteLotsToWithdraw: beet.COption<beet.bignum>
-  baseLotsToWithdraw: beet.COption<beet.bignum>
-}
+  quoteLotsToWithdraw: beet.COption<beet.bignum>;
+  baseLotsToWithdraw: beet.COption<beet.bignum>;
+};
 
 /**
  * @category userTypes
@@ -18,8 +18,8 @@ export type WithdrawParams = {
 export const withdrawParamsBeet =
   new beet.FixableBeetArgsStruct<WithdrawParams>(
     [
-      ['quoteLotsToWithdraw', beet.coption(beet.u64)],
-      ['baseLotsToWithdraw', beet.coption(beet.u64)],
+      ["quoteLotsToWithdraw", beet.coption(beet.u64)],
+      ["baseLotsToWithdraw", beet.coption(beet.u64)],
     ],
-    'WithdrawParams'
-  )
+    "WithdrawParams"
+  );

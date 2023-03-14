@@ -5,19 +5,19 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
-import { MarketSizeParams, marketSizeParamsBeet } from './MarketSizeParams'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
+import * as beetSolana from "@metaplex-foundation/beet-solana";
+import { MarketSizeParams, marketSizeParamsBeet } from "./MarketSizeParams";
 export type InitializeParams = {
-  marketSizeParams: MarketSizeParams
-  numQuoteLotsPerQuoteUnit: beet.bignum
-  tickSizeInQuoteLotsPerBaseUnit: beet.bignum
-  numBaseLotsPerBaseUnit: beet.bignum
-  takerFeeBps: number
-  feeCollector: web3.PublicKey
-  rawBaseUnitsPerBaseUnit: beet.COption<number>
-}
+  marketSizeParams: MarketSizeParams;
+  numQuoteLotsPerQuoteUnit: beet.bignum;
+  tickSizeInQuoteLotsPerBaseUnit: beet.bignum;
+  numBaseLotsPerBaseUnit: beet.bignum;
+  takerFeeBps: number;
+  feeCollector: web3.PublicKey;
+  rawBaseUnitsPerBaseUnit: beet.COption<number>;
+};
 
 /**
  * @category userTypes
@@ -26,13 +26,13 @@ export type InitializeParams = {
 export const initializeParamsBeet =
   new beet.FixableBeetArgsStruct<InitializeParams>(
     [
-      ['marketSizeParams', marketSizeParamsBeet],
-      ['numQuoteLotsPerQuoteUnit', beet.u64],
-      ['tickSizeInQuoteLotsPerBaseUnit', beet.u64],
-      ['numBaseLotsPerBaseUnit', beet.u64],
-      ['takerFeeBps', beet.u16],
-      ['feeCollector', beetSolana.publicKey],
-      ['rawBaseUnitsPerBaseUnit', beet.coption(beet.u32)],
+      ["marketSizeParams", marketSizeParamsBeet],
+      ["numQuoteLotsPerQuoteUnit", beet.u64],
+      ["tickSizeInQuoteLotsPerBaseUnit", beet.u64],
+      ["numBaseLotsPerBaseUnit", beet.u64],
+      ["takerFeeBps", beet.u16],
+      ["feeCollector", beetSolana.publicKey],
+      ["rawBaseUnitsPerBaseUnit", beet.coption(beet.u32)],
     ],
-    'InitializeParams'
-  )
+    "InitializeParams"
+  );

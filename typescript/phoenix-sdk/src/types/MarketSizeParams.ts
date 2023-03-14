@@ -5,12 +5,12 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 export type MarketSizeParams = {
-  bidsSize: beet.bignum
-  asksSize: beet.bignum
-  numSeats: beet.bignum
-}
+  bidsSize: beet.bignum;
+  asksSize: beet.bignum;
+  numSeats: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -18,9 +18,9 @@ export type MarketSizeParams = {
  */
 export const marketSizeParamsBeet = new beet.BeetArgsStruct<MarketSizeParams>(
   [
-    ['bidsSize', beet.u64],
-    ['asksSize', beet.u64],
-    ['numSeats', beet.u64],
+    ["bidsSize", beet.u64],
+    ["asksSize", beet.u64],
+    ["numSeats", beet.u64],
   ],
-  'MarketSizeParams'
-)
+  "MarketSizeParams"
+);

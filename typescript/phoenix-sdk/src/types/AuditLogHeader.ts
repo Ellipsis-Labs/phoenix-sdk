@@ -5,18 +5,18 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import * as web3 from '@solana/web3.js'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
+import * as beet from "@metaplex-foundation/beet";
+import * as web3 from "@solana/web3.js";
+import * as beetSolana from "@metaplex-foundation/beet-solana";
 export type AuditLogHeader = {
-  instruction: number
-  sequenceNumber: beet.bignum
-  timestamp: beet.bignum
-  slot: beet.bignum
-  market: web3.PublicKey
-  signer: web3.PublicKey
-  totalEvents: number
-}
+  instruction: number;
+  sequenceNumber: beet.bignum;
+  timestamp: beet.bignum;
+  slot: beet.bignum;
+  market: web3.PublicKey;
+  signer: web3.PublicKey;
+  totalEvents: number;
+};
 
 /**
  * @category userTypes
@@ -24,13 +24,13 @@ export type AuditLogHeader = {
  */
 export const auditLogHeaderBeet = new beet.BeetArgsStruct<AuditLogHeader>(
   [
-    ['instruction', beet.u8],
-    ['sequenceNumber', beet.u64],
-    ['timestamp', beet.i64],
-    ['slot', beet.u64],
-    ['market', beetSolana.publicKey],
-    ['signer', beetSolana.publicKey],
-    ['totalEvents', beet.u16],
+    ["instruction", beet.u8],
+    ["sequenceNumber", beet.u64],
+    ["timestamp", beet.i64],
+    ["slot", beet.u64],
+    ["market", beetSolana.publicKey],
+    ["signer", beetSolana.publicKey],
+    ["totalEvents", beet.u16],
   ],
-  'AuditLogHeader'
-)
+  "AuditLogHeader"
+);

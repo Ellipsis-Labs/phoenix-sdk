@@ -32,6 +32,9 @@ pub trait MarketEventHandler<T: Send + Sync> {
                 MarketEventDetails::Fee(..) => {
                     // Ignore fee events
                 }
+                MarketEventDetails::TimeInForce(..) => {
+                    // Ignore time in force events
+                }
             }
         }
         Ok(())

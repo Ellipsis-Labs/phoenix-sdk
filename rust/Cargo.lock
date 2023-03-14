@@ -2721,7 +2721,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2748,7 +2748,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
@@ -2764,9 +2764,9 @@ dependencies = [
 
 [[package]]
 name = "phoenix-v1"
-version = "0.1.4"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64366b3a050af1ad0511ed9f247851bbfeb92ad8a6305e99e2f40f3405136b98"
+checksum = "9e9edcf85c3187cc76930d531a7f3c67e7dfccf2b66d20d7371cdaa4461e3af8"
 dependencies = [
  "borsh 0.9.3",
  "bytemuck",

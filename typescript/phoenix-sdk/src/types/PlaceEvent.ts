@@ -5,14 +5,14 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 export type PlaceEvent = {
-  index: number
-  orderSequenceNumber: beet.bignum
-  clientOrderId: beet.bignum
-  priceInTicks: beet.bignum
-  baseLotsPlaced: beet.bignum
-}
+  index: number;
+  orderSequenceNumber: beet.bignum;
+  clientOrderId: beet.bignum;
+  priceInTicks: beet.bignum;
+  baseLotsPlaced: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -20,11 +20,11 @@ export type PlaceEvent = {
  */
 export const placeEventBeet = new beet.BeetArgsStruct<PlaceEvent>(
   [
-    ['index', beet.u16],
-    ['orderSequenceNumber', beet.u64],
-    ['clientOrderId', beet.u128],
-    ['priceInTicks', beet.u64],
-    ['baseLotsPlaced', beet.u64],
+    ["index", beet.u16],
+    ["orderSequenceNumber", beet.u64],
+    ["clientOrderId", beet.u128],
+    ["priceInTicks", beet.u64],
+    ["baseLotsPlaced", beet.u64],
   ],
-  'PlaceEvent'
-)
+  "PlaceEvent"
+);

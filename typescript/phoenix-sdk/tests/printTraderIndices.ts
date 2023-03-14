@@ -3,18 +3,22 @@ import { Connection } from "@solana/web3.js";
 import * as Phoenix from "../src";
 
 // Ex: ts-node tests/market.ts
-export async function market() {
-
+export async function printTraderIndices() {
   const connection = new Connection("https://api.mainnet-beta.solana.com");
   const phoenix = await Phoenix.Client.create(connection, "mainnet");
-  const m = phoenix.markets.find((market) => market.name === "SOL/USDC");
-  const index = m?.data.trader_index; 
-  console.log(index);
+  for (const [marketAddress, market] of phoenix.markets) {
+    if (market.name === "SOL/USDC") {
+      console.log("SOL/USDC marketAddress: ", marketAddress);
+      const index = market.data.traderIndex;
+      console.log(index);
+      break;
+    }
+  }
 }
 
 (async function () {
   try {
-    await market();
+    await printTraderIndices();
   } catch (err) {
     console.log("Error: ", err);
     process.exit(1);
