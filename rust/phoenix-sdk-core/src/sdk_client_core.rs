@@ -13,7 +13,7 @@ use phoenix::{
         TimeInForceEvent,
     },
     program::{reduce_order::CancelOrderParams, ReduceEvent},
-    quantities::WrapperU64,
+    quantities::{BaseLots, Ticks, WrapperU64},
     state::enums::{SelfTradeBehavior, Side},
     state::markets::FIFOOrderId,
     state::order_packet::OrderPacket,
@@ -805,7 +805,7 @@ impl SDKClientCore {
         side: Side,
         size: u64,
     ) -> Result<Instruction> {
-        self.get_post_only_generic_ix(market_key, price, side, size, None, None, None)
+        self.get_post_only_generic_ix(market_key, price, side, size, None, None, None, None, None)
     }
 
     pub fn get_post_only_generic_ix(
@@ -817,6 +817,8 @@ impl SDKClientCore {
         client_order_id: Option<u128>,
         reject_post_only: Option<bool>,
         use_only_deposited_funds: Option<bool>,
+        last_valid_slot: Option<u64>,
+        last_valid_unix_timestamp_in_seconds: Option<u64>,
     ) -> Result<Instruction> {
         let market = self.markets.get(market_key).ok_or(anyhow!(
             "Market not found! Please load in the market first."
@@ -825,19 +827,22 @@ impl SDKClientCore {
         let client_order_id = client_order_id.unwrap_or(0);
         let reject_post_only = reject_post_only.unwrap_or(false);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
+        let order_packet = OrderPacket::PostOnly {
+            side,
+            price_in_ticks: Ticks::new(price_in_ticks),
+            num_base_lots: BaseLots::new(size),
+            client_order_id,
+            reject_post_only,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        };
         Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
             &market.quote_mint,
-            &OrderPacket::new_post_only(
-                side,
-                price_in_ticks,
-                size,
-                client_order_id,
-                reject_post_only,
-                use_only_deposited_funds,
-            ),
+            &order_packet,
         ))
     }
 
@@ -883,7 +888,9 @@ impl SDKClientCore {
         side: Side,
         size: u64,
     ) -> Result<Instruction> {
-        self.get_limit_order_generic_ix(market_key, price, side, size, None, None, None, None)
+        self.get_limit_order_generic_ix(
+            market_key, price, side, size, None, None, None, None, None, None,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -897,6 +904,8 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
+        last_valid_slot: Option<u64>,
+        last_valid_unix_timestamp_in_seconds: Option<u64>,
     ) -> Result<Instruction> {
         let market = self.markets.get(market_key).ok_or(anyhow!(
             "Market not found! Please load in the market first."
@@ -905,20 +914,23 @@ impl SDKClientCore {
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::DecrementTake);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
+        let order_packet = OrderPacket::Limit {
+            side,
+            price_in_ticks: Ticks::new(num_quote_ticks_per_base_unit),
+            num_base_lots: BaseLots::new(size),
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        };
         Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
             &market.quote_mint,
-            &OrderPacket::new_limit_order(
-                side,
-                num_quote_ticks_per_base_unit,
-                size,
-                self_trade_behavior,
-                match_limit,
-                client_order_id,
-                use_only_deposited_funds,
-            ),
+            &order_packet,
         ))
     }
 
@@ -947,7 +959,11 @@ impl SDKClientCore {
         ))
     }
 
-    pub fn get_cancel_ids_ix(&self, market_key: &Pubkey, ids: Vec<FIFOOrderId>) -> Result<Instruction> {
+    pub fn get_cancel_ids_ix(
+        &self,
+        market_key: &Pubkey,
+        ids: Vec<FIFOOrderId>,
+    ) -> Result<Instruction> {
         let market = self.markets.get(market_key).ok_or(anyhow!(
             "Market not found! Please load in the market first."
         ))?;
