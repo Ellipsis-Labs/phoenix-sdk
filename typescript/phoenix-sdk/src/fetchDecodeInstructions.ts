@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as bs58 from "bs58";
 import {
   CancelMultipleOrdersByIdParams,
@@ -11,12 +12,10 @@ import {
   multipleOrderPacketBeet,
   OrderPacket,
   orderPacketBeet,
-  OrderPacketRecord,
   ReduceOrderParams,
   reduceOrderParamsBeet,
   SeatApprovalStatus,
   seatApprovalStatusBeet,
-  Side,
   WithdrawParams,
   withdrawParamsBeet,
 } from "./types";

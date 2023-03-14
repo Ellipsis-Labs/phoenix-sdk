@@ -65,7 +65,7 @@ export async function getEventsFromTransaction(
     return { instructions: [] };
   }
 
-  const logData = [];
+  const logData: Array<Uint8Array> = [];
   for (const ix of innerIxs) {
     for (const inner of ix.instructions) {
       if (inner.programId.toBase58() != PROGRAM_ID.toBase58()) {
