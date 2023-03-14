@@ -54,70 +54,124 @@ impl DerefMut for SDKClient {
 }
 
 impl SDKClient {
-    pub async fn new_from_ellipsis_client(market_key: &Pubkey, client: EllipsisClient) -> Self {
-        let market_metadata = Self::get_market_metadata(&client, market_key).await;
-        let mut markets = BTreeMap::new();
-
-        markets.insert(*market_key, market_metadata);
-        let core = SDKClientCore {
-            markets,
-            rng: Arc::new(Mutex::new(StdRng::from_entropy())),
-            active_market_key: Some(*market_key),
-            trader: client.payer.pubkey(),
-        };
-        SDKClient { client, core }
-    }
-
-    pub async fn new_from_ellipsis_client_without_active_market(client: EllipsisClient) -> Self {
+    pub async fn new_from_ellipsis_client(client: EllipsisClient) -> Self {
         let markets = BTreeMap::new();
 
         let core = SDKClientCore {
             markets,
             rng: Arc::new(Mutex::new(StdRng::from_entropy())),
-            active_market_key: None,
             trader: client.payer.pubkey(),
         };
         SDKClient { client, core }
     }
 
-    pub fn new_from_ellipsis_client_sync(market_key: &Pubkey, client: EllipsisClient) -> Self {
+    pub fn new_from_ellipsis_client_sync(client: EllipsisClient) -> Self {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(Self::new_from_ellipsis_client(market_key, client))
+        rt.block_on(Self::new_from_ellipsis_client(client))
     }
 
-    pub fn new_from_ellipsis_client_without_active_market_sync(client: EllipsisClient) -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(Self::new_from_ellipsis_client_without_active_market(client))
-    }
+    pub async fn new_from_ellipsis_client_with_all_markets(client: EllipsisClient) -> Self {
+        let markets = BTreeMap::new();
 
-    pub async fn new(market_key: &Pubkey, payer: &Keypair, url: &str) -> Self {
-        let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
-        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client"); //fix error handling instead of panic
-
-        SDKClient::new_from_ellipsis_client(market_key, client).await
-    }
-
-    pub async fn new_without_active_market(payer: &Keypair, url: &str) -> Self {
-        let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
-        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client"); //fix error handling instead of panic
-
-        SDKClient::new_from_ellipsis_client_without_active_market(client).await
-    }
-
-    pub fn new_without_active_market_sync(payer: &Keypair, url: &str) -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
-        rt.block_on(Self::new_without_active_market(payer, url))
-    }
-
-    pub async fn add_all_markets(&mut self, cluster: &str) {
-        let cluster = match cluster {
-            "dev" | "devnet" | "d" => "devnet",
-            "local" | "localhost" | "l" => "localhost",
-            "mainnet" | "main" | "mainnet-beta" | "m" => "mainnet-beta",
-            _ => panic!("Invalid cluster name. Please use one of the following: devnet, mainnet-beta, localhost")
+        let core = SDKClientCore {
+            markets,
+            rng: Arc::new(Mutex::new(StdRng::from_entropy())),
+            trader: client.payer.pubkey(),
         };
+        println!("Creating SDKClient with all markets");
+        let mut sdk = SDKClient { client, core };
+        sdk.add_all_markets().await;
+        sdk
+    }
 
+    pub fn new_from_ellipsis_client_with_all_markets_sync(client: EllipsisClient) -> Self {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(Self::new_from_ellipsis_client_with_all_markets(client))
+    }
+
+    pub async fn new_from_ellipsis_client_with_market_keys(
+        market_keys: Vec<&Pubkey>,
+        client: EllipsisClient,
+    ) -> Self {
+        let mut markets = BTreeMap::new();
+        for market_key in market_keys {
+            let market_metadata = Self::get_market_metadata(&client, market_key).await;
+            markets.insert(*market_key, market_metadata);
+        }
+        let core = SDKClientCore {
+            markets,
+            rng: Arc::new(Mutex::new(StdRng::from_entropy())),
+            trader: client.payer.pubkey(),
+        };
+        SDKClient { client, core }
+    }
+
+    pub fn new_from_ellipsis_client_sync_with_market_keys(
+        market_keys: Vec<&Pubkey>,
+        client: EllipsisClient,
+    ) -> Self {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(Self::new_from_ellipsis_client_with_market_keys(
+            market_keys,
+            client,
+        ))
+    }
+
+    pub async fn new(payer: &Keypair, url: &str) -> Self {
+        let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
+        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
+
+        SDKClient::new_from_ellipsis_client(client).await
+    }
+
+    pub fn new_sync(payer: &Keypair, url: &str) -> Self {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(Self::new(payer, url))
+    }
+
+    pub async fn new_with_all_markets(payer: &Keypair, url: &str) -> Self {
+        let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
+        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
+
+        SDKClient::new_from_ellipsis_client_with_all_markets(client).await
+    }
+
+    pub fn new_with_all_markets_sync(payer: &Keypair, url: &str) -> Self {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(Self::new_with_all_markets(payer, url))
+    }
+
+    pub async fn new_with_market_keys(
+        market_keys: Vec<&Pubkey>,
+        payer: &Keypair,
+        url: &str,
+    ) -> Self {
+        let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
+        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
+
+        SDKClient::new_from_ellipsis_client_with_market_keys(market_keys, client).await
+    }
+
+    pub fn new_with_market_keys_sync(
+        market_keys: Vec<&Pubkey>,
+        payer: &Keypair,
+        url: &str,
+    ) -> Self {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(Self::new_with_market_keys(market_keys, payer, url))
+    }
+
+    pub async fn add_all_markets(&mut self) {
         let config_url = "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
+        
+        let genesis = self.client.get_genesis_hash().await.unwrap();
+        
+        //hardcoded in the genesis hashes for mainnet and devnet
+        let cluster = match genesis.to_string().as_str() {
+            "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d" => "mainnet-beta",
+            "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG" => "devnet",
+            _ => "localhost",
+        };
 
         let response = reqwest::get(config_url)
             .await
@@ -136,9 +190,16 @@ impl SDKClient {
         }
     }
 
-    pub fn add_all_markets_sync(&mut self, cluster: &str) {
+    pub fn add_all_markets_sync(&mut self) {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(self.add_all_markets(cluster));
+        rt.block_on(self.add_all_markets());
+    }
+
+    pub async fn add_market(&mut self, market_key: &Pubkey) -> anyhow::Result<()> {
+        let market_metadata = Self::get_market_metadata(&self.client, market_key).await;
+        self.markets.insert(*market_key, market_metadata);
+
+        Ok(())
     }
 
     pub fn set_payer(&mut self, payer: Keypair) {
@@ -146,57 +207,15 @@ impl SDKClient {
         self.client.payer = payer;
     }
 
+    pub fn set_trader(&mut self, trader: Pubkey) {
+        self.trader = trader;
+    }
+
     pub fn get_trader(&self) -> Pubkey {
         self.trader
     }
 
-    pub fn change_active_market(&mut self, market: &Pubkey) -> anyhow::Result<()> {
-        if self.markets.get(market).is_some() {
-            self.active_market_key = Some(*market);
-            Ok(())
-        } else {
-            Err(anyhow::Error::msg("Market not found"))
-        }
-    }
-
-    pub async fn add_market(&mut self, market_key: &Pubkey) -> anyhow::Result<()> {
-        let market_metadata = Self::get_market_metadata(&self.client, market_key).await;
-
-        self.markets.insert(*market_key, market_metadata);
-
-        Ok(())
-    }
-
-    pub async fn add_and_change_active_market(&mut self, market: &Pubkey) -> anyhow::Result<()> {
-        if self.markets.get(market).is_some() {
-            self.active_market_key = Some(*market);
-        } else {
-            self.add_market(market).await?;
-            self.change_active_market(market)?;
-        }
-
-        Ok(())
-    }
-
-    pub async fn get_market_ladder(&self, levels: u64) -> Ladder {
-        let active_market_key = match self.active_market_key {
-            Some(key) => key,
-            None => panic!("Active market key not set"),
-        };
-        self.get_market_ladder_with_market_key(levels, &active_market_key)
-            .await
-    }
-
-    pub fn get_market_ladder_sync(&self, levels: u64) -> Ladder {
-        let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
-        rt.block_on(self.get_market_ladder(levels))
-    }
-
-    pub async fn get_market_ladder_with_market_key(
-        &self,
-        levels: u64,
-        market_key: &Pubkey,
-    ) -> Ladder {
+    pub async fn get_market_ladder(&self, market_key: &Pubkey, levels: u64) -> Ladder {
         let market_account_data = (self.client.get_account_data(market_key))
             .await
             .expect("Failed to get market account data");
@@ -210,30 +229,12 @@ impl SDKClient {
         market.get_ladder(levels)
     }
 
-    pub fn get_market_ladder_with_market_key_sync(
-        &self,
-        levels: u64,
-        market_key: &Pubkey,
-    ) -> Ladder {
+    pub fn get_market_ladder_sync(&self, market_key: &Pubkey, levels: u64) -> Ladder {
         let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
-        rt.block_on(self.get_market_ladder_with_market_key(levels, market_key))
+        rt.block_on(self.get_market_ladder(market_key, levels))
     }
 
-    pub async fn get_market_orderbook(&self) -> Orderbook<FIFOOrderId, PhoenixOrder> {
-        let active_market_key = match self.active_market_key {
-            Some(key) => key,
-            None => panic!("Active market key not set"),
-        };
-        self.get_market_orderbook_with_market_key(&active_market_key)
-            .await
-    }
-
-    pub fn get_market_orderbook_sync(&self) -> Orderbook<FIFOOrderId, PhoenixOrder> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(self.get_market_orderbook())
-    }
-
-    pub async fn get_market_orderbook_with_market_key(
+    pub async fn get_market_orderbook(
         &self,
         market_key: &Pubkey,
     ) -> Orderbook<FIFOOrderId, PhoenixOrder> {
@@ -257,8 +258,8 @@ impl SDKClient {
                     .map(|market| {
                         Orderbook::from_market(
                             market.inner,
-                            self.base_lots_to_base_units_multiplier(),
-                            self.ticks_to_float_price_multiplier(),
+                            self.base_lots_to_base_units_multiplier(market_key),
+                            self.ticks_to_float_price_multiplier(market_key),
                         )
                     })
                     .unwrap_or_else(|_| default.clone())
@@ -266,25 +267,12 @@ impl SDKClient {
             .unwrap_or(default)
     }
 
-    pub async fn get_market_orderbook_with_market_key_sync(
+    pub async fn get_market_orderbook_sync(
         &self,
         market_key: &Pubkey,
     ) -> Orderbook<FIFOOrderId, PhoenixOrder> {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(self.get_market_orderbook_with_market_key(market_key))
-    }
-
-    pub async fn get_traders(&self) -> BTreeMap<Pubkey, TraderState> {
-        let active_market_key = match self.active_market_key {
-            Some(key) => key,
-            None => panic!("Active market key not set"),
-        };
-        self.get_traders_with_market_key(&active_market_key).await
-    }
-
-    pub fn get_traders_sync(&self) -> BTreeMap<Pubkey, TraderState> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(self.get_traders())
+        rt.block_on(self.get_market_orderbook(market_key))
     }
 
     pub async fn get_traders_with_market_key(
@@ -317,16 +305,7 @@ impl SDKClient {
         rt.block_on(self.get_traders_with_market_key(market_key))
     }
 
-    pub async fn get_market_state(&self) -> MarketState {
-        let active_market_key = match self.active_market_key {
-            Some(key) => key,
-            None => panic!("Active market key not set"),
-        };
-        self.get_market_state_with_market_key(&active_market_key)
-            .await
-    }
-
-    pub async fn get_market_state_with_market_key(&self, market_key: &Pubkey) -> MarketState {
+    pub async fn get_market_state(&self, market_key: &Pubkey) -> MarketState {
         let market_account_data = match (self.client.get_account_data(market_key)).await {
             Ok(data) => data,
             Err(_) => {
@@ -350,8 +329,8 @@ impl SDKClient {
 
         let orderbook = Orderbook::from_market(
             market,
-            self.base_lots_to_base_units_multiplier(),
-            self.ticks_to_float_price_multiplier(),
+            self.base_lots_to_base_units_multiplier(market_key),
+            self.ticks_to_float_price_multiplier(market_key),
         );
 
         let traders = market
@@ -419,6 +398,7 @@ impl SDKClient {
 
     pub async fn parse_events_from_transaction(
         &self,
+        market_key: &Pubkey,
         sig: &Signature,
     ) -> Option<Vec<PhoenixEvent>> {
         let tx = self.client.get_transaction(sig).await.ok()?;
@@ -448,12 +428,16 @@ impl SDKClient {
                 }
             }
         }
-        self.parse_phoenix_events(sig, event_list)
+        self.parse_phoenix_events(market_key, sig, event_list)
     }
 
-    pub async fn parse_places(&self, signature: &Signature) -> Vec<PhoenixEvent> {
+    pub async fn parse_places(
+        &self,
+        market_key: &Pubkey,
+        signature: &Signature,
+    ) -> Vec<PhoenixEvent> {
         let events = self
-            .parse_events_from_transaction(signature)
+            .parse_events_from_transaction(market_key, signature)
             .await
             .unwrap_or_default();
         events
@@ -465,9 +449,13 @@ impl SDKClient {
             .collect::<Vec<PhoenixEvent>>()
     }
 
-    pub async fn parse_cancels(&self, signature: &Signature) -> Vec<PhoenixEvent> {
+    pub async fn parse_cancels(
+        &self,
+        market_key: &Pubkey,
+        signature: &Signature,
+    ) -> Vec<PhoenixEvent> {
         let events = self
-            .parse_events_from_transaction(signature)
+            .parse_events_from_transaction(market_key, signature)
             .await
             .unwrap_or_default();
         events
@@ -479,9 +467,13 @@ impl SDKClient {
             .collect::<Vec<PhoenixEvent>>()
     }
 
-    pub async fn parse_fills(&self, signature: &Signature) -> Vec<PhoenixEvent> {
+    pub async fn parse_fills(
+        &self,
+        market_key: &Pubkey,
+        signature: &Signature,
+    ) -> Vec<PhoenixEvent> {
         let events = self
-            .parse_events_from_transaction(signature)
+            .parse_events_from_transaction(market_key, signature)
             .await
             .unwrap_or_default();
         events
@@ -495,10 +487,11 @@ impl SDKClient {
 
     pub async fn parse_fills_and_places(
         &self,
+        market_key: &Pubkey,
         signature: &Signature,
     ) -> (Vec<PhoenixEvent>, Vec<PhoenixEvent>) {
         let events = self
-            .parse_events_from_transaction(signature)
+            .parse_events_from_transaction(market_key, signature)
             .await
             .unwrap_or_default();
         let fills = events
@@ -521,293 +514,154 @@ impl SDKClient {
 
     pub async fn send_ioc(
         &self,
-        price: u64,
-        side: Side,
-        size: u64,
-    ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_ioc_ix(price, side, size);
-        let signature = self
-            .client
-            .sign_send_instructions(vec![new_order_ix], vec![])
-            .await
-            .ok()?;
-        let fills = self.parse_fills(&signature).await;
-        Some((signature, fills))
-    }
-
-    pub async fn send_ioc_with_market_key(
-        &self,
         market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_ioc_ix_with_market_key(market_key, price, side, size);
+        let new_order_ix = self.get_ioc_ix(market_key, price, side, size);
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(&signature).await;
+        let fills = self.parse_fills(market_key, &signature).await;
         Some((signature, fills))
     }
 
     pub async fn send_fok_buy(
         &self,
-        price: u64,
-        size_in_quote_lots: u64,
-    ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_fok_buy_ix(price, size_in_quote_lots);
-
-        let signature = self
-            .client
-            .sign_send_instructions(vec![new_order_ix], vec![])
-            .await
-            .ok()?;
-        let fills = self.parse_fills(&signature).await;
-        Some((signature, fills))
-    }
-
-    pub async fn send_fok_buy_with_market_key(
-        &self,
         market_key: &Pubkey,
         price: u64,
         size_in_quote_lots: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
         let new_order_ix =
-            self.get_fok_buy_ix_with_market_key(market_key, price, size_in_quote_lots);
+            self.get_fok_buy_ix(market_key, price, size_in_quote_lots);
 
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(&signature).await;
+        let fills = self.parse_fills(market_key, &signature).await;
         Some((signature, fills))
     }
 
     pub async fn send_fok_sell(
         &self,
-        price: u64,
-        size_in_base_lots: u64,
-    ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_fok_sell_ix(price, size_in_base_lots);
-
-        let signature = self
-            .client
-            .sign_send_instructions(vec![new_order_ix], vec![])
-            .await
-            .ok()?;
-        let fills = self.parse_fills(&signature).await;
-        Some((signature, fills))
-    }
-
-    pub async fn send_fok_sell_with_market_key(
-        &self,
         market_key: &Pubkey,
         price: u64,
         size_in_base_lots: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
         let new_order_ix =
-            self.get_fok_sell_ix_with_market_key(market_key, price, size_in_base_lots);
+            self.get_fok_sell_ix(market_key, price, size_in_base_lots);
 
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(&signature).await;
+        let fills = self.parse_fills(market_key, &signature).await;
         Some((signature, fills))
     }
 
     pub async fn send_ioc_with_slippage(
         &self,
-        lots_in: u64,
-        min_lots_out: u64,
-        side: Side,
-    ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_ioc_with_slippage_ix(lots_in, min_lots_out, side);
-        let signature = self
-            .client
-            .sign_send_instructions(vec![new_order_ix], vec![])
-            .await
-            .ok()?;
-        let fills = self.parse_fills(&signature).await;
-        Some((signature, fills))
-    }
-
-    pub async fn send_ioc_with_slippage_with_market_key(
-        &self,
         market_key: &Pubkey,
         lots_in: u64,
         min_lots_out: u64,
         side: Side,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
         let new_order_ix =
-            self.get_ioc_with_slippage_ix_with_market_key(market_key, lots_in, min_lots_out, side);
+            self.get_ioc_with_slippage_ix(market_key, lots_in, min_lots_out, side);
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(&signature).await;
+        let fills = self.parse_fills(market_key, &signature).await;
         Some((signature, fills))
     }
 
     pub async fn send_post_only(
         &self,
-        price: u64,
-        side: Side,
-        size: u64,
-    ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_post_only_ix(price, side, size);
-        let signature = self
-            .client
-            .sign_send_instructions(vec![new_order_ix], vec![])
-            .await
-            .ok()?;
-        let fills = self.parse_fills(&signature).await;
-        Some((signature, fills))
-    }
-
-    pub async fn send_post_only_with_market_key(
-        &self,
         market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_post_only_ix_with_market_key(market_key, price, side, size);
+        let new_order_ix = self.get_post_only_ix(market_key, price, side, size);
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(&signature).await;
+        let fills = self.parse_fills(market_key, &signature).await;
         Some((signature, fills))
     }
 
     pub async fn send_limit_order(
         &self,
-        price: u64,
-        side: Side,
-        size: u64,
-    ) -> Option<(Signature, Vec<PhoenixEvent>, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_limit_order_ix(price, side, size);
-        let signature = self
-            .client
-            .sign_send_instructions(vec![new_order_ix], vec![])
-            .await
-            .ok()?;
-        let (fills, places) = self.parse_fills_and_places(&signature).await;
-        Some((signature, places, fills))
-    }
-
-    pub async fn send_limit_order_with_market_key(
-        &self,
         market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_limit_order_ix_with_market_key(market_key, price, side, size);
+        let new_order_ix = self.get_limit_order_ix(market_key, price, side, size);
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let (fills, places) = self.parse_fills_and_places(&signature).await;
+        let (fills, places) = self.parse_fills_and_places(market_key, &signature).await;
         Some((signature, places, fills))
     }
 
     pub async fn send_cancel_ids(
         &self,
-        ids: Vec<FIFOOrderId>,
-    ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_ix = self.get_cancel_ids_ix(ids);
-        let signature = self
-            .client
-            .sign_send_instructions(vec![cancel_ix], vec![])
-            .await
-            .ok()?;
-
-        let cancels = self.parse_cancels(&signature).await;
-        Some((signature, cancels))
-    }
-
-    pub async fn send_cancel_ids_with_market_key(
-        &self,
         market_key: &Pubkey,
         ids: Vec<FIFOOrderId>,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_ix = self.get_cancel_ids_ix_with_market_key(market_key, ids);
+        let cancel_ix = self.get_cancel_ids_ix(market_key, ids);
         let signature = self
             .client
             .sign_send_instructions(vec![cancel_ix], vec![])
             .await
             .ok()?;
 
-        let cancels = self.parse_cancels(&signature).await;
+        let cancels = self.parse_cancels(market_key, &signature).await;
         Some((signature, cancels))
     }
 
     pub async fn send_cancel_up_to(
         &self,
+        market_key: &Pubkey,
         tick_limit: Option<u64>,
         side: Side,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_ix = self.get_cancel_up_to_ix(tick_limit, side);
+        let cancel_ix = self.get_cancel_up_to_ix(market_key, tick_limit, side);
         let signature = self
             .client
             .sign_send_instructions(vec![cancel_ix], vec![])
             .await
             .ok()?;
 
-        let cancels = self.parse_cancels(&signature).await;
+        let cancels = self.parse_cancels(market_key, &signature).await;
         Some((signature, cancels))
     }
 
-    pub async fn send_cancel_up_to_with_market_key(
+    pub async fn send_cancel_all(
         &self,
         market_key: &Pubkey,
-        tick_limit: Option<u64>,
-        side: Side,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_ix = self.get_cancel_up_to_ix_with_market_key(market_key, tick_limit, side);
-        let signature = self
-            .client
-            .sign_send_instructions(vec![cancel_ix], vec![])
-            .await
-            .ok()?;
-
-        let cancels = self.parse_cancels(&signature).await;
-        Some((signature, cancels))
-    }
-
-    pub async fn send_cancel_all(&self) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_all_ix = self.get_cancel_all_ix();
+        let cancel_all_ix = self.get_cancel_all_ix(market_key);
         let signature = self
             .client
             .sign_send_instructions(vec![cancel_all_ix], vec![])
             .await
             .ok()?;
 
-        let cancels = self.parse_cancels(&signature).await;
-        Some((signature, cancels))
-    }
-
-    pub async fn send_cancel_all_with_market_key(
-        &self,
-        market_key: &Pubkey,
-    ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_all_ix = self.get_cancel_all_ix_with_market_key(market_key);
-        let signature = self
-            .client
-            .sign_send_instructions(vec![cancel_all_ix], vec![])
-            .await
-            .ok()?;
-
-        let cancels = self.parse_cancels(&signature).await;
+        let cancels = self.parse_cancels(market_key, &signature).await;
         Some((signature, cancels))
     }
 }

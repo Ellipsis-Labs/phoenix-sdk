@@ -1,5 +1,6 @@
 use crate::{market_event_handler::SDKMarketEvent, sdk_client::SDKClient};
 use solana_client::rpc_client::GetConfirmedSignaturesForAddress2Config;
+use solana_program::pubkey::Pubkey;
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Signature};
 use std::{str::FromStr, sync::Arc, time::Duration};
 use tokio::sync::mpsc::UnboundedSender;
@@ -7,27 +8,31 @@ use tokio::sync::mpsc::UnboundedSender;
 pub struct EventPoller {
     event_sender: UnboundedSender<Vec<SDKMarketEvent>>,
     sdk: Arc<SDKClient>,
+    market_key: Pubkey,
     timeout_ms: u64,
 }
 
 impl EventPoller {
     pub fn new(
         sdk: Arc<SDKClient>,
+        market_key: Pubkey,
         event_sender: UnboundedSender<Vec<SDKMarketEvent>>,
         timeout_ms: u64,
     ) -> Self {
         Self {
             event_sender,
             sdk,
+            market_key,
             timeout_ms,
         }
     }
 
     pub fn new_with_default_timeout(
         sdk: Arc<SDKClient>,
+        market_key: Pubkey,
         event_sender: UnboundedSender<Vec<SDKMarketEvent>>,
     ) -> Self {
-        Self::new(sdk, event_sender, 1000)
+        Self::new(sdk, market_key, event_sender, 1000)
     }
 
     pub async fn run(&self) -> anyhow::Result<()> {
@@ -56,7 +61,7 @@ impl EventPoller {
                 .sdk
                 .client
                 .get_signatures_for_address_with_config(
-                    &self.sdk.core.active_market_key.unwrap(),
+                    &self.market_key,
                     config,
                 )
                 .await
@@ -73,7 +78,7 @@ impl EventPoller {
                 //       We should be able to spin up chunks of requests and join.
                 let events = self
                     .sdk
-                    .parse_events_from_transaction(&signature)
+                    .parse_events_from_transaction(&self.market_key, &signature)
                     .await
                     .unwrap_or_default();
                 if self

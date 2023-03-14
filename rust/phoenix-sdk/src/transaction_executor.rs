@@ -1,17 +1,19 @@
 use crate::sdk_client::SDKClient;
-use solana_program::instruction::Instruction;
+use solana_program::{instruction::Instruction, pubkey::Pubkey};
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedReceiver;
 
 pub struct TransactionExecutor {
     pub client: Arc<SDKClient>,
+    pub market_key: Pubkey,
     pub ix_receiver: UnboundedReceiver<Vec<Instruction>>,
 }
 
 impl TransactionExecutor {
-    pub fn new(client: Arc<SDKClient>, ix_receiver: UnboundedReceiver<Vec<Instruction>>) -> Self {
+    pub fn new(client: Arc<SDKClient>, market_key: Pubkey, ix_receiver: UnboundedReceiver<Vec<Instruction>>) -> Self {
         Self {
             client,
+            market_key,
             ix_receiver,
         }
     }
@@ -33,7 +35,7 @@ impl TransactionExecutor {
                 Ok(s) => {
                     let logs = self.client.client.get_transaction(&s).await;
                     println!("Transaction sent: {}", s);
-                    println!("Fills: {:?}", self.client.parse_fills(&s).await);
+                    println!("Fills: {:?}", self.client.parse_fills(&self.market_key, &s).await);
 
                     match logs {
                         Ok(logs) => {
