@@ -2,9 +2,38 @@ import { Connection } from "@solana/web3.js";
 
 import * as Phoenix from "../src";
 import BN from "bn.js";
+import { bignum } from "@metaplex-foundation/beet";
 
 const getOrderSequenceNumber = (orderId: Phoenix.OrderId): BN => {
   return (orderId.orderSequenceNumber as BN).fromTwos(64);
+};
+
+const displayOpenOrders = (
+  order: Phoenix.RestingOrder,
+  slot: bignum,
+  time: bignum,
+  side: string,
+  orderSequenceNumber: string,
+  price: number,
+  size: number
+) => {
+  let timeRemaining = "∞";
+  if (order.lastValidSlot != 0) {
+    if (order.lastValidSlot < slot) {
+      return;
+    }
+  }
+  if (order.lastValidUnixTimestampInSeconds != 0) {
+    if (order.lastValidUnixTimestampInSeconds < (time as BN)) {
+      return;
+    }
+    timeRemaining = (order.lastValidUnixTimestampInSeconds as BN)
+      .sub(time as BN)
+      .add(new BN(1))
+      .toString();
+  }
+
+  console.log(side, orderSequenceNumber, price, size, timeRemaining);
 };
 
 export async function watch() {
@@ -16,6 +45,7 @@ export async function watch() {
   );
   if (!market) throw new Error("Market not found");
 
+  // Locate the first trader with locked orders
   let traderKey;
   for (const [trader, traderState] of market.data.traders) {
     if (traderState.baseLotsLocked != 0 || traderState.quoteLotsLocked != 0) {
@@ -42,23 +72,10 @@ export async function watch() {
     const time = phoenix.clock.unixTimestamp;
     for (const [orderId, order] of market.data.asks) {
       if (Phoenix.toNum(order.traderIndex) === traderIndex) {
-        let timeRemaining = "∞";
-        if (order.lastValidSlot != 0) {
-          if (order.lastValidSlot < slot) {
-            continue;
-          }
-        }
-        if (order.lastValidUnixTimestampInSeconds != 0) {
-          if (order.lastValidUnixTimestampInSeconds < (time as BN)) {
-            continue;
-          }
-          timeRemaining = (order.lastValidUnixTimestampInSeconds as BN)
-            .sub(time as BN)
-            .add(new BN(1))
-            .toString();
-        }
-
-        console.log(
+        displayOpenOrders(
+          order,
+          slot,
+          time,
           "ASK",
           " " + orderId.orderSequenceNumber.toString(),
           phoenix.ticksToFloatPrice(
@@ -71,31 +88,17 @@ export async function watch() {
               marketAddress.toString()
             ),
             marketAddress.toString()
-          ),
-          timeRemaining
+          )
         );
       }
     }
 
     for (const [orderId, order] of market.data.bids) {
       if (Phoenix.toNum(order.traderIndex) === traderIndex) {
-        let timeRemaining = "∞";
-        if (order.lastValidSlot != 0) {
-          if (order.lastValidSlot < slot) {
-            continue;
-          }
-        }
-        if (order.lastValidUnixTimestampInSeconds != 0) {
-          if (order.lastValidUnixTimestampInSeconds < (time as BN)) {
-            continue;
-          }
-          timeRemaining = (order.lastValidUnixTimestampInSeconds as BN)
-            .sub(time as BN)
-            .add(new BN(1))
-            .toString();
-        }
-
-        console.log(
+        displayOpenOrders(
+          order,
+          slot,
+          time,
           "BID",
           getOrderSequenceNumber(orderId).toString(),
           phoenix.ticksToFloatPrice(
@@ -108,8 +111,7 @@ export async function watch() {
               marketAddress.toString()
             ),
             marketAddress.toString()
-          ),
-          timeRemaining
+          )
         );
       }
     }
