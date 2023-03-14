@@ -41,7 +41,7 @@ export async function watch() {
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    // console.clear();
+    console.clear();
     console.log("Open Orders for trader: " + traderKey + "\n");
     const slot = phoenix.clock.slot;
     const time = phoenix.clock.unixTimestamp;
@@ -49,24 +49,24 @@ export async function watch() {
       if (Phoenix.toNum(order.traderIndex) === traderIndex) {
         let timeRemaining = "∞";
         if (order.lastValidSlot != 0) {
-          if (BigInt(order.lastValidSlot.toString()) < slot) {
+          if (order.lastValidSlot < slot) {
             continue;
           }
         }
         if (order.lastValidUnixTimestampInSeconds != 0) {
-          if (BigInt(order.lastValidUnixTimestampInSeconds.toString()) < time) {
+          if (order.lastValidUnixTimestampInSeconds < time) {
             continue;
           }
-          const expTime = BigInt(
-            order.lastValidUnixTimestampInSeconds.toString()
-          );
-          const diff = expTime - time;
-          timeRemaining = diff.toString();
+          timeRemaining = (
+            BigInt(order.lastValidUnixTimestampInSeconds.toString()) -
+            BigInt(time.toString()) +
+            BigInt(1)
+          ).toString();
         }
 
         console.log(
           "ASK",
-          getOrderSequenceNumber(orderId),
+          " " + orderId.orderSequenceNumber.toString(),
           phoenix.ticksToFloatPrice(
             Phoenix.toNum(orderId.priceInTicks),
             marketAddress.toString()
@@ -81,47 +81,47 @@ export async function watch() {
           timeRemaining
         );
       }
+    }
 
-      for (const [orderId, order] of market.data.bids) {
-        if (Phoenix.toNum(order.traderIndex) === traderIndex) {
-          let timeRemaining = "∞";
-          if (order.lastValidSlot != 0) {
-            if (BigInt(order.lastValidSlot.toString()) < slot) {
-              continue;
-            }
+    for (const [orderId, order] of market.data.bids) {
+      if (Phoenix.toNum(order.traderIndex) === traderIndex) {
+        let timeRemaining = "∞";
+        if (order.lastValidSlot != 0) {
+          if (order.lastValidSlot < slot) {
+            continue;
           }
-          if (order.lastValidUnixTimestampInSeconds != 0) {
-            if (
-              BigInt(order.lastValidUnixTimestampInSeconds.toString()) < time
-            ) {
-              continue;
-            }
-            timeRemaining = (
-              BigInt(order.lastValidUnixTimestampInSeconds.toString()) - time
-            ).toString();
-          }
-
-          console.log(
-            "BID",
-            getOrderSequenceNumber(orderId),
-            phoenix.ticksToFloatPrice(
-              Phoenix.toNum(orderId.priceInTicks),
-              marketAddress.toString()
-            ),
-            phoenix.baseAtomsToBaseUnits(
-              phoenix.baseLotsToBaseAtoms(
-                Phoenix.toNum(order.numBaseLots),
-                marketAddress.toString()
-              ),
-              marketAddress.toString()
-            ),
-            timeRemaining
-          );
         }
-        await phoenix.refreshMarket(marketAddress);
-        await new Promise((res) => setTimeout(res, 500));
+        if (order.lastValidUnixTimestampInSeconds != 0) {
+          if (order.lastValidUnixTimestampInSeconds < time) {
+            continue;
+          }
+          timeRemaining = (
+            BigInt(order.lastValidUnixTimestampInSeconds.toString()) -
+            BigInt(time.toString()) +
+            BigInt(1)
+          ).toString();
+        }
+
+        console.log(
+          "BID",
+          (-(getOrderSequenceNumber(orderId) + BigInt(1))).toString(),
+          phoenix.ticksToFloatPrice(
+            Phoenix.toNum(orderId.priceInTicks),
+            marketAddress.toString()
+          ),
+          phoenix.baseAtomsToBaseUnits(
+            phoenix.baseLotsToBaseAtoms(
+              Phoenix.toNum(order.numBaseLots),
+              marketAddress.toString()
+            ),
+            marketAddress.toString()
+          ),
+          timeRemaining
+        );
       }
     }
+    await phoenix.refreshMarket(marketAddress);
+    await new Promise((res) => setTimeout(res, 500));
   }
 }
 
