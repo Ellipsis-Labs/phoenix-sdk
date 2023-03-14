@@ -17,22 +17,15 @@ const displayOpenOrders = (
   price: number,
   size: number
 ) => {
-  let timeRemaining = "∞";
-  if (order.lastValidSlot != 0) {
-    if (order.lastValidSlot < slot) {
-      return;
-    }
-  }
-  if (order.lastValidUnixTimestampInSeconds != 0) {
-    if (order.lastValidUnixTimestampInSeconds < (time as BN)) {
-      return;
-    }
-    timeRemaining = (order.lastValidUnixTimestampInSeconds as BN)
-      .sub(time as BN)
-      .add(new BN(1))
-      .toString();
-  }
-
+  const timeRemaining =
+    (order.lastValidSlot != 0 && order.lastValidSlot < slot) ||
+    (order.lastValidUnixTimestampInSeconds != 0 &&
+      order.lastValidUnixTimestampInSeconds < (time as BN))
+      ? "∞"
+      : (order.lastValidUnixTimestampInSeconds as BN)
+          .sub(time as BN)
+          .add(new BN(1))
+          .toString();
   console.log(side, orderSequenceNumber, price, size, timeRemaining);
 };
 

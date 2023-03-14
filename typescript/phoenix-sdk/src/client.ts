@@ -66,10 +66,10 @@ export class Client {
     }
   }
 
-  static async loadMarketsAndTokens(
+  static loadMarketsAndTokens(
     marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]>,
     tokenConfig: Array<TokenConfig>
-  ): Promise<[Map<string, Market>, Token[]]> {
+  ): [Map<string, Market>, Token[]] {
     const tokens: Array<Token> = [];
     const markets = new Map();
     // For every market:
@@ -142,7 +142,7 @@ export class Client {
         return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
 
-    const [markets, tokens] = await Client.loadMarketsAndTokens(
+    const [markets, tokens] = Client.loadMarketsAndTokens(
       marketKeysToData,
       tokenConfig
     );
@@ -193,7 +193,7 @@ export class Client {
         return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
 
-    const [markets, tokens] = await Client.loadMarketsAndTokens(
+    const [markets, tokens] = Client.loadMarketsAndTokens(
       marketKeysToData,
       tokenConfig
     );
