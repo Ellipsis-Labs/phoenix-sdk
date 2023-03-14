@@ -137,7 +137,7 @@ export async function swap() {
 
   let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
   let counter = 1;
-  while (txResult.instructions.length == 0 && !txResult.failed) {
+  while (txResult.instructions.length == 0 && txResult.retry) {
     txResult = await Phoenix.getEventsFromTransaction(connection, txId);
     counter += 1;
     if (counter == 10) {
@@ -147,6 +147,58 @@ export async function swap() {
 
   if (txResult.failed) {
     console.log("Swap transaction failed");
+    return;
+  }
+
+  // Really dirty test for expired TIF
+  const expiredOrderPacket = Phoenix.getMarketSwapOrderPacketWithTimeInForce({
+    marketData,
+    side,
+    inAmount,
+    lastValidUnixTimestampInSeconds: 10, // This time will be treated as expired
+    lastValidSlot: null,
+    slippage,
+  });
+
+  const expiredSwapIx = Phoenix.createSwapInstruction(orderAccounts, {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore TODO why is __kind incompatible?
+    orderPacket: {
+      __kind: "ImmediateOrCancel",
+      ...expiredOrderPacket,
+    },
+  });
+
+  const expiredSwapTx = new Transaction().add(expiredSwapIx);
+  const expiredTxId = await connection.sendTransaction(
+    expiredSwapTx,
+    [trader],
+    {
+      skipPreflight: true,
+    }
+  );
+  await connection.confirmTransaction(expiredTxId, "confirmed");
+  console.log("Transaction ID:", expiredTxId);
+
+  let expiredTxResult = await Phoenix.getEventsFromTransaction(
+    connection,
+    expiredTxId
+  );
+  let expiredCounter = 1;
+  while (expiredTxResult.retry) {
+    console.log(expiredTxResult);
+    expiredTxResult = await Phoenix.getEventsFromTransaction(
+      connection,
+      expiredTxId
+    );
+    expiredCounter += 1;
+    if (expiredCounter == 10) {
+      throw Error("Failed to fetch transaction");
+    }
+  }
+
+  if (expiredTxResult.failed) {
+    console.log("Expired transaction not supposed to fail");
     return;
   }
 
