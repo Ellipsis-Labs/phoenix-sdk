@@ -26,6 +26,9 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   // Edge in cents on quote. Places bid/ask at fair price -/+ edge
   const QUOTE_EDGE = 0.01;
 
+  // Expected life time of order in seconds
+  const ORDER_LIFETIME_IN_SECONDS = 7;
+
   // Create a Phoenix client
   const client = await Phoenix.Client.createWithMarketAddresses(
     connection,
@@ -144,6 +147,9 @@ export async function simpleMarketMaker(privateKeyPath: string) {
     const bidPrice = parseFloat(price) - QUOTE_EDGE;
     const askPrice = parseFloat(price) + QUOTE_EDGE;
 
+    // Get current time in seconds
+    const currentTime = Math.floor(Date.now() / 1000);
+
     // create bid and ask instructions for 1 SOL
     const bidOrderPacket: Phoenix.OrderPacket = {
       __kind: "PostOnly",
@@ -158,7 +164,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
       rejectPostOnly: false,
       useOnlyDepositedFunds: false,
       lastValidSlot: null,
-      lastValidUnixTimestampInSeconds: null,
+      lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
     };
     const placeBuy = Phoenix.createPlaceLimitOrderInstruction(placeAccounts, {
       orderPacket: bidOrderPacket,
@@ -177,7 +183,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
       rejectPostOnly: false,
       useOnlyDepositedFunds: false,
       lastValidSlot: null,
-      lastValidUnixTimestampInSeconds: null,
+      lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
     };
 
     const placeAsk = Phoenix.createPlaceLimitOrderInstructionWithClient(
