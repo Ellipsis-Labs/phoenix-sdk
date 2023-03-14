@@ -2764,8 +2764,9 @@ dependencies = [
 
 [[package]]
 name = "phoenix-v1"
-version = "0.1.4"
-source = "git+https://github.com/Ellipsis-Labs/phoenix-v1?rev=60aaa21#60aaa2195675a343bfdea64f72aa7d9b38bc59dd"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e9edcf85c3187cc76930d531a7f3c67e7dfccf2b66d20d7371cdaa4461e3af8"
 dependencies = [
  "borsh 0.9.3",
  "bytemuck",
