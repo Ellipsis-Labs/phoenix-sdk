@@ -306,29 +306,29 @@ impl SDKClient {
     pub async fn get_traders_with_market_key(
         &self,
         market_key: &Pubkey,
-    ) -> BTreeMap<Pubkey, TraderState> {
+    ) -> Result<BTreeMap<Pubkey, TraderState>> {
         let market_account_data = match (self.client.get_account_data(market_key)).await {
             Ok(data) => data,
-            Err(_) => return BTreeMap::new(),
+            Err(_) => return Ok(BTreeMap::new()),
         };
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
         let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-            .expect("Failed to deserialize market header");
+            .map_err(|_| anyhow!("Failed to deserialize market header"))?; 
         let market = load_with_dispatch(&header.market_size_params, bytes)
-            .expect("Market configuration not found")
+            .map_err(|_| anyhow!("Market configuration not found"))?
             .inner;
 
-        market
+        Ok(market
             .get_registered_traders()
             .iter()
             .map(|(k, v)| (*k, *v))
-            .collect()
+            .collect())
     }
 
     pub fn get_traders_with_market_key_sync(
         &self,
         market_key: &Pubkey,
-    ) -> BTreeMap<Pubkey, TraderState> {
+    ) -> Result<BTreeMap<Pubkey, TraderState>> {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(self.get_traders_with_market_key(market_key))
     }
