@@ -105,10 +105,10 @@ impl SDKClient {
     pub async fn new_from_ellipsis_client_with_market_keys(
         market_keys: Vec<&Pubkey>,
         client: EllipsisClient,
-    ) -> Self {
+    ) -> Result<Self> {
         let mut markets = BTreeMap::new();
         for market_key in market_keys {
-            let market_metadata = Self::get_market_metadata(&client, market_key).await;
+            let market_metadata = Self::get_market_metadata(&client, market_key).await?;
             markets.insert(*market_key, market_metadata);
         }
         let core = SDKClientCore {
@@ -116,7 +116,7 @@ impl SDKClient {
             rng: Arc::new(Mutex::new(StdRng::from_entropy())),
             trader: client.payer.pubkey(),
         };
-        SDKClient { client, core }
+        Ok(SDKClient { client, core })
     }
 
     /// Create a new SDKClient from an EllipsisClient.
@@ -124,7 +124,7 @@ impl SDKClient {
     pub fn new_from_ellipsis_client_sync_with_market_keys(
         market_keys: Vec<&Pubkey>,
         client: EllipsisClient,
-    ) -> Self {
+    ) -> Result<Self> {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(Self::new_from_ellipsis_client_with_market_keys(
             market_keys,
@@ -172,7 +172,7 @@ impl SDKClient {
         market_keys: Vec<&Pubkey>,
         payer: &Keypair,
         url: &str,
-    ) -> Self {
+    ) -> Result<Self> {
         let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
         let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
 
@@ -185,7 +185,7 @@ impl SDKClient {
         market_keys: Vec<&Pubkey>,
         payer: &Keypair,
         url: &str,
-    ) -> Self {
+    ) -> Result<Self> {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(Self::new_with_market_keys(market_keys, payer, url))
     }
@@ -226,7 +226,7 @@ impl SDKClient {
     }
 
     pub async fn add_market(&mut self, market_key: &Pubkey) -> anyhow::Result<()> {
-        let market_metadata = Self::get_market_metadata(&self.client, market_key).await;
+        let market_metadata = Self::get_market_metadata(&self.client, market_key).await?;
         self.markets.insert(*market_key, market_metadata);
 
         Ok(())
@@ -288,11 +288,7 @@ impl SDKClient {
             .map(|header| {
                 load_with_dispatch(&header.market_size_params, bytes)
                     .map(|market| {
-                        Orderbook::from_market(
-                            market.inner,
-                            base_lots_multiplier,
-                            ticks_multiplier,
-                        )
+                        Orderbook::from_market(market.inner, base_lots_multiplier, ticks_multiplier)
                     })
                     .unwrap_or_else(|_| default.clone())
             })
@@ -375,31 +371,34 @@ impl SDKClient {
     }
 
     #[allow(clippy::useless_conversion)]
-    async fn get_market_metadata(client: &EllipsisClient, market_key: &Pubkey) -> MarketMetadata {
+    async fn get_market_metadata(
+        client: &EllipsisClient,
+        market_key: &Pubkey,
+    ) -> Result<MarketMetadata> {
         let market_account_data = (client.get_account_data(market_key))
             .await
-            .expect("Failed to find market account");
+            .map_err(|_| anyhow!("Failed to find market account"))?;
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
         let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-            .expect("Failed to deserialize market header");
+            .map_err(|_| anyhow!("Failed to deserialize market header"))?;
         let market = load_with_dispatch(&header.market_size_params, bytes)
-            .expect("Market configuration not found")
+            .map_err(|_| anyhow!("Market configuration not found"))?
             .inner;
 
         let base_mint_acct = spl_token::state::Mint::unpack(
             &client
                 .get_account_data(&header.base_params.mint_key)
                 .await
-                .expect("Failed to find base mint account"),
+                .map_err(|_| anyhow!("Failed to find base mint account"))?,
         )
-        .expect("Failed to deserialize base mint account");
+        .map_err(|_| anyhow!("Failed to deserialize base mint account"))?;
         let quote_mint_acct = spl_token::state::Mint::unpack(
             &client
                 .get_account_data(&header.quote_params.mint_key)
                 .await
-                .expect("Failed to find quote mint account"),
+                .map_err(|_| anyhow!("Failed to find quote mint account"))?,
         )
-        .expect("Failed to deserialize quote mint account");
+        .map_err(|_| anyhow!("Failed to deserialize quote mint account"))?;
 
         let quote_lot_size = header.get_quote_lot_size().into();
         let base_lot_size = header.get_base_lot_size().into();
@@ -413,7 +412,7 @@ impl SDKClient {
         // max(1) is only relevant for old markets where the raw_base_units_per_base_unit was not set
         let raw_base_units_per_base_unit = header.raw_base_units_per_base_unit.max(1);
 
-        MarketMetadata {
+        Ok(MarketMetadata {
             base_mint,
             quote_mint,
             base_decimals: base_mint_acct.decimals as u32,
@@ -425,7 +424,7 @@ impl SDKClient {
             base_lot_size,
             num_base_lots_per_base_unit,
             raw_base_units_per_base_unit,
-        }
+        })
     }
 
     pub async fn parse_events_from_transaction(
@@ -551,7 +550,7 @@ impl SDKClient {
         side: Side,
         size: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_ioc_ix(market_key, price, side, size);
+        let new_order_ix = self.get_ioc_ix(market_key, price, side, size).ok()?;
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
@@ -567,7 +566,9 @@ impl SDKClient {
         price: u64,
         size_in_quote_lots: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_fok_buy_ix(market_key, price, size_in_quote_lots);
+        let new_order_ix = self
+            .get_fok_buy_ix(market_key, price, size_in_quote_lots)
+            .ok()?;
 
         let signature = self
             .client
@@ -584,7 +585,9 @@ impl SDKClient {
         price: u64,
         size_in_base_lots: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_fok_sell_ix(market_key, price, size_in_base_lots);
+        let new_order_ix = self
+            .get_fok_sell_ix(market_key, price, size_in_base_lots)
+            .ok()?;
 
         let signature = self
             .client
@@ -602,7 +605,9 @@ impl SDKClient {
         min_lots_out: u64,
         side: Side,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_ioc_with_slippage_ix(market_key, lots_in, min_lots_out, side);
+        let new_order_ix = self
+            .get_ioc_with_slippage_ix(market_key, lots_in, min_lots_out, side)
+            .ok()?;
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
@@ -619,7 +624,7 @@ impl SDKClient {
         side: Side,
         size: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_post_only_ix(market_key, price, side, size);
+        let new_order_ix = self.get_post_only_ix(market_key, price, side, size).ok()?;
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
@@ -636,7 +641,9 @@ impl SDKClient {
         side: Side,
         size: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_limit_order_ix(market_key, price, side, size);
+        let new_order_ix = self
+            .get_limit_order_ix(market_key, price, side, size)
+            .ok()?;
         let signature = self
             .client
             .sign_send_instructions(vec![new_order_ix], vec![])
@@ -651,7 +658,7 @@ impl SDKClient {
         market_key: &Pubkey,
         ids: Vec<FIFOOrderId>,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_ix = self.get_cancel_ids_ix(market_key, ids);
+        let cancel_ix = self.get_cancel_ids_ix(market_key, ids).ok()?;
         let signature = self
             .client
             .sign_send_instructions(vec![cancel_ix], vec![])
@@ -668,7 +675,9 @@ impl SDKClient {
         tick_limit: Option<u64>,
         side: Side,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_ix = self.get_cancel_up_to_ix(market_key, tick_limit, side);
+        let cancel_ix = self
+            .get_cancel_up_to_ix(market_key, tick_limit, side)
+            .ok()?;
         let signature = self
             .client
             .sign_send_instructions(vec![cancel_ix], vec![])
@@ -683,7 +692,7 @@ impl SDKClient {
         &self,
         market_key: &Pubkey,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let cancel_all_ix = self.get_cancel_all_ix(market_key);
+        let cancel_all_ix = self.get_cancel_all_ix(market_key).ok()?;
         let signature = self
             .client
             .sign_send_instructions(vec![cancel_all_ix], vec![])

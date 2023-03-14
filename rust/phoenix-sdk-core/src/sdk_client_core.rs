@@ -561,7 +561,7 @@ impl SDKClientCore {
         price: u64,
         side: Side,
         num_base_lots: u64,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_ioc_generic_ix(
             market_key,
             price,
@@ -585,16 +585,15 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let num_quote_ticks_per_base_unit = price / market.tick_size_in_quote_atoms_per_base_unit;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
-        create_new_order_instruction(
+        Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
@@ -608,7 +607,7 @@ impl SDKClientCore {
                 client_order_id,
                 use_only_deposited_funds,
             ),
-        )
+        ))
     }
 
     pub fn get_fok_sell_ix(
@@ -616,7 +615,7 @@ impl SDKClientCore {
         market_key: &Pubkey,
         price: u64,
         size_in_base_lots: u64,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_fok_generic_ix(
             market_key,
             price,
@@ -634,7 +633,7 @@ impl SDKClientCore {
         market_key: &Pubkey,
         price: u64,
         size_in_base_lots: u64,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_fok_generic_ix(
             market_key,
             price,
@@ -656,7 +655,7 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_fok_generic_ix(
             market_key,
             price,
@@ -678,7 +677,7 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_fok_generic_ix(
             market_key,
             price,
@@ -702,11 +701,10 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
         let target_price_in_ticks = price / market.tick_size_in_quote_atoms_per_base_unit;
@@ -714,7 +712,7 @@ impl SDKClientCore {
         match side {
             Side::Bid => {
                 let quote_lot_budget = size / market.quote_lot_size;
-                create_new_order_instruction(
+                Ok(create_new_order_instruction(
                     &market_key.clone(),
                     &self.trader,
                     &market.base_mint,
@@ -727,11 +725,11 @@ impl SDKClientCore {
                         client_order_id,
                         use_only_deposited_funds,
                     ),
-                )
+                ))
             }
             Side::Ask => {
                 let num_base_lots = size / market.base_lot_size;
-                create_new_order_instruction(
+                Ok(create_new_order_instruction(
                     &market_key.clone(),
                     &self.trader,
                     &market.base_mint,
@@ -744,7 +742,7 @@ impl SDKClientCore {
                         client_order_id,
                         use_only_deposited_funds,
                     ),
-                )
+                ))
             }
         }
     }
@@ -755,23 +753,22 @@ impl SDKClientCore {
         lots_in: u64,
         min_lots_out: u64,
         side: Side,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let order_type = match side {
             Side::Bid => OrderPacket::new_ioc_buy_with_slippage(lots_in, min_lots_out),
             Side::Ask => OrderPacket::new_ioc_sell_with_slippage(lots_in, min_lots_out),
         };
 
-        create_new_order_instruction(
+        Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
             &market.quote_mint,
             &order_type,
-        )
+        ))
     }
 
     pub fn get_ioc_from_tick_price_ix(
@@ -780,12 +777,11 @@ impl SDKClientCore {
         tick_price: u64,
         side: Side,
         size: u64,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        create_new_order_instruction(
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
@@ -799,7 +795,7 @@ impl SDKClientCore {
                 self.rng.lock().unwrap().gen::<u128>(),
                 false,
             ),
-        )
+        ))
     }
 
     pub fn get_post_only_ix(
@@ -808,7 +804,7 @@ impl SDKClientCore {
         price: u64,
         side: Side,
         size: u64,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_post_only_generic_ix(market_key, price, side, size, None, None, None)
     }
 
@@ -821,16 +817,15 @@ impl SDKClientCore {
         client_order_id: Option<u128>,
         reject_post_only: Option<bool>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let price_in_ticks = price / market.tick_size_in_quote_atoms_per_base_unit;
         let client_order_id = client_order_id.unwrap_or(0);
         let reject_post_only = reject_post_only.unwrap_or(false);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
-        create_new_order_instruction(
+        Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
@@ -843,7 +838,7 @@ impl SDKClientCore {
                 reject_post_only,
                 use_only_deposited_funds,
             ),
-        )
+        ))
     }
 
     pub fn get_post_only_ix_from_tick_price(
@@ -854,12 +849,11 @@ impl SDKClientCore {
         size: u64,
         client_order_id: u128,
         improve_price_on_cross: bool,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        create_new_order_instruction(
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
@@ -879,7 +873,7 @@ impl SDKClientCore {
                     client_order_id,
                 )
             },
-        )
+        ))
     }
 
     pub fn get_limit_order_ix(
@@ -888,7 +882,7 @@ impl SDKClientCore {
         price: u64,
         side: Side,
         size: u64,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_limit_order_generic_ix(market_key, price, side, size, None, None, None, None)
     }
 
@@ -903,16 +897,15 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let num_quote_ticks_per_base_unit = price / market.tick_size_in_quote_atoms_per_base_unit;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::DecrementTake);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
-        create_new_order_instruction(
+        Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
@@ -926,7 +919,7 @@ impl SDKClientCore {
                 client_order_id,
                 use_only_deposited_funds,
             ),
-        )
+        ))
     }
 
     pub fn get_limit_order_ix_from_tick_price(
@@ -936,12 +929,11 @@ impl SDKClientCore {
         side: Side,
         size: u64,
         client_order_id: u128,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        create_new_order_instruction(
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
@@ -952,14 +944,13 @@ impl SDKClientCore {
                 size,
                 client_order_id,
             ),
-        )
+        ))
     }
 
-    pub fn get_cancel_ids_ix(&self, market_key: &Pubkey, ids: Vec<FIFOOrderId>) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    pub fn get_cancel_ids_ix(&self, market_key: &Pubkey, ids: Vec<FIFOOrderId>) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let mut cancel_orders = vec![];
         for &FIFOOrderId {
             price_in_ticks,
@@ -977,13 +968,13 @@ impl SDKClientCore {
             orders: cancel_orders,
         };
 
-        create_cancel_multiple_orders_by_id_instruction(
+        Ok(create_cancel_multiple_orders_by_id_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
             &market.quote_mint,
             &cancel_multiple_orders,
-        )
+        ))
     }
 
     pub fn get_cancel_up_to_ix(
@@ -991,11 +982,10 @@ impl SDKClientCore {
         market_key: &Pubkey,
         tick_limit: Option<u64>,
         side: Side,
-    ) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let params = CancelUpToParams {
             side,
             tick_limit,
@@ -1003,25 +993,24 @@ impl SDKClientCore {
             num_orders_to_cancel: None,
         };
 
-        create_cancel_up_to_instruction(
+        Ok(create_cancel_up_to_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
             &market.quote_mint,
             &params,
-        )
+        ))
     }
 
-    pub fn get_cancel_all_ix(&self, market_key: &Pubkey) -> Instruction {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
-        create_cancel_all_orders_instruction(
+    pub fn get_cancel_all_ix(&self, market_key: &Pubkey) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(create_cancel_all_orders_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
             &market.quote_mint,
-        )
+        ))
     }
 }
