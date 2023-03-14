@@ -2765,7 +2765,7 @@ dependencies = [
 [[package]]
 name = "phoenix-v1"
 version = "0.1.4"
-source = "git+https://github.com/Ellipsis-Labs/phoenix-v1?rev=2f1c301#2f1c30146cd0c69725f587d6edcd23797c2e0d40"
+source = "git+https://github.com/Ellipsis-Labs/phoenix-v1?rev=60aaa21#60aaa2195675a343bfdea64f72aa7d9b38bc59dd"
 dependencies = [
  "borsh 0.9.3",
  "bytemuck",

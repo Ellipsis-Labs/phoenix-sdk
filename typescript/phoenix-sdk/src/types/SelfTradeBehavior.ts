@@ -5,7 +5,7 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 /**
  * @category enums
  * @category generated
@@ -22,4 +22,4 @@ export enum SelfTradeBehavior {
  */
 export const selfTradeBehaviorBeet = beet.fixedScalarEnum(
   SelfTradeBehavior
-) as beet.FixedSizeBeet<SelfTradeBehavior, SelfTradeBehavior>
+) as beet.FixedSizeBeet<SelfTradeBehavior, SelfTradeBehavior>;

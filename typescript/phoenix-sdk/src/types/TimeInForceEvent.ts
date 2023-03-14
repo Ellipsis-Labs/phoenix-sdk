@@ -6,19 +6,23 @@
  */
 
 import * as beet from "@metaplex-foundation/beet";
-export type FeeEvent = {
+export type TimeInForceEvent = {
   index: number;
-  feesCollectedInQuoteLots: beet.bignum;
+  orderSequenceNumber: beet.bignum;
+  lastValidSlot: beet.bignum;
+  lastValidUnixTimestampInSeconds: beet.bignum;
 };
 
 /**
  * @category userTypes
  * @category generated
  */
-export const feeEventBeet = new beet.BeetArgsStruct<FeeEvent>(
+export const timeInForceEventBeet = new beet.BeetArgsStruct<TimeInForceEvent>(
   [
     ["index", beet.u16],
-    ["feesCollectedInQuoteLots", beet.u64],
+    ["orderSequenceNumber", beet.u64],
+    ["lastValidSlot", beet.u64],
+    ["lastValidUnixTimestampInSeconds", beet.u64],
   ],
-  "FeeEvent"
+  "TimeInForceEvent"
 );

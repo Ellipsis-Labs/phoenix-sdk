@@ -5,17 +5,17 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as web3 from '@solana/web3.js'
-import * as beet from '@metaplex-foundation/beet'
-import * as beetSolana from '@metaplex-foundation/beet-solana'
+import * as web3 from "@solana/web3.js";
+import * as beet from "@metaplex-foundation/beet";
+import * as beetSolana from "@metaplex-foundation/beet-solana";
 export type FillEvent = {
-  index: number
-  makerId: web3.PublicKey
-  orderSequenceNumber: beet.bignum
-  priceInTicks: beet.bignum
-  baseLotsFilled: beet.bignum
-  baseLotsRemaining: beet.bignum
-}
+  index: number;
+  makerId: web3.PublicKey;
+  orderSequenceNumber: beet.bignum;
+  priceInTicks: beet.bignum;
+  baseLotsFilled: beet.bignum;
+  baseLotsRemaining: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -23,12 +23,12 @@ export type FillEvent = {
  */
 export const fillEventBeet = new beet.BeetArgsStruct<FillEvent>(
   [
-    ['index', beet.u16],
-    ['makerId', beetSolana.publicKey],
-    ['orderSequenceNumber', beet.u64],
-    ['priceInTicks', beet.u64],
-    ['baseLotsFilled', beet.u64],
-    ['baseLotsRemaining', beet.u64],
+    ["index", beet.u16],
+    ["makerId", beetSolana.publicKey],
+    ["orderSequenceNumber", beet.u64],
+    ["priceInTicks", beet.u64],
+    ["baseLotsFilled", beet.u64],
+    ["baseLotsRemaining", beet.u64],
   ],
-  'FillEvent'
-)
+  "FillEvent"
+);

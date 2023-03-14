@@ -6,36 +6,39 @@ import {
 import { BinaryReader } from "borsh";
 import base58 from "bs58";
 import BN from "bn.js";
+import * as beet from "@metaplex-foundation/beet";
 
 import { PROGRAM_ID } from "../index";
 import {
   AuditLogHeader,
-  EvictEvent,
-  FeeEvent,
-  FillEvent,
-  FillSummaryEvent,
-  PlaceEvent,
-  ReduceEvent,
   PhoenixMarketEvent,
+  phoenixMarketEventBeet,
 } from "../types";
 import { logInstructionDiscriminator } from "../instructions";
 
 export type PhoenixTransaction = {
-  instructions: Array<PhoenixEvent>;
+  instructions: Array<PhoenixEventsFromInstruction>;
 };
 
-export type PhoenixEvent = {
+export type PhoenixEventsFromInstruction = {
   header: AuditLogHeader;
-  enums: Array<PhoenixMarketEvent>;
-  events: Array<
-    | FillEvent
-    | PlaceEvent
-    | ReduceEvent
-    | EvictEvent
-    | FillSummaryEvent
-    | FeeEvent
-  >;
+  events: Array<PhoenixMarketEvent>;
 };
+
+export type PhoenixEvents = {
+  events: PhoenixMarketEvent[];
+};
+
+export const phoenixEventsBeet = new beet.FixableBeetArgsStruct<PhoenixEvents>(
+  [["events", beet.array(phoenixMarketEventBeet)]],
+  "PhoenixEvents"
+);
+
+export function decodePhoenixEvents(data: Uint8Array): PhoenixMarketEvent[] {
+  const buffer: Buffer = Buffer.from(data);
+  const [events] = phoenixEventsBeet.deserialize(buffer, 0);
+  return events.events;
+}
 
 export function readPublicKey(reader: BinaryReader): PublicKey {
   return new PublicKey(reader.readFixedArray(32));
@@ -46,12 +49,23 @@ export async function getEventsFromTransaction(
   signature: string
 ): Promise<PhoenixTransaction> {
   const txData = await connection.getParsedTransaction(signature, "confirmed");
+
+  const meta = txData?.meta;
+  if (meta === undefined) {
+    return { instructions: [] };
+  }
+
+  if (meta?.err !== undefined) {
+    console.log("Transaction failed", meta?.err);
+    return { instructions: [] };
+  }
+
   const innerIxs = txData?.meta?.innerInstructions;
   if (!innerIxs || !txData || !txData.slot) {
     return { instructions: [] };
   }
 
-  const logData = [];
+  const logData: Array<Uint8Array> = [];
   for (const ix of innerIxs) {
     for (const inner of ix.instructions) {
       if (inner.programId.toBase58() != PROGRAM_ID.toBase58()) {
@@ -65,26 +79,16 @@ export async function getEventsFromTransaction(
       }
     }
   }
-  const instructions = new Array<PhoenixEvent>();
+  const instructions = new Array<PhoenixEventsFromInstruction>();
 
   for (const data of logData) {
+    // Decode the header by hand
     const reader = new BinaryReader(Buffer.from(data));
-    const byte = reader.readU8() as PhoenixMarketEvent;
-    if (byte != PhoenixMarketEvent.Header) {
+    const byte = reader.readU8();
+    // A byte of 1 identifies a header event
+    if (byte != 1) {
       throw new Error("early Unexpected event");
     }
-
-    const tradeEvents = new Array<
-      | FillEvent
-      | PlaceEvent
-      | ReduceEvent
-      | EvictEvent
-      | FillSummaryEvent
-      | FeeEvent
-    >();
-
-    const enums = new Array<PhoenixMarketEvent>();
-
     const header = {
       instruction: reader.readU8(),
       sequenceNumber: reader.readU64(),
@@ -95,71 +99,14 @@ export async function getEventsFromTransaction(
       totalEvents: reader.readU16(),
     };
 
-    while (reader.offset < reader.buf.length) {
-      // console.log("reading");
-      const e = reader.readU8() as PhoenixMarketEvent;
-      switch (e) {
-        case PhoenixMarketEvent.Fill:
-          tradeEvents.push({
-            index: reader.readU16(),
-            makerId: readPublicKey(reader),
-            orderSequenceNumber: new BN(reader.readFixedArray(8)),
-            priceInTicks: reader.readU64(),
-            baseLotsFilled: reader.readU64(),
-            baseLotsRemaining: reader.readU64(),
-          });
-          break;
-        case PhoenixMarketEvent.Place:
-          tradeEvents.push({
-            index: reader.readU16(),
-            orderSequenceNumber: new BN(reader.readFixedArray(8)),
-            clientOrderId: reader.readU64(),
-            priceInTicks: reader.readU64(),
-            baseLotsPlaced: reader.readU64(),
-          });
-          break;
-        case PhoenixMarketEvent.Reduce:
-          tradeEvents.push({
-            index: reader.readU16(),
-            orderSequenceNumber: reader.readU64(),
-            priceInTicks: reader.readU64(),
-            baseLotsRemoved: reader.readU64(),
-            baseLotsRemaining: reader.readU64(),
-          });
-          break;
-        case PhoenixMarketEvent.Evict:
-          tradeEvents.push({
-            index: reader.readU16(),
-            makerId: readPublicKey(reader),
-            orderSequenceNumber: reader.readU64(),
-            priceInTicks: reader.readU64(),
-            baseLotsEvicted: reader.readU64(),
-          });
-          break;
-        case PhoenixMarketEvent.FillSummary:
-          tradeEvents.push({
-            index: reader.readU16(),
-            clientOrderId: reader.readU128(),
-            totalBaseLotsFilled: reader.readU64(),
-            totalQuoteLotsFilled: reader.readU64(),
-            totalFeeInQuoteLots: reader.readU64(),
-          });
-          break;
-        case PhoenixMarketEvent.Fee:
-          tradeEvents.push({
-            index: reader.readU16(),
-            feesCollectedInQuoteLots: reader.readU64(),
-          });
-          break;
-        default:
-          throw Error("Unexpected Event");
-      }
-      enums.push(e);
-    }
+    const lengthPadding = new BN(header.totalEvents).toBuffer("le", 4);
+    const events = decodePhoenixEvents(
+      Buffer.concat([lengthPadding, Buffer.from(data.slice(reader.offset))])
+    );
+
     instructions.push({
       header: header,
-      events: tradeEvents,
-      enums: enums,
+      events: events,
     });
   }
   return { instructions: instructions };

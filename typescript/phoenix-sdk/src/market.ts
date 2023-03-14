@@ -1,21 +1,18 @@
-import { Connection, PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
 import BN from "bn.js";
 
-import CONFIG from "../config.json";
 import { MarketHeader, Side } from "./types";
 import {
   DEFAULT_SLIPPAGE_PERCENT,
   deserializeMarketData,
-  getMarketLadder,
   getMarketUiLadder,
-  printUiLadder,
   getMarketSwapTransaction,
-  getMarketExpectedOutAmount,
-  getClusterFromEndpoint,
   toNum,
+  getMarketExpectedOutAmount,
 } from "./utils";
 import { Token } from "./token";
+import { TokenConfig } from "./index";
 
 export type OrderId = {
   priceInTicks: beet.bignum;
@@ -25,7 +22,8 @@ export type OrderId = {
 export type RestingOrder = {
   traderIndex: beet.bignum;
   numBaseLots: beet.bignum;
-  padding: beet.bignum[]; // size: 2
+  lastValidSlot: beet.bignum;
+  lastValidUnixTimestampInSeconds: beet.bignum;
 };
 
 export type TraderState = {
@@ -56,8 +54,8 @@ export interface MarketData {
   unclaimedAdjustedQuoteLotFees: number;
   bids: Array<[OrderId, RestingOrder]>;
   asks: Array<[OrderId, RestingOrder]>;
-  traders: Map<PublicKey, TraderState>;
-  trader_index: Map<PublicKey, number>;
+  traders: Map<string, TraderState>;
+  traderIndex: Map<string, number>;
 }
 
 export class Market {
@@ -93,54 +91,52 @@ export class Market {
    * @param connection The Solana `Connection` object
    * @param marketAddress The `PublicKey` of the market account
    */
-  static async load({
-    connection,
+  static load({
     address,
+    buffer,
+    tokenList,
   }: {
-    connection: Connection;
     address: PublicKey;
-  }): Promise<Market> {
-    // Fetch the account data for the market
-    const account = await connection.getAccountInfo(address);
-    if (!account)
-      throw new Error("Account not found for market: " + address.toBase58());
-    const buffer = Buffer.from(account.data);
+    buffer: Buffer;
+    tokenList: TokenConfig[];
+  }): Market {
     const marketData = deserializeMarketData(buffer);
 
-    const allTokens =
-      CONFIG[getClusterFromEndpoint(connection.rpcEndpoint)].tokens;
-
-    const baseTokenConfig = allTokens.find(
+    const baseTokenConfig = tokenList.find(
       (token) => token.mint === marketData.header.baseParams.mintKey.toBase58()
     );
-    const quoteTokenConfig = allTokens.find(
+    const quoteTokenConfig = tokenList.find(
       (token) => token.mint === marketData.header.quoteParams.mintKey.toBase58()
     );
 
-    if (baseTokenConfig === undefined) {
-      throw new Error(
-        `Base token ${marketData.header.baseParams.mintKey} not found in config`
-      );
-    }
-    if (quoteTokenConfig === undefined) {
-      throw new Error(
-        `Quote token ${marketData.header.quoteParams.mintKey} not found in config`
-      );
-    }
+    const baseKey = marketData.header.baseParams.mintKey.toBase58();
+    const baseKeyNameBackup = baseKey.slice(0, 8) + "..." + baseKey.slice(-8);
+    const quoteKey = marketData.header.baseParams.mintKey.toBase58();
+    const quoteKeyNameBackup =
+      quoteKey.slice(0, 8) + "..." + quoteKey.slice(-8);
 
     const baseToken = new Token({
-      name: baseTokenConfig.name,
-      symbol: baseTokenConfig.symbol,
-      logoUri: baseTokenConfig.logoUri,
+      name:
+        baseTokenConfig !== undefined
+          ? baseTokenConfig.name
+          : baseKeyNameBackup,
+      symbol: baseTokenConfig !== undefined ? baseTokenConfig.symbol : baseKey,
+      logoUri:
+        baseTokenConfig !== undefined ? baseTokenConfig.logoUri : "Unknown",
       data: {
         ...marketData.header.baseParams,
       },
     });
 
     const quoteToken = new Token({
-      name: quoteTokenConfig.name,
-      symbol: quoteTokenConfig.symbol,
-      logoUri: quoteTokenConfig.logoUri,
+      name:
+        quoteTokenConfig !== undefined
+          ? quoteTokenConfig.name
+          : quoteKeyNameBackup,
+      symbol:
+        quoteTokenConfig !== undefined ? quoteTokenConfig.symbol : quoteKey,
+      logoUri:
+        quoteTokenConfig !== undefined ? quoteTokenConfig.logoUri : "Unknown",
       data: {
         ...marketData.header.quoteParams,
       },
@@ -159,40 +155,16 @@ export class Market {
   }
 
   /**
-   * Refreshes the market data
+   * Reloads market data from buffer
    *
-   * @param connection The Solana `Connection` object
+   * @param buffer A data buffer with the serialized market data
    *
-   * @returns The refreshed Market
+   * @returns The reloaded Market
    */
-  async refresh(connection: Connection): Promise<Market> {
-    const account = await connection.getAccountInfo(this.address);
-    const data = Buffer.from(account.data);
-    const marketData = deserializeMarketData(data);
+  reload(buffer: Buffer): Market {
+    const marketData = deserializeMarketData(buffer);
     this.data = marketData;
-
     return this;
-  }
-
-  /**
-   * Returns the market's ladder of bids and asks
-   */
-  getLadder(): Ladder {
-    return getMarketLadder(this.data);
-  }
-
-  /**
-   * Returns the market's ladder of bids and asks  as JS numbers
-   */
-  getUiLadder(): UiLadder {
-    return getMarketUiLadder(this.data);
-  }
-
-  /**
-   * Pretty prints the market's current ladder of bids and asks
-   */
-  printLadder() {
-    printUiLadder(this.getUiLadder());
   }
 
   /**
@@ -237,12 +209,25 @@ export class Market {
   getExpectedOutAmount({
     side,
     inAmount,
+    slot,
+    unixTimestamp,
   }: {
     side: Side;
     inAmount: number;
+    slot: beet.bignum;
+    unixTimestamp: beet.bignum;
   }): number {
+    const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
+    const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
+    const ladder = getMarketUiLadder(
+      this.data,
+      Math.max(numBids, numAsks),
+      slot,
+      unixTimestamp
+    );
     return getMarketExpectedOutAmount({
-      marketData: this.data,
+      ladder,
+      takerFeeBps: this.data.takerFeeBps,
       side,
       inAmount,
     });

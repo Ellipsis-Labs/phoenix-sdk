@@ -8,23 +8,25 @@
 import * as web3 from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
 import * as beetSolana from "@metaplex-foundation/beet-solana";
-export type TokenParams = {
-  decimals: number;
-  vaultBump: number;
-  mintKey: web3.PublicKey;
-  vaultKey: web3.PublicKey;
+export type ExpiredOrderEvent = {
+  index: number;
+  makerId: web3.PublicKey;
+  orderSequenceNumber: beet.bignum;
+  priceInTicks: beet.bignum;
+  baseLotsRemoved: beet.bignum;
 };
 
 /**
  * @category userTypes
  * @category generated
  */
-export const tokenParamsBeet = new beet.BeetArgsStruct<TokenParams>(
+export const expiredOrderEventBeet = new beet.BeetArgsStruct<ExpiredOrderEvent>(
   [
-    ["decimals", beet.u32],
-    ["vaultBump", beet.u32],
-    ["mintKey", beetSolana.publicKey],
-    ["vaultKey", beetSolana.publicKey],
+    ["index", beet.u16],
+    ["makerId", beetSolana.publicKey],
+    ["orderSequenceNumber", beet.u64],
+    ["priceInTicks", beet.u64],
+    ["baseLotsRemoved", beet.u64],
   ],
-  "TokenParams"
+  "ExpiredOrderEvent"
 );

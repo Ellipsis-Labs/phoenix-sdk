@@ -5,11 +5,11 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
-import { CancelOrderParams, cancelOrderParamsBeet } from './CancelOrderParams'
+import * as beet from "@metaplex-foundation/beet";
+import { CancelOrderParams, cancelOrderParamsBeet } from "./CancelOrderParams";
 export type CancelMultipleOrdersByIdParams = {
-  orders: CancelOrderParams[]
-}
+  orders: CancelOrderParams[];
+};
 
 /**
  * @category userTypes
@@ -17,6 +17,6 @@ export type CancelMultipleOrdersByIdParams = {
  */
 export const cancelMultipleOrdersByIdParamsBeet =
   new beet.FixableBeetArgsStruct<CancelMultipleOrdersByIdParams>(
-    [['orders', beet.array(cancelOrderParamsBeet)]],
-    'CancelMultipleOrdersByIdParams'
-  )
+    [["orders", beet.array(cancelOrderParamsBeet)]],
+    "CancelMultipleOrdersByIdParams"
+  );

@@ -5,14 +5,14 @@
  * See: https://github.com/metaplex-foundation/solita
  */
 
-import * as beet from '@metaplex-foundation/beet'
+import * as beet from "@metaplex-foundation/beet";
 export type FillSummaryEvent = {
-  index: number
-  clientOrderId: beet.bignum
-  totalBaseLotsFilled: beet.bignum
-  totalQuoteLotsFilled: beet.bignum
-  totalFeeInQuoteLots: beet.bignum
-}
+  index: number;
+  clientOrderId: beet.bignum;
+  totalBaseLotsFilled: beet.bignum;
+  totalQuoteLotsFilled: beet.bignum;
+  totalFeeInQuoteLots: beet.bignum;
+};
 
 /**
  * @category userTypes
@@ -20,11 +20,11 @@ export type FillSummaryEvent = {
  */
 export const fillSummaryEventBeet = new beet.BeetArgsStruct<FillSummaryEvent>(
   [
-    ['index', beet.u16],
-    ['clientOrderId', beet.u128],
-    ['totalBaseLotsFilled', beet.u64],
-    ['totalQuoteLotsFilled', beet.u64],
-    ['totalFeeInQuoteLots', beet.u64],
+    ["index", beet.u16],
+    ["clientOrderId", beet.u128],
+    ["totalBaseLotsFilled", beet.u64],
+    ["totalQuoteLotsFilled", beet.u64],
+    ["totalFeeInQuoteLots", beet.u64],
   ],
-  'FillSummaryEvent'
-)
+  "FillSummaryEvent"
+);
