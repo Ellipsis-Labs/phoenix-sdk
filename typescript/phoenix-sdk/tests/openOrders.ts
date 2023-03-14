@@ -1,15 +1,10 @@
 import { Connection } from "@solana/web3.js";
 
 import * as Phoenix from "../src";
+import BN from "bn.js";
 
-const getOrderSequenceNumber = (orderId: Phoenix.OrderId): bigint => {
-  const num = BigInt(orderId.orderSequenceNumber.toString()); // 64-bit integer (maximum value)
-  const low = Number(num & BigInt(0xffffffff)); // lower 32 bits
-  const high = Number(num >> 32n); // upper 32 bits
-  const inverseLow = ~low >>> 0; // perform bitwise NOT on lower 32 bits
-  const inverseHigh = ~high >>> 0; // perform bitwise NOT on upper 32 bits
-  const sequenceNumber = (BigInt(inverseHigh) << 32n) | BigInt(inverseLow); // combine the results
-  return sequenceNumber;
+const getOrderSequenceNumber = (orderId: Phoenix.OrderId): BN => {
+  return (orderId.orderSequenceNumber as BN).fromTwos(64);
 };
 
 export async function watch() {
@@ -54,14 +49,13 @@ export async function watch() {
           }
         }
         if (order.lastValidUnixTimestampInSeconds != 0) {
-          if (order.lastValidUnixTimestampInSeconds < time) {
+          if (order.lastValidUnixTimestampInSeconds < (time as BN)) {
             continue;
           }
-          timeRemaining = (
-            BigInt(order.lastValidUnixTimestampInSeconds.toString()) -
-            BigInt(time.toString()) +
-            BigInt(1)
-          ).toString();
+          timeRemaining = (order.lastValidUnixTimestampInSeconds as BN)
+            .sub(time as BN)
+            .add(new BN(1))
+            .toString();
         }
 
         console.log(
@@ -92,19 +86,18 @@ export async function watch() {
           }
         }
         if (order.lastValidUnixTimestampInSeconds != 0) {
-          if (order.lastValidUnixTimestampInSeconds < time) {
+          if (order.lastValidUnixTimestampInSeconds < (time as BN)) {
             continue;
           }
-          timeRemaining = (
-            BigInt(order.lastValidUnixTimestampInSeconds.toString()) -
-            BigInt(time.toString()) +
-            BigInt(1)
-          ).toString();
+          timeRemaining = (order.lastValidUnixTimestampInSeconds as BN)
+            .sub(time as BN)
+            .add(new BN(1))
+            .toString();
         }
 
         console.log(
           "BID",
-          (-(getOrderSequenceNumber(orderId) + BigInt(1))).toString(),
+          getOrderSequenceNumber(orderId).toString(),
           phoenix.ticksToFloatPrice(
             Phoenix.toNum(orderId.priceInTicks),
             marketAddress.toString()

@@ -86,7 +86,12 @@ export class Client {
         // Set the tokens from the market (avoiding duplicates)
         for (const token of [market.baseToken, market.quoteToken]) {
           const mint = token.data.mintKey.toBase58();
-          if (tokens.find((t) => t.data.mintKey.toBase58() === mint)) continue;
+          if (
+            tokens.find((t) => {
+              return t.data.mintKey.toBase58() === mint;
+            })
+          )
+            continue;
           tokens.push(token);
         }
       })
@@ -150,10 +155,10 @@ export class Client {
       tokenConfig,
       trader: trader
         ? await Trader.create({
-          connection,
-          pubkey: trader,
-          tokens,
-        })
+            connection,
+            pubkey: trader,
+            tokens,
+          })
         : undefined,
       clock,
     });
@@ -201,10 +206,10 @@ export class Client {
       tokenConfig,
       trader: trader
         ? await Trader.create({
-          connection,
-          pubkey: trader,
-          tokens,
-        })
+            connection,
+            pubkey: trader,
+            tokens,
+          })
         : undefined,
       clock,
     });
@@ -497,7 +502,7 @@ export class Client {
     if (!market) throw new Error("Market not found: " + marketAddress);
     return Math.round(
       (price * 10 ** market.quoteToken.data.decimals) /
-      market.data.quoteLotsPerBaseUnitPerTick
+        market.data.quoteLotsPerBaseUnitPerTick
     );
   }
 
@@ -582,7 +587,7 @@ export class Client {
     if (!market) throw new Error("Market not found: " + marketAddress);
     return Math.round(
       (quoteUnits * 10 ** market.quoteToken.data.decimals) /
-      toNum(market.data.header.quoteLotSize)
+        toNum(market.data.header.quoteLotSize)
     );
   }
 
@@ -659,7 +664,7 @@ export class Client {
       (baseLots *
         price_in_ticks *
         toNum(market.data.header.tickSizeInQuoteAtomsPerBaseUnit)) /
-      market.data.baseLotsPerBaseUnit
+        market.data.baseLotsPerBaseUnit
     );
   }
 }

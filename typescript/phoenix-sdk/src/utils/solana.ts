@@ -1,4 +1,3 @@
-import * as beetSolana from "@metaplex-foundation/beet-solana";
 import * as beet from "@metaplex-foundation/beet";
 
 export type Cluster = "mainnet-beta" | "devnet" | "localhost";
@@ -22,7 +21,7 @@ export type ClockData = {
   epoch: beet.bignum;
   leaderScheduleEpoch: beet.bignum;
   unixTimestamp: beet.bignum;
-}
+};
 
 export const clockBeet = new beet.BeetArgsStruct<ClockData>(
   [
@@ -31,5 +30,6 @@ export const clockBeet = new beet.BeetArgsStruct<ClockData>(
     ["epoch", beet.u64],
     ["leaderScheduleEpoch", beet.u64],
     ["unixTimestamp", beet.i64],
-  ], "ClockData"
+  ],
+  "ClockData"
 );
