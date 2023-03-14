@@ -4,7 +4,6 @@ import {
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
-import { deserialize } from "borsh";
 import { getClusterFromEndpoint, toNum } from "./utils";
 import { Token } from "./token";
 import { Market } from "./market";
@@ -47,55 +46,55 @@ export class Client {
     tokens,
     tokenConfig,
     markets,
-    trader,
     clock,
+    trader,
   }: {
     connection: Connection;
     tokens: Array<Token>;
     tokenConfig: Array<TokenConfig>;
     markets: Map<string, Market>;
-    trader: Trader;
     clock: ClockData;
+    trader?: Trader;
   }) {
     this.connection = connection;
     this.tokens = tokens;
     this.tokenConfig = tokenConfig;
     this.markets = markets;
-    this.trader = trader;
     this.clock = clock;
+    if (trader) {
+      this.trader = trader;
+    }
   }
 
   static async loadMarketsAndTokens(
     marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]>,
     tokenConfig: Array<TokenConfig>
   ): Promise<[Map<string, Market>, Token[]]> {
-    const tokens = [];
+    const tokens: Array<Token> = [];
     const markets = new Map();
-    await Promise.all(
-      // For every market:
-      marketKeysToData.map(async ([marketAddress, marketAccount]) => {
-        // Load the market
-        const market = await Market.load({
-          address: marketAddress,
-          buffer: marketAccount.data,
-          tokenList: tokenConfig,
-        });
+    // For every market:
+    marketKeysToData.map(([marketAddress, marketAccount]) => {
+      // Load the market
+      const market = Market.load({
+        address: marketAddress,
+        buffer: marketAccount.data,
+        tokenList: tokenConfig,
+      });
 
-        markets.set(marketAddress.toString(), market);
+      markets.set(marketAddress.toString(), market);
 
-        // Set the tokens from the market (avoiding duplicates)
-        for (const token of [market.baseToken, market.quoteToken]) {
-          const mint = token.data.mintKey.toBase58();
-          if (
-            tokens.find((t) => {
-              return t.data.mintKey.toBase58() === mint;
-            })
-          )
-            continue;
-          tokens.push(token);
-        }
-      })
-    );
+      // Set the tokens from the market (avoiding duplicates)
+      for (const token of [market.baseToken, market.quoteToken]) {
+        const mint = token.data.mintKey.toBase58();
+        if (
+          tokens.find((t) => {
+            return t.data.mintKey.toBase58() === mint;
+          })
+        )
+          continue;
+        tokens.push(token);
+      }
+    });
     return [markets, tokens];
   }
 
@@ -140,7 +139,7 @@ export class Client {
     const clock = deserializeClockData(clockBuffer);
     const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
-        return [marketAddress, accounts[index]];
+        return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
 
     const [markets, tokens] = await Client.loadMarketsAndTokens(
@@ -191,7 +190,7 @@ export class Client {
 
     const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
-        return [marketAddress, accounts[index]];
+        return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
 
     const [markets, tokens] = await Client.loadMarketsAndTokens(

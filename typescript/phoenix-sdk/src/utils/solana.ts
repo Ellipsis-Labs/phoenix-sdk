@@ -11,7 +11,7 @@ export function getClusterFromEndpoint(endpoint: string): Cluster {
 }
 
 export function deserializeClockData(data: Buffer): ClockData {
-  const [clockData, _] = clockBeet.deserialize(data, 0);
+  const [clockData] = clockBeet.deserialize(data, 0);
   return clockData;
 }
 

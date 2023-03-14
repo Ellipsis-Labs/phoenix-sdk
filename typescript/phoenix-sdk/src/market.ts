@@ -90,7 +90,7 @@ export class Market {
    * @param connection The Solana `Connection` object
    * @param marketAddress The `PublicKey` of the market account
    */
-  static async load({
+  static load({
     address,
     buffer,
     tokenList,
@@ -98,7 +98,7 @@ export class Market {
     address: PublicKey;
     buffer: Buffer;
     tokenList: TokenConfig[];
-  }): Promise<Market> {
+  }): Market {
     const marketData = deserializeMarketData(buffer);
 
     const baseTokenConfig = tokenList.find(
