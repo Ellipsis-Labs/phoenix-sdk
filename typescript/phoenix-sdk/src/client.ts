@@ -4,11 +4,7 @@ import {
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
-import {
-  getClusterFromEndpoint,
-  getMarketExpectedOutAmount,
-  toNum,
-} from "./utils";
+import { getClusterFromEndpoint, toNum } from "./utils";
 import { Token } from "./token";
 import { Market } from "./market";
 import { Trader } from "./trader";
@@ -412,22 +408,13 @@ export class Client {
     side: Side;
     inAmount: number;
   }): number {
-    const marketData = this.markets.get(marketAddress)?.data;
-    if (!marketData) throw new Error("Market not found: " + marketAddress);
-    const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
-    const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
-    const ladder = getMarketUiLadder(
-      marketData,
-      Math.max(numBids, numAsks),
-      this.clock.slot,
-      this.clock.unixTimestamp
-    );
-
-    return getMarketExpectedOutAmount({
-      ladder,
-      takerFeeBps: marketData.takerFeeBps,
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.getExpectedOutAmount({
       side,
       inAmount,
+      slot: this.clock.slot,
+      unixTimestamp: this.clock.unixTimestamp,
     });
   }
 
@@ -533,7 +520,7 @@ export class Client {
    * @param rawBaseUnits The amount of raw base units to convert
    * @param marketAddress The `PublicKey` of the market account
    */
-  public rawBaseUnitsToBaseLots(
+  public rawBaseUnitsToBaseLotsRoundedDown(
     rawBaseUnits: number,
     marketAddress: string
   ): number {

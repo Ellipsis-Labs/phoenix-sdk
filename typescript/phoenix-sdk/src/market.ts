@@ -9,6 +9,7 @@ import {
   getMarketUiLadder,
   getMarketSwapTransaction,
   toNum,
+  getMarketExpectedOutAmount,
 } from "./utils";
 import { Token } from "./token";
 import { TokenConfig } from "./index";
@@ -224,44 +225,12 @@ export class Market {
       slot,
       unixTimestamp
     );
-    let remainingUnits = inAmount * (1 - this.data.takerFeeBps / 10000);
-    let expectedUnitsReceived = 0;
-    if (side === Side.Bid) {
-      for (const [
-        priceInQuoteUnitsPerBaseUnit,
-        sizeInBaseUnits,
-      ] of ladder.asks) {
-        const totalQuoteUnitsAvailable =
-          sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
-        if (totalQuoteUnitsAvailable > remainingUnits) {
-          expectedUnitsReceived +=
-            remainingUnits / priceInQuoteUnitsPerBaseUnit;
-          remainingUnits = 0;
-          break;
-        } else {
-          expectedUnitsReceived += sizeInBaseUnits;
-          remainingUnits -= totalQuoteUnitsAvailable;
-        }
-      }
-    } else {
-      for (const [
-        priceInQuoteUnitsPerBaseUnit,
-        sizeInBaseUnits,
-      ] of ladder.bids) {
-        if (sizeInBaseUnits > remainingUnits) {
-          expectedUnitsReceived +=
-            remainingUnits * priceInQuoteUnitsPerBaseUnit;
-          remainingUnits = 0;
-          break;
-        } else {
-          expectedUnitsReceived +=
-            sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
-          remainingUnits -= sizeInBaseUnits;
-        }
-      }
-    }
-
-    return expectedUnitsReceived;
+    return getMarketExpectedOutAmount({
+      ladder,
+      takerFeeBps: this.data.takerFeeBps,
+      side,
+      inAmount,
+    });
   }
 
   getPriceDecimalPlaces(): number {
