@@ -4,7 +4,11 @@ import {
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
-import { getClusterFromEndpoint, toNum } from "./utils";
+import {
+  getClusterFromEndpoint,
+  getMarketExpectedOutAmount,
+  toNum,
+} from "./utils";
 import { Token } from "./token";
 import { Market } from "./market";
 import { Trader } from "./trader";
@@ -265,6 +269,37 @@ export class Client {
   }
 
   /**
+   * Refreshes the market data for all markets and the clock
+   */
+  public async refreshAllMarkets() {
+    const marketKeys = Array.from(this.markets.keys()).map((market) => {
+      return new PublicKey(market);
+    });
+    const accounts = await this.connection.getMultipleAccountsInfo(
+      [...marketKeys, SYSVAR_CLOCK_PUBKEY],
+      "confirmed"
+    );
+
+    const clockBuffer = accounts.pop()?.data;
+    if (clockBuffer === undefined) {
+      throw new Error("Unable to get clock");
+    }
+    this.reloadClockFromBuffer(clockBuffer);
+
+    for (const [i, marketKey] of marketKeys.entries()) {
+      const existingMarket = this.markets.get(marketKey.toString());
+      if (existingMarket === undefined) {
+        throw new Error("Market does not exist: " + marketKey.toBase58());
+      }
+      const buffer = accounts[i]?.data;
+      if (buffer === undefined) {
+        throw new Error("Unable to get market account data");
+      }
+      existingMarket.reload(buffer);
+    }
+  }
+
+  /**
    * Refreshes the market data and clock
    *
    * @param marketAddress The address of the market to refresh
@@ -336,7 +371,7 @@ export class Client {
   }
 
   /**
-   * Returns the market's ladder of bids and asks  as JS numbers
+   * Returns the market's ladder of bids and asks as JS numbers
    * @param marketAddress The `PublicKey` of the market account
    */
   public getUiLadder(
@@ -367,7 +402,6 @@ export class Client {
    * @param side The side of the order (Bid or Ask)
    * @param inAmount The amount of the input token
    *
-   * TODO this should use getMarketLadder and adjust its calculation
    */
   public getMarketExpectedOutAmount({
     marketAddress,
@@ -382,46 +416,19 @@ export class Client {
     if (!marketData) throw new Error("Market not found: " + marketAddress);
     const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
     const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
-    const ladder = this.getUiLadder(marketAddress, Math.max(numBids, numAsks));
+    const ladder = getMarketUiLadder(
+      marketData,
+      Math.max(numBids, numAsks),
+      this.clock.slot,
+      this.clock.unixTimestamp
+    );
 
-    let remainingUnits = inAmount * (1 - marketData.takerFeeBps / 10000);
-    let expectedUnitsReceived = 0;
-    if (side === Side.Bid) {
-      for (const [
-        priceInQuoteUnitsPerBaseUnit,
-        sizeInBaseUnits,
-      ] of ladder.asks) {
-        const totalQuoteUnitsAvailable =
-          sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
-        if (totalQuoteUnitsAvailable > remainingUnits) {
-          expectedUnitsReceived +=
-            remainingUnits / priceInQuoteUnitsPerBaseUnit;
-          remainingUnits = 0;
-          break;
-        } else {
-          expectedUnitsReceived += sizeInBaseUnits;
-          remainingUnits -= totalQuoteUnitsAvailable;
-        }
-      }
-    } else {
-      for (const [
-        priceInQuoteUnitsPerBaseUnit,
-        sizeInBaseUnits,
-      ] of ladder.bids) {
-        if (sizeInBaseUnits > remainingUnits) {
-          expectedUnitsReceived +=
-            remainingUnits * priceInQuoteUnitsPerBaseUnit;
-          remainingUnits = 0;
-          break;
-        } else {
-          expectedUnitsReceived +=
-            sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
-          remainingUnits -= sizeInBaseUnits;
-        }
-      }
-    }
-
-    return expectedUnitsReceived;
+    return getMarketExpectedOutAmount({
+      ladder,
+      takerFeeBps: marketData.takerFeeBps,
+      side,
+      inAmount,
+    });
   }
 
   /**
@@ -492,7 +499,9 @@ export class Client {
   }
 
   /**
-   * Get the price in ticks for a given price
+   * Get the price in ticks for a given price in quote units per base unit
+   * Example: For a tick size of 0.01 (quote units per base unit), a price in quote units per
+   * base unit of 1.23 would be 123 ticks
    * @param price The price to convert
    * @param marketAddress The `PublicKey` of the market account
    */
@@ -530,9 +539,8 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    const base_units =
-      rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
-    return Math.floor(base_units * market.data.baseLotsPerBaseUnit);
+    const baseUnits = rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
+    return Math.floor(baseUnits * market.data.baseLotsPerBaseUnit);
   }
 
   /**

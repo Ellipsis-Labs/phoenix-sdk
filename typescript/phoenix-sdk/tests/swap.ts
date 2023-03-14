@@ -118,8 +118,8 @@ export async function swap() {
       "Manually created transaction does not match the one created by the SDK"
     );
 
-  const expectedOutAmount = Phoenix.getMarketExpectedOutAmount({
-    marketData,
+  const expectedOutAmount = client.getMarketExpectedOutAmount({
+    marketAddress: marketAddress.toBase58(),
     side,
     inAmount,
   });

@@ -286,10 +286,7 @@ export function getMarketLadder(
       }
     }
     if (restingOrder.lastValidUnixTimestampInSeconds != 0) {
-      if (
-        restingOrder.lastValidUnixTimestampInSeconds <
-        unixTimestamp
-      ) {
+      if (restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp) {
         continue;
       }
     }
@@ -320,10 +317,7 @@ export function getMarketLadder(
       }
     }
     if (restingOrder.lastValidUnixTimestampInSeconds != 0) {
-      if (
-        restingOrder.lastValidUnixTimestampInSeconds <
-        unixTimestamp
-      ) {
+      if (restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp) {
         continue;
       }
     }
@@ -369,8 +363,8 @@ function levelToUiLevel(
 ): [number, number] {
   return [
     (toNum(priceInTicks) / quoteAtomsPerQuoteUnit) *
-    marketData.quoteLotsPerBaseUnitPerTick *
-    toNum(marketData.header.quoteLotSize),
+      marketData.quoteLotsPerBaseUnitPerTick *
+      toNum(marketData.header.quoteLotSize),
     toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit,
   ];
 }
@@ -385,7 +379,7 @@ export function getMarketUiLadder(
   marketData: MarketData,
   levels: number = DEFAULT_LADDER_DEPTH,
   slot: beet.bignum = 0,
-  unixTimestamp: beet.bignum = 0,
+  unixTimestamp: beet.bignum = 0
 ): UiLadder {
   const ladder = getMarketLadder(marketData, slot, unixTimestamp, levels);
 
@@ -556,8 +550,12 @@ export function getMarketSwapOrderPacket({
   clientOrderId?: number;
   useOnlyDepositedFunds?: boolean;
 }): Partial<OrderPacket> {
+  const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
+  const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
+  const ladder = getMarketUiLadder(this.data, Math.max(numBids, numAsks));
   const expectedOutAmount = getMarketExpectedOutAmount({
-    marketData,
+    ladder,
+    takerFeeBps: marketData.takerFeeBps,
     side,
     inAmount,
   });
@@ -576,7 +574,7 @@ export function getMarketSwapOrderPacket({
     minQuoteLotsToFill = Math.ceil(
       ((expectedOutAmount * quoteMul) /
         parseFloat(marketData.header.quoteLotSize.toString())) *
-      slippageDenom
+        slippageDenom
     );
   } else {
     numQuoteLots =
@@ -585,7 +583,7 @@ export function getMarketSwapOrderPacket({
     minBaseLotsToFill = Math.ceil(
       ((expectedOutAmount * baseMul) /
         parseFloat(marketData.header.baseLotSize.toString())) *
-      slippageDenom
+        slippageDenom
     );
   }
 
@@ -615,19 +613,17 @@ export function getMarketSwapOrderPacket({
  * TODO this should use getMarketLadder and adjust its calculation
  */
 export function getMarketExpectedOutAmount({
-  marketData,
+  ladder,
+  takerFeeBps,
   side,
   inAmount,
 }: {
-  marketData: MarketData;
+  ladder: UiLadder;
+  takerFeeBps: number;
   side: Side;
   inAmount: number;
 }): number {
-  const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
-  const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
-  const ladder = getMarketUiLadder(marketData, Math.max(numBids, numAsks));
-
-  let remainingUnits = inAmount * (1 - marketData.takerFeeBps / 10000);
+  let remainingUnits = inAmount * (1 - takerFeeBps / 10000);
   let expectedUnitsReceived = 0;
   if (side === Side.Bid) {
     for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.asks) {
