@@ -119,8 +119,8 @@ async fn main() -> anyhow::Result<()> {
     println!("Getting SOL/USDC order book");
     let sol_usdc_market = sol_usdc_market.unwrap();
     println!("Market pubkey: {:?}", sol_usdc_market);
-    let sdk_client = SDKClient::new_from_ellipsis_client_with_all_markets(client).await;
-    let orderbook = sdk_client.get_market_orderbook(&sol_usdc_market,).await?;
+    let sdk_client = SDKClient::new_from_ellipsis_client_with_all_markets(client).await?;
+    let orderbook = sdk_client.get_market_orderbook(&sol_usdc_market).await?;
     orderbook.print_ladder(5, 4);
 
     Ok(())

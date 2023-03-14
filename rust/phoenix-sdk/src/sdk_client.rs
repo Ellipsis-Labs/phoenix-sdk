@@ -58,7 +58,7 @@ impl SDKClient {
     /// Create a new SDKClient from an EllipsisClient.
     /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
     /// add markets to the SDKClient.
-    pub async fn new_from_ellipsis_client(client: EllipsisClient) -> Self {
+    pub async fn new_from_ellipsis_client(client: EllipsisClient) -> Result<Self> {
         let markets = BTreeMap::new();
 
         let core = SDKClientCore {
@@ -66,20 +66,20 @@ impl SDKClient {
             rng: Arc::new(Mutex::new(StdRng::from_entropy())),
             trader: client.payer.pubkey(),
         };
-        SDKClient { client, core }
+        Ok(SDKClient { client, core })
     }
 
     /// Create a new SDKClient from an EllipsisClient.
     /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
     /// add markets to the SDKClient.
-    pub fn new_from_ellipsis_client_sync(client: EllipsisClient) -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+    pub fn new_from_ellipsis_client_sync(client: EllipsisClient) -> Result<Self> {
+        let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(Self::new_from_ellipsis_client(client))
     }
 
     /// Recommended way to create a new SDKClient from an EllipsisClient.
     /// This will use a list of markets from a pre-defined config file to add all known markets to the SDKClient.
-    pub async fn new_from_ellipsis_client_with_all_markets(client: EllipsisClient) -> Self {
+    pub async fn new_from_ellipsis_client_with_all_markets(client: EllipsisClient) -> Result<Self> {
         let markets = BTreeMap::new();
 
         let core = SDKClientCore {
@@ -89,14 +89,14 @@ impl SDKClient {
         };
         println!("Creating SDKClient with all markets");
         let mut sdk = SDKClient { client, core };
-        sdk.add_all_markets().await;
-        sdk
+        sdk.add_all_markets().await?;
+        Ok(sdk)
     }
 
     /// Recommended way to create a new SDKClient from an EllipsisClient.
     /// This will use a list of markets from a pre-defined config file to add all known markets to the SDKClient.
-    pub fn new_from_ellipsis_client_with_all_markets_sync(client: EllipsisClient) -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+    pub fn new_from_ellipsis_client_with_all_markets_sync(client: EllipsisClient) -> Result<Self> {
+        let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(Self::new_from_ellipsis_client_with_all_markets(client))
     }
 
@@ -125,7 +125,7 @@ impl SDKClient {
         market_keys: Vec<&Pubkey>,
         client: EllipsisClient,
     ) -> Result<Self> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(Self::new_from_ellipsis_client_with_market_keys(
             market_keys,
             client,
@@ -135,9 +135,9 @@ impl SDKClient {
     /// Create a new SDKClient.
     /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
     /// add markets to the SDKClient.
-    pub async fn new(payer: &Keypair, url: &str) -> Self {
+    pub async fn new(payer: &Keypair, url: &str) -> Result<Self> {
         let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
-        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
+        let client = EllipsisClient::from_rpc(rpc, payer)?;
 
         SDKClient::new_from_ellipsis_client(client).await
     }
@@ -145,24 +145,24 @@ impl SDKClient {
     /// Create a new SDKClient.
     /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
     /// add markets to the SDKClient.
-    pub fn new_sync(payer: &Keypair, url: &str) -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+    pub fn new_sync(payer: &Keypair, url: &str) -> Result<Self> {
+        let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(Self::new(payer, url))
     }
 
     /// Recommended way to create a new SDKClient.
     /// This will use a list of markets from a pre-defined config file to add all known markets to the SDKClient.
-    pub async fn new_with_all_markets(payer: &Keypair, url: &str) -> Self {
+    pub async fn new_with_all_markets(payer: &Keypair, url: &str) -> Result<Self> {
         let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
-        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
+        let client = EllipsisClient::from_rpc(rpc, payer)?;
 
         SDKClient::new_from_ellipsis_client_with_all_markets(client).await
     }
 
     /// Recommended way to create a new SDKClient.
     /// This will use a list of markets from a pre-defined config file to add all known markets to the SDKClient.
-    pub fn new_with_all_markets_sync(payer: &Keypair, url: &str) -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+    pub fn new_with_all_markets_sync(payer: &Keypair, url: &str) -> Result<Self> {
+        let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(Self::new_with_all_markets(payer, url))
     }
 
@@ -174,7 +174,7 @@ impl SDKClient {
         url: &str,
     ) -> Result<Self> {
         let rpc = RpcClient::new_with_commitment(url.to_string(), CommitmentConfig::confirmed());
-        let client = EllipsisClient::from_rpc(rpc, payer).expect("Failed to load Ellipsis Client");
+        let client = EllipsisClient::from_rpc(rpc, payer)?;
 
         SDKClient::new_from_ellipsis_client_with_market_keys(market_keys, client).await
     }
@@ -186,15 +186,15 @@ impl SDKClient {
         payer: &Keypair,
         url: &str,
     ) -> Result<Self> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(Self::new_with_market_keys(market_keys, payer, url))
     }
 
     /// Load in all known markets from a pre-defined config file located in the SDK github.
-    pub async fn add_all_markets(&mut self) {
+    pub async fn add_all_markets(&mut self) -> Result<()> {
         let config_url = "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
 
-        let genesis = self.client.get_genesis_hash().await.unwrap();
+        let genesis = self.client.get_genesis_hash().await?;
 
         //hardcoded in the genesis hashes for mainnet and devnet
         let cluster = match genesis.to_string().as_str() {
@@ -205,24 +205,30 @@ impl SDKClient {
 
         let response = reqwest::get(config_url)
             .await
-            .unwrap()
+            .map_err(|e| anyhow!("Failed to get config file: {}", e))?
             .json::<HashMap<String, JsonMarketConfig>>()
             .await
-            .unwrap();
+            .map_err(|e| anyhow!("Failed to parse config file: {}", e))?;
 
-        let market_details = response.get(cluster).unwrap();
+        let market_details = response.get(cluster).ok_or(anyhow!(
+            "Failed to find cluster {} in config file",
+            cluster
+        ))?;
+
         for market_key in market_details.markets.iter() {
-            let market_key = Pubkey::from_str(market_key).unwrap();
+            let market_key = Pubkey::from_str(market_key).map_err(|e| anyhow!(e))?;
             if self.markets.get(&market_key).is_some() {
                 continue;
             }
-            self.add_market(&market_key).await.unwrap();
+            self.add_market(&market_key).await.map_err(|e| anyhow!(e))?;
         }
+
+        Ok(())
     }
 
-    pub fn add_all_markets_sync(&mut self) {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(self.add_all_markets());
+    pub fn add_all_markets_sync(&mut self) -> Result<()> {
+        let rt = tokio::runtime::Runtime::new()?;
+        rt.block_on(self.add_all_markets())
     }
 
     pub async fn add_market(&mut self, market_key: &Pubkey) -> anyhow::Result<()> {
@@ -245,22 +251,22 @@ impl SDKClient {
         self.trader
     }
 
-    pub async fn get_market_ladder(&self, market_key: &Pubkey, levels: u64) -> Ladder {
+    pub async fn get_market_ladder(&self, market_key: &Pubkey, levels: u64) -> Result<Ladder> {
         let market_account_data = (self.client.get_account_data(market_key))
             .await
-            .expect("Failed to get market account data");
+            .map_err(|_| anyhow!("Failed to get market account data"))?;
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
         let header: &MarketHeader =
             bytemuck::try_from_bytes(header_bytes).expect("Failed to deserialize market header");
         let market = load_with_dispatch(&header.market_size_params, bytes)
-            .expect("Market configuration not found")
+            .map_err(|_| anyhow!("Market configuration not found"))?
             .inner;
 
-        market.get_ladder(levels)
+        Ok(market.get_ladder(levels))
     }
 
-    pub fn get_market_ladder_sync(&self, market_key: &Pubkey, levels: u64) -> Ladder {
-        let rt = tokio::runtime::Runtime::new().unwrap(); //fix error handling instead of panic
+    pub fn get_market_ladder_sync(&self, market_key: &Pubkey, levels: u64) -> Result<Ladder> {
+        let rt = tokio::runtime::Runtime::new()?; //fix error handling instead of panic
         rt.block_on(self.get_market_ladder(market_key, levels))
     }
 
@@ -299,7 +305,7 @@ impl SDKClient {
         &self,
         market_key: &Pubkey,
     ) -> Result<Orderbook<FIFOOrderId, PhoenixOrder>> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(self.get_market_orderbook(market_key))
     }
 
@@ -329,7 +335,7 @@ impl SDKClient {
         &self,
         market_key: &Pubkey,
     ) -> Result<BTreeMap<Pubkey, TraderState>> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(self.get_traders_with_market_key(market_key))
     }
 
