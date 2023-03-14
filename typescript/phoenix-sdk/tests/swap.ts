@@ -137,12 +137,17 @@ export async function swap() {
 
   let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
   let counter = 1;
-  while (txResult.instructions.length == 0) {
+  while (txResult.instructions.length == 0 && !txResult.failed) {
     txResult = await Phoenix.getEventsFromTransaction(connection, txId);
     counter += 1;
     if (counter == 10) {
       throw Error("Failed to fetch transaction");
     }
+  }
+
+  if (txResult.failed) {
+    console.log("Swap transaction failed");
+    return;
   }
 
   const fillEvents = txResult.instructions[0];

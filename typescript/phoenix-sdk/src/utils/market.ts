@@ -538,8 +538,6 @@ export function getMarketSwapOrderPacket({
   matchLimit = DEFAULT_MATCH_LIMIT,
   clientOrderId = 0,
   useOnlyDepositedFunds = false,
-  lastValidSlot,
-  lastValidUnixTimestampInSeconds,
 }: {
   marketData: MarketData;
   side: Side;
@@ -549,12 +547,10 @@ export function getMarketSwapOrderPacket({
   matchLimit?: number;
   clientOrderId?: number;
   useOnlyDepositedFunds?: boolean;
-  lastValidSlot?: number;
-  lastValidUnixTimestampInSeconds?: number;
 }): Partial<OrderPacket> {
   const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
   const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
-  const ladder = getMarketUiLadder(this.data, Math.max(numBids, numAsks));
+  const ladder = getMarketUiLadder(marketData, Math.max(numBids, numAsks));
   const expectedOutAmount = getMarketExpectedOutAmount({
     ladder,
     takerFeeBps: marketData.takerFeeBps,
@@ -600,8 +596,8 @@ export function getMarketSwapOrderPacket({
     matchLimit,
     clientOrderId,
     useOnlyDepositedFunds,
-    lastValidSlot,
-    lastValidUnixTimestampInSeconds,
+    lastValidSlot: null,
+    lastValidUnixTimestampInSeconds: null,
   };
 
   return orderPacket;
