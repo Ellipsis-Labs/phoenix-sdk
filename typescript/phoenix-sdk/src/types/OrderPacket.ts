@@ -50,6 +50,8 @@ export type OrderPacketRecord = {
     matchLimit: beet.COption<beet.bignum>;
     clientOrderId: beet.bignum;
     useOnlyDepositedFunds: boolean;
+    lastValidSlot: beet.COption<beet.bignum>;
+    lastValidUnixTimestampInSeconds: beet.COption<beet.bignum>;
   };
 };
 
@@ -131,6 +133,8 @@ export const orderPacketBeet = beet.dataEnum<OrderPacketRecord>([
         ["matchLimit", beet.coption(beet.u64)],
         ["clientOrderId", beet.u128],
         ["useOnlyDepositedFunds", beet.bool],
+        ["lastValidSlot", beet.coption(beet.u64)],
+        ["lastValidUnixTimestampInSeconds", beet.coption(beet.u64)],
       ],
       'OrderPacketRecord["ImmediateOrCancel"]'
     ),
