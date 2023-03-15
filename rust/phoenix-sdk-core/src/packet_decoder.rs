@@ -1,10 +1,14 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use phoenix::state::{SelfTradeBehavior, Side};
+use phoenix::{
+    quantities::{BaseLots, QuoteLots, Ticks},
+    state::{SelfTradeBehavior, Side},
+};
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub enum OrderPacketEnum {
     PostOnly,
     Limit,
+    ImmediateOrCancel,
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -115,6 +119,85 @@ pub struct LimitPacket {
     pub last_valid_unix_timestamp_in_seconds: Option<u64>,
 }
 
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct DeprecatedImmediateOrCancelPacket {
+    side: Side,
+
+    /// The most aggressive price an order can be matched at. For example, if there is an IOC buy order
+    /// to purchase 10 lots with the tick_per_lot parameter set to 10, then the order will never
+    /// be matched at a price higher than 10 quote ticks per base unit. If this value is None, then the order
+    /// is treated as a market order.
+    price_in_ticks: Option<Ticks>,
+
+    /// The number of base lots to fill against the order book. Either this parameter or the `num_quote_lots`
+    /// parameter must be set to a nonzero value.
+    num_base_lots: BaseLots,
+
+    /// The number of quote lots to fill against the order book. Either this parameter or the `num_base_lots`
+    /// parameter must be set to a nonzero value.
+    num_quote_lots: QuoteLots,
+
+    /// The minimum number of base lots to fill against the order book. If the order does not fill
+    /// this many base lots, it will be voided.
+    min_base_lots_to_fill: BaseLots,
+
+    /// The minimum number of quote lots to fill against the order book. If the order does not fill
+    /// this many quote lots, it will be voided.
+    min_quote_lots_to_fill: QuoteLots,
+
+    /// How the matching engine should handle a self trade.
+    self_trade_behavior: SelfTradeBehavior,
+
+    /// Number of orders to match against. If set to `None`, there is no limit.
+    match_limit: Option<u64>,
+
+    /// Client order id used to identify the order in the program's inner instruction data.
+    client_order_id: u128,
+
+    /// Flag for whether or not the order should only use funds that are already in the account.
+    /// Using only deposited funds will allow the trader to pass in less accounts per instruction and
+    /// save transaction space as well as compute. This is only for traders who have a seat
+    use_only_deposited_funds: bool,
+}
+
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct ImmediateOrCancelPacket {
+    side: Side,
+    /// The most aggressive price an order can be matched at. For example, if there is an IOC buy order
+    /// to purchase 10 lots with the tick_per_lot parameter set to 10, then the order will never
+    /// be matched at a price higher than 10 quote ticks per base unit. If this value is None, then the order
+    /// is treated as a market order.
+    price_in_ticks: Option<Ticks>,
+    /// The number of base lots to fill against the order book. Either this parameter or the `num_quote_lots`
+    /// parameter must be set to a nonzero value.
+    num_base_lots: BaseLots,
+    /// The number of quote lots to fill against the order book. Either this parameter or the `num_base_lots`
+    /// parameter must be set to a nonzero value.
+    num_quote_lots: QuoteLots,
+    /// The minimum number of base lots to fill against the order book. If the order does not fill
+    /// this many base lots, it will be voided.
+    min_base_lots_to_fill: BaseLots,
+    /// The minimum number of quote lots to fill against the order book. If the order does not fill
+    /// this many quote lots, it will be voided.
+    min_quote_lots_to_fill: QuoteLots,
+    /// How the matching engine should handle a self trade.
+    self_trade_behavior: SelfTradeBehavior,
+    /// Number of orders to match against. If set to `None`, there is no limit.
+    match_limit: Option<u64>,
+    /// Client order id used to identify the order in the program's inner instruction data.
+    client_order_id: u128,
+    /// Flag for whether or not the order should only use funds that are already in the account.
+    /// Using only deposited funds will allow the trader to pass in less accounts per instruction and
+    /// save transaction space as well as compute. This is only for traders who have a seat
+    use_only_deposited_funds: bool,
+
+    /// If this is set, the order will be invalid after the specified slot
+    last_valid_slot: Option<u64>,
+
+    /// If this is set, the order will be invalid after the specified unix timestamp
+    last_valid_unix_timestamp_in_seconds: Option<u64>,
+}
+
 pub fn decode_post_only_packet_data(bytes: &[u8]) -> anyhow::Result<PostOnlyPacket> {
     let (tag, bytes) = bytes
         .split_first()
@@ -188,5 +271,50 @@ pub fn decode_limit_packet_data(bytes: &[u8]) -> anyhow::Result<LimitPacket> {
             })
         }
         _ => Err(anyhow::anyhow!("Invalid Post-Only packet")),
+    }
+}
+
+pub fn decode_ioc_packet_data(bytes: &[u8]) -> anyhow::Result<ImmediateOrCancelPacket> {
+    let (tag, bytes) = bytes
+        .split_first()
+        .ok_or(anyhow::anyhow!("Invalid packet"))?;
+
+    match OrderPacketEnum::try_from_slice(&[*tag])? {
+        OrderPacketEnum::ImmediateOrCancel => {
+            let packet = ImmediateOrCancelPacket::try_from_slice(bytes)
+                .map_err(|_| anyhow::Error::msg("Invalid IOC packet"));
+            let deprecated_packet_result = DeprecatedImmediateOrCancelPacket::try_from_slice(bytes);
+            if packet.is_ok() {
+                return packet;
+            }
+            let deprecated_packet = deprecated_packet_result?;
+            let DeprecatedImmediateOrCancelPacket {
+                side,
+                price_in_ticks,
+                num_base_lots,
+                num_quote_lots,
+                min_base_lots_to_fill,
+                min_quote_lots_to_fill,
+                self_trade_behavior,
+                match_limit,
+                client_order_id,
+                use_only_deposited_funds,
+            } = deprecated_packet;
+            Ok(ImmediateOrCancelPacket {
+                side,
+                price_in_ticks,
+                num_base_lots,
+                num_quote_lots,
+                min_base_lots_to_fill,
+                min_quote_lots_to_fill,
+                self_trade_behavior,
+                match_limit,
+                client_order_id,
+                use_only_deposited_funds,
+                last_valid_slot: None,
+                last_valid_unix_timestamp_in_seconds: None,
+            })
+        }
+        _ => Err(anyhow::anyhow!("Invalid Immediate or Cancel packet")),
     }
 }

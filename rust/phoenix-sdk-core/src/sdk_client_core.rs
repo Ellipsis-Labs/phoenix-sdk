@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use anyhow::Result;
 use borsh::BorshDeserialize;
+use phoenix::quantities::QuoteLots;
 use phoenix::{
     program::events::PhoenixMarketEvent,
     program::instruction_builders::{
@@ -571,6 +572,8 @@ impl SDKClientCore {
             None,
             None,
             None,
+            None,
+            None,
         )
     }
 
@@ -585,6 +588,8 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
+        last_valid_slot: Option<u64>,
+        last_valid_unix_timestamp_in_seconds: Option<u64>,
     ) -> Result<Instruction> {
         let market = self.markets.get(market_key).ok_or(anyhow!(
             "Market not found! Please load in the market first."
@@ -593,20 +598,26 @@ impl SDKClientCore {
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
+        let order_packet = OrderPacket::ImmediateOrCancel {
+            side,
+            price_in_ticks: Some(Ticks::new(num_quote_ticks_per_base_unit)),
+            num_base_lots: BaseLots::new(num_base_lots),
+            num_quote_lots: QuoteLots::new(0),
+            min_base_lots_to_fill: BaseLots::new(0),
+            min_quote_lots_to_fill: QuoteLots::new(0),
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        };
         Ok(create_new_order_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
             &market.quote_mint,
-            &OrderPacket::new_ioc_by_lots(
-                side,
-                num_quote_ticks_per_base_unit,
-                num_base_lots,
-                self_trade_behavior,
-                match_limit,
-                client_order_id,
-                use_only_deposited_funds,
-            ),
+            &order_packet,
         ))
     }
 
