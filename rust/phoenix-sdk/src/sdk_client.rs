@@ -12,7 +12,6 @@ pub use phoenix_sdk_core::{
     market_event::{Evict, Fill, FillSummary, MarketEventDetails, PhoenixEvent, Place, Reduce},
     sdk_client_core::{get_decimal_string, MarketMetadata, PhoenixOrder, SDKClientCore},
 };
-use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use solana_client::client_error::reqwest;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -25,8 +24,8 @@ use solana_sdk::{
 };
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::{collections::BTreeMap, mem::size_of, ops::DerefMut, sync::Arc};
-use std::{ops::Deref, sync::Mutex};
+use std::{collections::BTreeMap, mem::size_of, ops::DerefMut};
+use std::{ops::Deref};
 
 use crate::orderbook::Orderbook;
 
@@ -63,7 +62,6 @@ impl SDKClient {
 
         let core = SDKClientCore {
             markets,
-            rng: Arc::new(Mutex::new(StdRng::from_entropy())),
             trader: client.payer.pubkey(),
         };
         Ok(SDKClient { client, core })
@@ -84,7 +82,6 @@ impl SDKClient {
 
         let core = SDKClientCore {
             markets,
-            rng: Arc::new(Mutex::new(StdRng::from_entropy())),
             trader: client.payer.pubkey(),
         };
         println!("Creating SDKClient with all markets");
@@ -113,7 +110,6 @@ impl SDKClient {
         }
         let core = SDKClientCore {
             markets,
-            rng: Arc::new(Mutex::new(StdRng::from_entropy())),
             trader: client.payer.pubkey(),
         };
         Ok(SDKClient { client, core })

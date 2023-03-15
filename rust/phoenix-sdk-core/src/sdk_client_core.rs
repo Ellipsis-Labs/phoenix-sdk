@@ -93,7 +93,6 @@ pub struct MarketMetadata {
 }
 pub struct SDKClientCore {
     pub markets: BTreeMap<Pubkey, MarketMetadata>,
-    pub rng: Arc<Mutex<StdRng>>,
     pub trader: Pubkey,
 }
 
@@ -316,8 +315,9 @@ impl SDKClientCore {
 }
 
 impl SDKClientCore {
-    pub fn get_next_client_order_id(&self) -> u128 {
-        self.rng.lock().unwrap().gen::<u128>()
+    /// Generate a random client order id
+    pub fn get_next_client_order_id(&self, rng: Arc<Mutex<StdRng>>) -> u128 {
+        rng.lock().unwrap().gen::<u128>()
     }
 
     pub fn get_market_metadata(&self, market_key: &Pubkey) -> &MarketMetadata {
@@ -792,7 +792,7 @@ impl SDKClientCore {
                 size,
                 SelfTradeBehavior::CancelProvide,
                 None,
-                self.rng.lock().unwrap().gen::<u128>(),
+                0,
                 false,
             ),
         ))
