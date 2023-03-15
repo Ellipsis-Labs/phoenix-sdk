@@ -499,9 +499,13 @@ export class Client {
   public floatPriceToTicks(price: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
+
     return Math.round(
-      (price * 10 ** market.quoteToken.data.decimals) /
-        market.data.quoteLotsPerBaseUnitPerTick
+      (price *
+        market.data.header.rawBaseUnitsPerBaseUnit *
+        10 ** market.quoteToken.data.decimals) /
+        (market.data.quoteLotsPerBaseUnitPerTick *
+          toNum(market.data.header.quoteLotSize))
     );
   }
 
@@ -517,8 +521,11 @@ export class Client {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return (
-      (ticks * market.data.quoteLotsPerBaseUnitPerTick) /
-      10 ** market.quoteToken.data.decimals
+      (ticks *
+        market.data.quoteLotsPerBaseUnitPerTick *
+        toNum(market.data.header.quoteLotSize)) /
+      (10 ** market.quoteToken.data.decimals *
+        market.data.header.rawBaseUnitsPerBaseUnit)
     );
   }
 
