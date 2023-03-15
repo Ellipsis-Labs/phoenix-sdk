@@ -90,6 +90,7 @@ export class Market {
    *
    * @param connection The Solana `Connection` object
    * @param marketAddress The `PublicKey` of the market account
+   * @param tokenList The list of tokens to use for the market
    */
   static load({
     address,
@@ -205,6 +206,8 @@ export class Market {
    *
    * @param side The side of the order (Bid or Ask)
    * @param inAmount The amount of the input token
+   * @param slot The current slot
+   * @param unixTimestamp The current unix timestamp, in seconds
    */
   getExpectedOutAmount({
     side,
