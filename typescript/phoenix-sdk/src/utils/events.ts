@@ -19,7 +19,7 @@ import { logInstructionDiscriminator } from "../instructions";
 export type PhoenixTransaction = {
   instructions: Array<PhoenixEventsFromInstruction>;
   txReceived: boolean;
-  failed: boolean;
+  txFailed: boolean;
 };
 
 export type PhoenixEventsFromInstruction = {
@@ -55,18 +55,18 @@ export async function getEventsFromTransaction(
   const meta = txData?.meta;
   if (meta === undefined) {
     console.log("Transaction not found");
-    return { instructions: [], txReceived: false, failed: true };
+    return { instructions: [], txReceived: false, txFailed: true };
   }
 
   if (meta?.err !== null) {
     console.log("Transaction failed", meta?.err);
-    return { instructions: [], txReceived: true, failed: true };
+    return { instructions: [], txReceived: true, txFailed: true };
   }
 
   const innerIxs = txData?.meta?.innerInstructions;
   if (!innerIxs || !txData || !txData.slot) {
     console.log("No inner instructions found");
-    return { instructions: [], txReceived: true, failed: true };
+    return { instructions: [], txReceived: true, txFailed: true };
   }
 
   const logData: Array<Uint8Array> = [];
@@ -113,5 +113,5 @@ export async function getEventsFromTransaction(
       events: events,
     });
   }
-  return { instructions: instructions, txReceived: true, failed: false };
+  return { instructions: instructions, txReceived: true, txFailed: false };
 }

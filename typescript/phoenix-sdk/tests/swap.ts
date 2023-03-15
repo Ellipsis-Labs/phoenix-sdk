@@ -145,7 +145,7 @@ export async function swap() {
     }
   }
 
-  if (txResult.failed) {
+  if (txResult.txFailed) {
     console.log("Swap transaction failed");
     return;
   }
@@ -197,7 +197,7 @@ export async function swap() {
     }
   }
 
-  if (expiredTxResult.failed) {
+  if (expiredTxResult.txFailed) {
     console.log("Expired transaction not supposed to fail");
     return;
   }

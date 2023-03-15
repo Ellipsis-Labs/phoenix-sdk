@@ -609,6 +609,8 @@ export function getMarketSwapOrderPacket({
  * @param marketData The `MarketData` for the swap market
  * @param side The side of the order
  * @param inAmount The amount of the input token
+ * @param lastValidSlot The last valid slot for the order, if null, the order is valid until cancelled
+ * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for the order, if null, the order is valid until cancelled
  * @param slippage The slippage tolerance in bps (optional, default 0.5%)
  * @param selfTradeBehavior The self trade behavior (optional, default Abort)
  * @param matchLimit The match limit (optional)
