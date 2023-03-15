@@ -3,10 +3,10 @@ import { BN } from "bn.js";
 
 import * as Phoenix from "../src";
 
-// Ex: ts-node tests/market.ts
-export async function market() {
-  const connection = new Connection("https://api.mainnet-beta.solana.com");
-  const phoenix = await Phoenix.Client.create(connection, "mainnet");
+// Ex: ts-node examples/deserializeClock.ts
+export async function deserializeClock() {
+  const connection = new Connection("https://api.devnet.solana.com");
+  const phoenix = await Phoenix.Client.create(connection, "devnet");
   const clock = phoenix.clock;
   console.log("slot: ", new BN(clock.slot).toNumber());
   console.log("epoch start time", new BN(clock.epochStartTime).toNumber());
@@ -20,7 +20,7 @@ export async function market() {
 
 (async function () {
   try {
-    await market();
+    await deserializeClock();
   } catch (err) {
     console.log("Error: ", err);
     process.exit(1);

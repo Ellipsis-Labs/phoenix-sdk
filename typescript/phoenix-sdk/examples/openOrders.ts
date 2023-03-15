@@ -75,7 +75,7 @@ export async function watch() {
             Phoenix.toNum(orderId.priceInTicks),
             marketAddress.toString()
           ),
-          phoenix.baseAtomsToBaseUnits(
+          phoenix.baseAtomsToRawBaseUnits(
             phoenix.baseLotsToBaseAtoms(
               Phoenix.toNum(order.numBaseLots),
               marketAddress.toString()
@@ -98,7 +98,7 @@ export async function watch() {
             Phoenix.toNum(orderId.priceInTicks),
             marketAddress.toString()
           ),
-          phoenix.baseAtomsToBaseUnits(
+          phoenix.baseAtomsToRawBaseUnits(
             phoenix.baseLotsToBaseAtoms(
               Phoenix.toNum(order.numBaseLots),
               marketAddress.toString()

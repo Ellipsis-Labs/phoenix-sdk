@@ -24,7 +24,6 @@ import {
   getMarketUiLadder,
   printUiLadder,
 } from "./index";
-import axios from "axios";
 
 export type TokenConfig = {
   name: string;
@@ -114,8 +113,8 @@ export class Client {
     const configUrl =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
 
-    const marketConfigs = await axios.get(configUrl).then((response) => {
-      return response.data;
+    const marketConfigs = await fetch(configUrl).then((response) => {
+      return response.json();
     });
 
     const marketAddresses: PublicKey[] = marketConfigs[cluster].markets.map(
@@ -173,8 +172,8 @@ export class Client {
     const configUrl =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
 
-    const marketConfigs = await axios.get(configUrl).then((response) => {
-      return response.data;
+    const marketConfigs = await fetch(configUrl).then((response) => {
+      return response.json();
     });
     const tokenConfig = marketConfigs[cluster].tokens;
     const accounts = await connection.getMultipleAccountsInfo(
@@ -369,6 +368,7 @@ export class Client {
   /**
    * Returns the market's ladder of bids and asks as JS numbers
    * @param marketAddress The `PublicKey` of the market account
+   * @param levels The number of levels to return
    */
   public getUiLadder(
     marketAddress: string,
@@ -419,9 +419,10 @@ export class Client {
   }
 
   /**
-   * Get the Pubkey for a trader's Base Token Account on Phoenix
+   * Get a trader's base token account Pubkey for a given market
+   *
    * @param trader The `PublicKey` of the trader account
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public getBaseAccountKey(
     trader: PublicKey,
@@ -440,9 +441,10 @@ export class Client {
   }
 
   /**
-   * Get the Pubkey for a trader's Quote Token Account on Phoenix
+   * Get a trader's quote token account Pubkey for a given market
+   *
    * @param trader The `PublicKey` of the trader account
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public getQuoteAccountKey(
     trader: PublicKey,
@@ -461,9 +463,10 @@ export class Client {
   }
 
   /**
-   * Get the Pubkey for a trader's Seat Account
+   * Get a trader's seat account Pubkey for a given market
+   *
    * @param trader The `PublicKey` of the trader account
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public getSeatKey(trader: PublicKey, marketAddress: string): PublicKey {
     const market = this.markets.get(marketAddress);
@@ -476,7 +479,7 @@ export class Client {
   }
 
   /**
-   * Get the Log Authority Pubkey
+   * Returns the Phoenix log authority Pubkey
    */
   public getLogAuthority(): PublicKey {
     return PublicKey.findProgramAddressSync(
@@ -486,11 +489,12 @@ export class Client {
   }
 
   /**
-   * Get the price in ticks for a given price in quote units per base unit
-   * Example: For a tick size of 0.01 (quote units per base unit), a price in quote units per
-   * base unit of 1.23 would be 123 ticks
+   * Given a price in quote units per raw base unit, returns the price in ticks.
+   *
+   * Example: With a market tick size of 0.01, and a price of 1.23 quote units per raw base unit, the price in ticks is 123
+   *
    * @param price The price to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public floatPriceToTicks(price: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
@@ -502,9 +506,12 @@ export class Client {
   }
 
   /**
-   * Get the price in quote units for a given price in ticks
-   * @param ticks  The price in ticks to convert
-   * @param marketAddress  The `PublicKey` of the market account
+   * Given a price in ticks, returns the price in quote units per raw base unit.
+   *
+   * Example: With a market tick size of 0.01, and a price of 123 ticks, the price in quote units per raw base unit is 1.23
+   *
+   * @param ticks The price in ticks to convert
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public ticksToFloatPrice(ticks: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
@@ -516,9 +523,10 @@ export class Client {
   }
 
   /**
-   * Get the amount of base lots for a given amount of raw base units (rounded down)
+   * Given a number of raw base units, returns the equivalent number of base lots (rounded down).
+   *
    * @param rawBaseUnits The amount of raw base units to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public rawBaseUnitsToBaseLotsRoundedDown(
     rawBaseUnits: number,
@@ -531,9 +539,10 @@ export class Client {
   }
 
   /**
-   * Get the amount of base lots for a given amount of raw base units (rounded up)
+   * Given a number of raw base units, returns the equivalent number of base lots (rounded up).
+   *
    * @param rawBaseUnits The amount of raw base units to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public rawBaseUnitsToBaseLotsRoundedUp(
     rawBaseUnits: number,
@@ -546,9 +555,10 @@ export class Client {
   }
 
   /**
-   * Get the amount of base lots for a given amount base atoms
+   * Given a number of base atoms, returns the equivalent number of base lots.
+   *
    * @param baseAtoms The amount of base atoms to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public baseAtomsToBaseLots(baseAtoms: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
@@ -557,9 +567,10 @@ export class Client {
   }
 
   /**
-   * Get the amount of base atoms for a given amount of base lots
+   * Given a number of base lots, returns the equivalent number of base atoms.
+   *
    * @param baseLots The amount of base lots to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public baseLotsToBaseAtoms(baseLots: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
@@ -568,9 +579,10 @@ export class Client {
   }
 
   /**
-   * Get the amount of quote lots for a given amount of quote units
+   * Given a number of quote units, returns the equivalent number of quote lots.
+   *
    * @param quoteUnits The amount of quote units to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public quoteUnitsToQuoteLots(
     quoteUnits: number,
@@ -585,9 +597,10 @@ export class Client {
   }
 
   /**
-   * Get the amount of quote lots for a given amount of quote atoms
+   * Given a number of quote atoms, returns the equivalent number of quote lots.
+   *
    * @param quoteAtoms The amount of quote atoms to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public quoteAtomsToQuoteLots(
     quoteAtoms: number,
@@ -599,9 +612,10 @@ export class Client {
   }
 
   /**
-   * Get the amount of quote atoms for a given amount of quote lots
+   * Given a number of quote lots, returns the equivalent number of quote atoms.
+   *
    * @param quoteLots The amount of quote lots to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public quoteLotsToQuoteAtoms(
     quoteLots: number,
@@ -613,11 +627,12 @@ export class Client {
   }
 
   /**
-   * Get the amount of base units for a given amount of base atoms
+   * Given a number of base atoms, returns the equivalent number of raw base units.
+   *
    * @param baseAtoms The amount of base atoms to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
-  public baseAtomsToBaseUnits(
+  public baseAtomsToRawBaseUnits(
     baseAtoms: number,
     marketAddress: string
   ): number {
@@ -627,9 +642,10 @@ export class Client {
   }
 
   /**
-   * Get the amount of quote units for a given amount of quote atoms
+   * Given a number of quote atoms, returns the equivalent number of quote units.
+   *
    * @param quoteAtoms The amount of quote atoms to convert
-   * @param marketAddress The `PublicKey` of the market account
+   * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public quoteAtomsToQuoteUnits(
     quoteAtoms: number,
@@ -638,26 +654,5 @@ export class Client {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return quoteAtoms / 10 ** market.quoteToken.data.decimals;
-  }
-
-  /**
-   * Get the amount of quote atoms for an order with a given amount of base lots and a price in ticks
-   * @param baseLots The amount of base lots to convert
-   * @param priceInTicks The price in ticks
-   * @param marketAddress The `PublicKey` of the market account
-   */
-  public orderToQuoteAmount(
-    baseLots: number,
-    priceInTicks: number,
-    marketAddress: string
-  ): number {
-    const market = this.markets.get(marketAddress);
-    if (!market) throw new Error("Market not found: " + marketAddress);
-    return Math.round(
-      (baseLots *
-        priceInTicks *
-        toNum(market.data.header.tickSizeInQuoteAtomsPerBaseUnit)) /
-        market.data.baseLotsPerBaseUnit
-    );
   }
 }

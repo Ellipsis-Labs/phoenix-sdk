@@ -8,7 +8,6 @@ import {
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as Phoenix from "../src";
 import fs from "fs";
-import axios from "axios";
 
 // Ex: ts-node examples/simpleMarketMaker.ts {private_key_path}
 export async function simpleMarketMaker(privateKeyPath: string) {
@@ -136,9 +135,8 @@ export async function simpleMarketMaker(privateKeyPath: string) {
     }
 
     // grab the price from coinbase
-    const price = await axios
-      .get("https://api.coinbase.com/v2/prices/SOL-USD/spot")
-      .then((response) => response.data)
+    const price = await fetch("https://api.coinbase.com/v2/prices/SOL-USD/spot")
+      .then((response) => response.json())
       .then((data) => {
         return data.data.amount;
       })
