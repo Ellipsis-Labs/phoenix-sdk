@@ -550,7 +550,7 @@ export function getMarketSwapOrderPacket({
 }): Partial<OrderPacket> {
   const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
   const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
-  const ladder = getMarketUiLadder(this.data, Math.max(numBids, numAsks));
+  const ladder = getMarketUiLadder(marketData, Math.max(numBids, numAsks));
   const expectedOutAmount = getMarketExpectedOutAmount({
     ladder,
     takerFeeBps: marketData.takerFeeBps,
@@ -596,8 +596,62 @@ export function getMarketSwapOrderPacket({
     matchLimit,
     clientOrderId,
     useOnlyDepositedFunds,
+    lastValidSlot: null,
+    lastValidUnixTimestampInSeconds: null,
   };
 
+  return orderPacket;
+}
+
+/**
+ * Returns a Phoenix swap order packet
+ *
+ * @param marketData The `MarketData` for the swap market
+ * @param side The side of the order
+ * @param inAmount The amount of the input token
+ * @param lastValidSlot The last valid slot for the order, if null, the order is valid until cancelled
+ * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for the order, if null, the order is valid until cancelled
+ * @param slippage The slippage tolerance in bps (optional, default 0.5%)
+ * @param selfTradeBehavior The self trade behavior (optional, default Abort)
+ * @param matchLimit The match limit (optional)
+ * @param clientOrderId The client order ID (optional)
+ * @param useOnlyDepositedFunds Whether to use only deposited funds (optional)
+ */
+export function getMarketSwapOrderPacketWithTimeInForce({
+  marketData,
+  side,
+  inAmount,
+  lastValidSlot,
+  lastValidUnixTimestampInSeconds,
+  slippage = DEFAULT_SLIPPAGE_PERCENT,
+  selfTradeBehavior = SelfTradeBehavior.Abort,
+  matchLimit = DEFAULT_MATCH_LIMIT,
+  clientOrderId = 0,
+  useOnlyDepositedFunds = false,
+}: {
+  marketData: MarketData;
+  side: Side;
+  inAmount: number;
+  lastValidSlot: number | null;
+  lastValidUnixTimestampInSeconds: number | null;
+  slippage?: number;
+  selfTradeBehavior?: SelfTradeBehavior;
+  matchLimit?: number;
+  clientOrderId?: number;
+  useOnlyDepositedFunds?: boolean;
+}): Partial<OrderPacket> {
+  const orderPacket = getMarketSwapOrderPacket({
+    marketData,
+    side,
+    inAmount,
+    slippage,
+    selfTradeBehavior,
+    matchLimit,
+    clientOrderId,
+    useOnlyDepositedFunds,
+  });
+  orderPacket.lastValidSlot = lastValidSlot;
+  orderPacket.lastValidUnixTimestampInSeconds = lastValidUnixTimestampInSeconds;
   return orderPacket;
 }
 
