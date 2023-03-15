@@ -9,7 +9,8 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as Phoenix from "../src";
 import fs from "fs";
 
-// Ex: ts-node examples/simpleMarketMaker.ts {private_key_path}
+// To run: ts-node examples/simpleMarketMaker.ts $PATH-TO-KEYPAIR
+// The keypair must be funded with the base and quote tokens for the market, and whitelisted for the market
 export async function simpleMarketMaker(privateKeyPath: string) {
   // mainnet test market (BASE/QUOTE)
   const marketPubkey = new PublicKey(
