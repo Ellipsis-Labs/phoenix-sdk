@@ -2,7 +2,6 @@ use anyhow::anyhow;
 use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use phoenix::program::dispatch_market::*;
-use phoenix::program::instruction::PhoenixInstruction;
 use phoenix::program::MarketHeader;
 use phoenix::state::enums::*;
 use phoenix::state::markets::*;
@@ -23,9 +22,9 @@ use solana_sdk::{
     signer::keypair::Keypair,
 };
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::str::FromStr;
 use std::{collections::BTreeMap, mem::size_of, ops::DerefMut};
-use std::{ops::Deref};
 
 use crate::orderbook::Orderbook;
 
@@ -206,10 +205,9 @@ impl SDKClient {
             .await
             .map_err(|e| anyhow!("Failed to parse config file: {}", e))?;
 
-        let market_details = response.get(cluster).ok_or(anyhow!(
-            "Failed to find cluster {} in config file",
-            cluster
-        ))?;
+        let market_details = response
+            .get(cluster)
+            .ok_or_else(|| anyhow!("Failed to find cluster {} in config file", cluster))?;
 
         for market_key in market_details.markets.iter() {
             let market_key = Pubkey::from_str(market_key).map_err(|e| anyhow!(e))?;
@@ -315,7 +313,7 @@ impl SDKClient {
         };
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
         let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-            .map_err(|_| anyhow!("Failed to deserialize market header"))?; 
+            .map_err(|_| anyhow!("Failed to deserialize market header"))?;
         let market = load_with_dispatch(&header.market_size_params, bytes)
             .map_err(|_| anyhow!("Market configuration not found"))?
             .inner;
@@ -438,7 +436,8 @@ impl SDKClient {
         if tx.is_err {
             return None;
         }
-        self.core.parse_events_from_transaction(market_key, sig, &tx)
+        self.core
+            .parse_events_from_transaction(market_key, sig, &tx)
     }
 
     pub async fn parse_places(
