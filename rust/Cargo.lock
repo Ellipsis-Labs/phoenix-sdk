@@ -2721,7 +2721,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2749,10 +2749,11 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk-core"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
+ "bytemuck",
  "ellipsis-client",
  "itertools",
  "num-traits",
@@ -2762,6 +2763,7 @@ dependencies = [
  "rust_decimal_macros",
  "solana-program",
  "solana-sdk",
+ "spl-token",
 ]
 
 [[package]]
