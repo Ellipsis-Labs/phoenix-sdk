@@ -2753,6 +2753,7 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
+ "ellipsis-client",
  "itertools",
  "num-traits",
  "phoenix-v1",

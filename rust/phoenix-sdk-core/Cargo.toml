@@ -19,3 +19,4 @@ rust_decimal_macros = { workspace = true }
 itertools = "0.10.5"
 rand = { workspace = true }
 anyhow = { workspace = true }
+ellipsis-client = { workspace = true }

@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use anyhow::Result;
 use borsh::BorshDeserialize;
+use phoenix::program::PhoenixInstruction;
 use phoenix::quantities::QuoteLots;
 use phoenix::{
     program::events::PhoenixMarketEvent,
@@ -20,6 +21,7 @@ use phoenix::{
     state::order_packet::OrderPacket,
     state::trader_state::TraderState,
 };
+use ellipsis_client::transaction_utils::ParsedTransaction;
 use rand::{rngs::StdRng, Rng};
 use solana_program::{instruction::Instruction, pubkey::Pubkey};
 use solana_sdk::signature::Signature;
@@ -27,7 +29,6 @@ use std::{
     collections::BTreeMap,
     fmt::Display,
     ops::{Div, Rem},
-    sync::{Arc, Mutex},
 };
 
 use crate::{
@@ -317,10 +318,8 @@ impl SDKClientCore {
 
 impl SDKClientCore {
     /// Generate a random client order id
-    pub fn get_next_client_order_id(&self, rng: Arc<Mutex<StdRng>>) -> Result<u128> {
-        rng.lock()
-            .map(|mut rng| rng.gen::<u128>())
-            .map_err(|e| anyhow!("{}", e))
+    pub fn get_next_client_order_id(&self, rng: &mut StdRng) -> u128 {
+        rng.gen::<u128>()
     }
 
     pub fn get_market_metadata(&self, market_key: &Pubkey) -> &MarketMetadata {
@@ -336,10 +335,7 @@ impl SDKClientCore {
         sig: &Signature,
         events: Vec<Vec<u8>>,
     ) -> Option<Vec<PhoenixEvent>> {
-        let market = self
-            .markets
-            .get(market_key)
-            .expect("Market not found! Please load in the market first.");
+        let market = self.markets.get(market_key)?;
         let mut market_events: Vec<PhoenixEvent> = vec![];
 
         for event in events.iter() {
@@ -557,6 +553,40 @@ impl SDKClientCore {
         }
         Some(market_events)
     }
+
+    pub fn parse_events_from_transaction(
+        &self,
+        market_key: &Pubkey,
+        sig: &Signature,
+        tx: &ParsedTransaction,
+    ) -> Option<Vec<PhoenixEvent>> {
+        
+        let mut event_list = vec![];
+        for inner_ixs in tx.inner_instructions.iter() {
+            for inner_ix in inner_ixs.iter() {
+                let current_program_id = inner_ix.instruction.program_id.clone();
+                if current_program_id != phoenix::id().to_string() {
+                    continue;
+                }
+                if inner_ix.instruction.data.is_empty() {
+                    continue;
+                }
+                let (tag, data) = match inner_ix.instruction.data.split_first() {
+                    Some((tag, data)) => (*tag, data),
+                    None => continue,
+                };
+                let ix_enum = match PhoenixInstruction::try_from(tag).ok() {
+                    Some(ix) => ix,
+                    None => continue,
+                };
+                if matches!(ix_enum, PhoenixInstruction::Log) {
+                    event_list.push(data.to_vec());
+                }
+            }
+        }
+        self.parse_phoenix_events(market_key, sig, event_list)
+    }
+    
 
     pub fn get_ioc_ix(
         &self,

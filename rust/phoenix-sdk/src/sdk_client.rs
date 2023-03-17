@@ -438,30 +438,7 @@ impl SDKClient {
         if tx.is_err {
             return None;
         }
-        let mut event_list = vec![];
-        for inner_ixs in tx.inner_instructions.iter() {
-            for inner_ix in inner_ixs.iter() {
-                let current_program_id = inner_ix.instruction.program_id.clone();
-                if current_program_id != phoenix::id().to_string() {
-                    continue;
-                }
-                if inner_ix.instruction.data.is_empty() {
-                    continue;
-                }
-                let (tag, data) = match inner_ix.instruction.data.split_first() {
-                    Some((tag, data)) => (*tag, data),
-                    None => continue,
-                };
-                let ix_enum = match PhoenixInstruction::try_from(tag).ok() {
-                    Some(ix) => ix,
-                    None => continue,
-                };
-                if matches!(ix_enum, PhoenixInstruction::Log) {
-                    event_list.push(data.to_vec());
-                }
-            }
-        }
-        self.parse_phoenix_events(market_key, sig, event_list)
+        self.core.parse_events_from_transaction(market_key, sig, &tx)
     }
 
     pub async fn parse_places(
