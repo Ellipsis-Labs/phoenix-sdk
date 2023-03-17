@@ -81,7 +81,7 @@ export interface MarketData {
   // Note that the header contains tick size in quote atoms per base unit
   quoteLotsPerBaseUnitPerTick: number;
 
-  // The next sequence number of the market
+  // The next order sequence number of the market
   sequenceNumber: number;
 
   // Taker fee in basis points

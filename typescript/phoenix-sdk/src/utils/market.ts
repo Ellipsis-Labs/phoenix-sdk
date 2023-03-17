@@ -495,59 +495,46 @@ export function getMarketL3Book(
 ): L3Book {
   const bids: L3Order[] = [];
   const asks: L3Order[] = [];
-  for (const [orderId, restingOrder] of marketData.bids) {
-    if (restingOrder.lastValidSlot != 0 && restingOrder.lastValidSlot < slot) {
-      continue;
-    }
-    if (
-      restingOrder.lastValidUnixTimestampInSeconds != 0 &&
-      restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
-    ) {
-      continue;
-    }
-    const priceInTicks = toBN(orderId.priceInTicks);
-    const numBaseLots = toBN(restingOrder.numBaseLots);
 
-    bids.push({
-      priceInTicks,
-      sizeInBaseLots: numBaseLots,
-      side: Side.Bid,
-      makerPubkey: marketData.traderIndexToTraderPubkey.get(
-        toNum(restingOrder.traderIndex)
-      ),
-      orderSequenceNumber: getUiOrderSequenceNumber(orderId),
-    });
+  for (const side of [Side.Ask, Side.Bid]) {
+    const book = side === Side.Ask ? marketData.asks : marketData.bids;
+    for (const [orderId, restingOrder] of book) {
+      if (
+        restingOrder.lastValidSlot != 0 &&
+        restingOrder.lastValidSlot < slot
+      ) {
+        continue;
+      }
+      if (
+        restingOrder.lastValidUnixTimestampInSeconds != 0 &&
+        restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
+      ) {
+        continue;
+      }
+      const priceInTicks = toBN(orderId.priceInTicks);
+      const numBaseLots = toBN(restingOrder.numBaseLots);
 
-    if (bids.length === ordersPerSide) {
-      break;
-    }
-  }
+      const order: L3Order = {
+        priceInTicks,
+        sizeInBaseLots: numBaseLots,
+        side,
+        makerPubkey: marketData.traderIndexToTraderPubkey.get(
+          toNum(restingOrder.traderIndex)
+        ),
+        orderSequenceNumber: getUiOrderSequenceNumber(orderId),
+      };
+      if (side === Side.Ask) {
+        asks.push(order);
+      } else {
+        bids.push(order);
+      }
 
-  for (const [orderId, restingOrder] of marketData.asks) {
-    if (restingOrder.lastValidSlot != 0 && restingOrder.lastValidSlot < slot) {
-      continue;
-    }
-    if (
-      restingOrder.lastValidUnixTimestampInSeconds != 0 &&
-      restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
-    ) {
-      continue;
-    }
-    const priceInTicks = toBN(orderId.priceInTicks);
-    const numBaseLots = toBN(restingOrder.numBaseLots);
-
-    asks.push({
-      priceInTicks,
-      sizeInBaseLots: numBaseLots,
-      side: Side.Ask,
-      makerPubkey: marketData.traderIndexToTraderPubkey.get(
-        toNum(restingOrder.traderIndex)
-      ),
-      orderSequenceNumber: getUiOrderSequenceNumber(orderId),
-    });
-
-    if (asks.length === ordersPerSide) {
-      break;
+      if (side === Side.Ask && asks.length === ordersPerSide) {
+        break;
+      }
+      if (side === Side.Bid && bids.length === ordersPerSide) {
+        break;
+      }
     }
   }
 

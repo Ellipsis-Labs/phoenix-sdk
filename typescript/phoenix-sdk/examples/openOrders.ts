@@ -28,7 +28,6 @@ const displayOpenOrder = (
           .add(new BN(1))
           .toString();
   console.log(side, orderSequenceNumber, price, size, timeRemaining);
-  // console.log(toNum(orderSequenceNumber));
 };
 
 export async function watch() {
