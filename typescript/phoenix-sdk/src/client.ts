@@ -14,7 +14,7 @@ import {
 } from "@solana/spl-token";
 import {
   ClockData,
-  DEFAULT_LADDER_DEPTH,
+  DEFAULT_L2_LADDER_DEPTH,
   Ladder,
   PROGRAM_ID,
   Side,
@@ -23,6 +23,11 @@ import {
   getMarketLadder,
   getMarketUiLadder,
   printUiLadder,
+  getMarketL3Book,
+  DEFAULT_L3_BOOK_DEPTH,
+  L3Book,
+  L3UiBook,
+  getMarketL3UiBook,
 } from "./index";
 
 export type TokenConfig = {
@@ -350,10 +355,11 @@ export class Client {
   /**
    * Returns the market's ladder of bids and asks
    * @param marketAddress The `PublicKey` of the market account
+   * @param levels The number of levels to return
    */
   public getLadder(
     marketAddress: string,
-    levels: number = DEFAULT_LADDER_DEPTH
+    levels: number = DEFAULT_L2_LADDER_DEPTH
   ): Ladder {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -372,13 +378,51 @@ export class Client {
    */
   public getUiLadder(
     marketAddress: string,
-    levels: number = DEFAULT_LADDER_DEPTH
+    levels: number = DEFAULT_L2_LADDER_DEPTH
   ): UiLadder {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return getMarketUiLadder(
       market.data,
       levels,
+      this.clock.slot,
+      this.clock.unixTimestamp
+    );
+  }
+
+  /**
+   * Returns the L3 book for a market
+   * @param marketAddress The `PublicKey` of the market account
+   * @param ordersPerSide The number of orders to return per side
+   */
+  public getL3Book(
+    marketAddress: string,
+    ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
+  ): L3Book {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return getMarketL3Book(
+      market.data,
+      this.clock.slot,
+      this.clock.unixTimestamp,
+      ordersPerSide
+    );
+  }
+
+  /**
+   * Returns the L3 UI book for a market
+   * @param marketAddress The `PublicKey` of the market account
+   * @param ordersPerSide The number of orders to return per side
+   */
+  public getL3UiBook(
+    marketAddress: string,
+    ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
+  ): L3UiBook {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return getMarketL3UiBook(
+      market.data,
+      ordersPerSide,
       this.clock.slot,
       this.clock.unixTimestamp
     );
