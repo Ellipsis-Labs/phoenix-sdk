@@ -317,8 +317,10 @@ impl SDKClientCore {
 
 impl SDKClientCore {
     /// Generate a random client order id
-    pub fn get_next_client_order_id(&self, rng: Arc<Mutex<StdRng>>) -> u128 {
-        rng.lock().unwrap().gen::<u128>()
+    pub fn get_next_client_order_id(&self, rng: Arc<Mutex<StdRng>>) -> Result<u128> {
+        rng.lock()
+            .map(|mut rng| rng.gen::<u128>())
+            .map_err(|e| anyhow!("{}", e))
     }
 
     pub fn get_market_metadata(&self, market_key: &Pubkey) -> &MarketMetadata {
