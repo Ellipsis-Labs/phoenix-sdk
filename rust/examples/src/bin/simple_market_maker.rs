@@ -20,7 +20,7 @@ use solana_sdk::{
 };
 
 // Frequency in milliseconds to update quotes
-const QUOTE_REFRESH_FREQUENCY: u64 = 10000;
+const QUOTE_REFRESH_FREQUENCY: u64 = 2000;
 
 // Edge in bps on quote. Places bid/ask at fair price -/+ edge
 const QUOTE_EDGE_BPS: u64 = 5;
@@ -83,11 +83,7 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         let cancel_all_ix = sdk.get_cancel_all_ix(&market)?;
-        let cancel_txid = sdk
-            .client
-            .sign_send_instructions(vec![cancel_all_ix], vec![])
-            .await?;
-        println!("Cancel txid: {}", cancel_txid);
+        let mut ixs = vec![cancel_all_ix];
 
         let response = reqwest::get(format!(
             "https://api.coinbase.com/v2/prices/{}/spot",
@@ -103,7 +99,9 @@ async fn main() -> anyhow::Result<()> {
         let ask_price = fair_price * (1.0 + QUOTE_EDGE_BPS as f64 / 10000.0);
 
         if bid_price == 0.0 || ask_price == 0.0 {
-            println!("Bid or ask price is 0.0, skipping order placement");
+            println!("Bid or ask price is 0.0, skipping order placement, cancelling orders");
+            let txid = sdk.client.sign_send_instructions(ixs, vec![]).await?;
+            println!("Transaction sent: {}", txid);
             continue;
         }
 
@@ -169,10 +167,10 @@ async fn main() -> anyhow::Result<()> {
             &ask_order_packet,
         );
 
-        let txid = sdk
-            .client
-            .sign_send_instructions(vec![bid_ix, ask_ix], vec![])
-            .await?;
+        ixs.push(bid_ix);
+        ixs.push(ask_ix);
+
+        let txid = sdk.client.sign_send_instructions(ixs, vec![]).await?;
 
         println!("Place Txid: {}", txid);
 
