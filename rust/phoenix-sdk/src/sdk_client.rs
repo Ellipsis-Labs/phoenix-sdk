@@ -452,12 +452,10 @@ impl SDKClient {
         for raw_phoenix_event in raw_phoenix_events {
             let header = raw_phoenix_event.header;
             if !cached_metadata.contains_key(&header.market) {
-                cached_metadata.insert(
-                    header.market.clone(),
-                    Self::get_market_metadata(&self.client, &header.market)
-                        .await
-                        .ok()?,
-                )?;
+                let metadata = Self::get_market_metadata(&self.client, &header.market)
+                    .await
+                    .ok()?;
+                cached_metadata.insert(header.market.clone(), metadata);
             }
             let meta = cached_metadata.get(&header.market)?;
 
