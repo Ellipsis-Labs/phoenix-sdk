@@ -26,7 +26,6 @@ use solana_client::client_error::reqwest;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
-    program_pack::Pack,
     pubkey::Pubkey,
     signature::{Signature, Signer},
     signer::keypair::Keypair,
@@ -112,16 +111,15 @@ impl SDKClient {
         market_keys: Vec<&Pubkey>,
         client: EllipsisClient,
     ) -> Result<Self> {
-        let mut markets = BTreeMap::new();
-        for market_key in market_keys {
-            let market_metadata = Self::get_market_metadata(&client, market_key).await?;
-            markets.insert(*market_key, market_metadata);
-        }
         let core = SDKClientCore {
-            markets,
+            markets: BTreeMap::new(),
             trader: client.payer.pubkey(),
         };
-        Ok(SDKClient { client, core })
+        let mut sdk = SDKClient { client, core };
+        for market_key in market_keys {
+            sdk.add_market(market_key).await?;
+        }
+        Ok(sdk)
     }
 
     /// Create a new SDKClient from an EllipsisClient.
@@ -236,7 +234,7 @@ impl SDKClient {
     }
 
     pub async fn add_market(&mut self, market_key: &Pubkey) -> anyhow::Result<()> {
-        let market_metadata = Self::get_market_metadata(&self.client, market_key).await?;
+        let market_metadata = self.get_market_metadata(market_key).await?;
         self.markets.insert(*market_key, market_metadata);
 
         Ok(())
@@ -380,61 +378,32 @@ impl SDKClient {
         Ok(MarketState { orderbook, traders })
     }
 
-    #[allow(clippy::useless_conversion)]
-    async fn get_market_metadata(
-        client: &EllipsisClient,
+    pub async fn get_market_metadata(&self, market_key: &Pubkey) -> Result<MarketMetadata> {
+        match self.markets.get(market_key) {
+            Some(metadata) => return Ok(metadata.clone()),
+            None => {
+                let market_account_data = (self.client.get_account_data(market_key))
+                    .await
+                    .map_err(|_| anyhow!("Failed to find market account"))?;
+
+                let (header_bytes, _) = market_account_data.split_at(size_of::<MarketHeader>());
+                let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
+                    .map_err(|_| anyhow!("Failed to deserialize market header"))?;
+                MarketMetadata::from_header(&header)
+            }
+        }
+    }
+
+    pub fn get_market_metadata_from_cache(
+        &self,
         market_key: &Pubkey,
-    ) -> Result<MarketMetadata> {
-        let market_account_data = (client.get_account_data(market_key))
-            .await
-            .map_err(|_| anyhow!("Failed to find market account"))?;
-        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-            .map_err(|_| anyhow!("Failed to deserialize market header"))?;
-        let market = load_with_dispatch(&header.market_size_params, bytes)
-            .map_err(|_| anyhow!("Market configuration not found"))?
-            .inner;
-
-        let base_mint_acct = spl_token::state::Mint::unpack(
-            &client
-                .get_account_data(&header.base_params.mint_key)
-                .await
-                .map_err(|_| anyhow!("Failed to find base mint account"))?,
-        )
-        .map_err(|_| anyhow!("Failed to deserialize base mint account"))?;
-        let quote_mint_acct = spl_token::state::Mint::unpack(
-            &client
-                .get_account_data(&header.quote_params.mint_key)
-                .await
-                .map_err(|_| anyhow!("Failed to find quote mint account"))?,
-        )
-        .map_err(|_| anyhow!("Failed to deserialize quote mint account"))?;
-
-        let quote_lot_size = header.get_quote_lot_size().into();
-        let base_lot_size = header.get_base_lot_size().into();
-        let quote_multiplier = 10u64.pow(quote_mint_acct.decimals as u32);
-        let base_multiplier = 10u64.pow(base_mint_acct.decimals as u32);
-        let base_mint = header.base_params.mint_key;
-        let quote_mint = header.quote_params.mint_key;
-        let tick_size_in_quote_atoms_per_base_unit =
-            header.get_tick_size_in_quote_atoms_per_base_unit().into();
-        let num_base_lots_per_base_unit = market.get_base_lots_per_base_unit().into();
-        // max(1) is only relevant for old markets where the raw_base_units_per_base_unit was not set
-        let raw_base_units_per_base_unit = header.raw_base_units_per_base_unit.max(1);
-
-        Ok(MarketMetadata {
-            base_mint,
-            quote_mint,
-            base_decimals: base_mint_acct.decimals as u32,
-            quote_decimals: quote_mint_acct.decimals as u32,
-            base_multiplier,
-            quote_multiplier,
-            tick_size_in_quote_atoms_per_base_unit,
-            quote_lot_size,
-            base_lot_size,
-            num_base_lots_per_base_unit,
-            raw_base_units_per_base_unit,
-        })
+    ) -> anyhow::Result<&MarketMetadata> {
+        match self.markets.get(market_key) {
+            Some(metadata) => return Ok(metadata),
+            None => Err(anyhow!(
+                "Market metadata not found in cache. Try calling add_market first."
+            )),
+        }
     }
 
     pub async fn parse_events_from_transaction(
@@ -452,9 +421,7 @@ impl SDKClient {
         for raw_phoenix_event in raw_phoenix_events {
             let header = raw_phoenix_event.header;
             if !cached_metadata.contains_key(&header.market) {
-                let metadata = Self::get_market_metadata(&self.client, &header.market)
-                    .await
-                    .ok()?;
+                let metadata = self.get_market_metadata(&header.market).await.ok()?;
                 cached_metadata.insert(header.market.clone(), metadata);
             }
             let meta = cached_metadata.get(&header.market)?;

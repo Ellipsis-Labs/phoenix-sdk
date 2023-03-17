@@ -4,6 +4,7 @@ use anyhow::Result;
 use borsh::BorshDeserialize;
 use ellipsis_client::transaction_utils::ParsedTransaction;
 use itertools::Itertools;
+use phoenix::program::MarketHeader;
 use phoenix::program::PhoenixInstruction;
 use phoenix::quantities::QuoteLots;
 use phoenix::{
@@ -103,6 +104,38 @@ pub struct MarketMetadata {
     /// The adjustment factor is almost always 1, unless one base token is worth less than one quote atom (i.e. 1e-6 USDC)
     pub raw_base_units_per_base_unit: u32,
 }
+
+impl MarketMetadata {
+    pub fn from_header(header: &MarketHeader) -> Result<Self> {
+        let quote_lot_size = header.get_quote_lot_size().into();
+        let base_lot_size = header.get_base_lot_size().into();
+        let quote_multiplier = 10u64.pow(header.quote_params.decimals);
+        let base_multiplier = 10u64.pow(header.base_params.decimals);
+        let base_mint = header.base_params.mint_key;
+        let quote_mint = header.quote_params.mint_key;
+        let tick_size_in_quote_atoms_per_base_unit =
+            header.get_tick_size_in_quote_atoms_per_base_unit().into();
+        // max(1) is only relevant for old markets where the raw_base_units_per_base_unit was not set
+        let raw_base_units_per_base_unit = header.raw_base_units_per_base_unit.max(1);
+        let num_base_lots_per_base_unit =
+            base_multiplier * raw_base_units_per_base_unit as u64 / base_lot_size;
+
+        Ok(MarketMetadata {
+            base_mint,
+            quote_mint,
+            base_decimals: header.base_params.decimals,
+            quote_decimals: header.quote_params.decimals,
+            base_multiplier,
+            quote_multiplier,
+            tick_size_in_quote_atoms_per_base_unit,
+            quote_lot_size,
+            base_lot_size,
+            num_base_lots_per_base_unit,
+            raw_base_units_per_base_unit,
+        })
+    }
+}
+
 pub struct SDKClientCore {
     pub markets: BTreeMap<Pubkey, MarketMetadata>,
     pub trader: Pubkey,
