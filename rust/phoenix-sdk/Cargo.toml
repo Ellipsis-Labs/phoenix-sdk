@@ -31,3 +31,5 @@ bytemuck = { workspace = true }
 itertools = "0.10.5"
 phoenix-sdk-core = { version = "0.3.8", path = "../phoenix-sdk-core" }
 serde = { workspace = true }
+spl-associated-token-account = { workspace = true }
+phoenix-seat-manager = { workspace = true }
