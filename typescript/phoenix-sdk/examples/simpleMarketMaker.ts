@@ -102,7 +102,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   );
 
   let count = 0;
-  
+
   while (true) {
     const cancelAll = Phoenix.createCancelAllOrdersInstructionWithClient(
       client,
