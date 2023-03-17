@@ -388,12 +388,9 @@ impl SDKClient {
         let market_account_data = (client.get_account_data(market_key))
             .await
             .map_err(|_| anyhow!("Failed to find market account"))?;
-        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let (header_bytes, _) = market_account_data.split_at(size_of::<MarketHeader>());
         let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
             .map_err(|_| anyhow!("Failed to deserialize market header"))?;
-        let market = load_with_dispatch(&header.market_size_params, bytes)
-            .map_err(|_| anyhow!("Market configuration not found"))?
-            .inner;
 
         let base_mint_acct = spl_token::state::Mint::unpack(
             &client
@@ -418,9 +415,10 @@ impl SDKClient {
         let quote_mint = header.quote_params.mint_key;
         let tick_size_in_quote_atoms_per_base_unit =
             header.get_tick_size_in_quote_atoms_per_base_unit().into();
-        let num_base_lots_per_base_unit = market.get_base_lots_per_base_unit().into();
         // max(1) is only relevant for old markets where the raw_base_units_per_base_unit was not set
         let raw_base_units_per_base_unit = header.raw_base_units_per_base_unit.max(1);
+        let num_base_lots_per_base_unit =
+            base_multiplier * raw_base_units_per_base_unit as u64 / base_lot_size;
 
         Ok(MarketMetadata {
             base_mint,
