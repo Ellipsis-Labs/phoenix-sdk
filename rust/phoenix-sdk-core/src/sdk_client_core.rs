@@ -24,7 +24,6 @@ use phoenix::{
 use rand::{rngs::StdRng, Rng};
 use solana_program::{instruction::Instruction, pubkey::Pubkey};
 use solana_sdk::signature::Signature;
-use std::mem::size_of;
 use std::{
     collections::BTreeMap,
     fmt::Display,
@@ -107,11 +106,7 @@ pub struct MarketMetadata {
 }
 
 impl MarketMetadata {
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let (header_bytes, _) = bytes.split_at(size_of::<MarketHeader>());
-        let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-            .map_err(|_| anyhow!("Failed to deserialize market header"))?;
-
+    pub fn from_header(header: &MarketHeader) -> Result<Self> {
         let quote_lot_size = header.get_quote_lot_size().into();
         let base_lot_size = header.get_base_lot_size().into();
         let quote_multiplier = 10u64.pow(header.quote_params.decimals);

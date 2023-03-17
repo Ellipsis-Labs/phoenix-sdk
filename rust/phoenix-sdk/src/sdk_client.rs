@@ -385,8 +385,24 @@ impl SDKClient {
                 let market_account_data = (self.client.get_account_data(market_key))
                     .await
                     .map_err(|_| anyhow!("Failed to find market account"))?;
-                MarketMetadata::from_bytes(&market_account_data)
+
+                let (header_bytes, _) = market_account_data.split_at(size_of::<MarketHeader>());
+                let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
+                    .map_err(|_| anyhow!("Failed to deserialize market header"))?;
+                MarketMetadata::from_header(&header)
             }
+        }
+    }
+
+    pub fn get_market_metadata_from_cache(
+        &self,
+        market_key: &Pubkey,
+    ) -> anyhow::Result<&MarketMetadata> {
+        match self.markets.get(market_key) {
+            Some(metadata) => return Ok(metadata),
+            None => Err(anyhow!(
+                "Market metadata not found in cache. Try calling add_market first."
+            )),
         }
     }
 
