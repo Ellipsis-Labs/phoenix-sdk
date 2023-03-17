@@ -2,10 +2,20 @@ use anyhow::anyhow;
 use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use phoenix::program::dispatch_market::*;
+use phoenix::program::EvictEvent;
+use phoenix::program::ExpiredOrderEvent;
+use phoenix::program::FeeEvent;
+use phoenix::program::FillEvent;
+use phoenix::program::FillSummaryEvent;
 use phoenix::program::MarketHeader;
+use phoenix::program::PhoenixMarketEvent;
+use phoenix::program::PlaceEvent;
+use phoenix::program::ReduceEvent;
+use phoenix::program::TimeInForceEvent;
 use phoenix::state::enums::*;
 use phoenix::state::markets::*;
 use phoenix::state::TraderState;
+use phoenix_sdk_core::market_event::TimeInForce;
 use phoenix_sdk_core::sdk_client_core::MarketState;
 pub use phoenix_sdk_core::{
     market_event::{Evict, Fill, FillSummary, MarketEventDetails, PhoenixEvent, Place, Reduce},
@@ -429,24 +439,226 @@ impl SDKClient {
 
     pub async fn parse_events_from_transaction(
         &self,
-        market_key: &Pubkey,
         sig: &Signature,
     ) -> Option<Vec<PhoenixEvent>> {
         let tx = self.client.get_transaction(sig).await.ok()?;
         if tx.is_err {
             return None;
         }
-        self.core
-            .parse_events_from_transaction(market_key, sig, &tx)
+        let raw_phoenix_events = self.core.parse_events_from_transaction(sig, &tx)?;
+        let mut trade_direction = None;
+        let mut market_events = vec![];
+        let mut cached_metadata = self.markets.clone();
+        for raw_phoenix_event in raw_phoenix_events {
+            let header = raw_phoenix_event.header;
+            if !cached_metadata.contains_key(&header.market) {
+                cached_metadata.insert(
+                    header.market.clone(),
+                    Self::get_market_metadata(&self.client, &header.market)
+                        .await
+                        .ok()?,
+                )?;
+            }
+            let meta = cached_metadata.get(&header.market)?;
+
+            for phoenix_event in raw_phoenix_event.batch {
+                match phoenix_event {
+                    PhoenixMarketEvent::Fill(FillEvent {
+                        index,
+                        maker_id,
+                        order_sequence_number,
+                        price_in_ticks,
+                        base_lots_filled,
+                        base_lots_remaining,
+                    }) => {
+                        let side_filled = Side::from_order_sequence_number(order_sequence_number);
+                        market_events.push(PhoenixEvent {
+                            market: header.market,
+                            sequence_number: header.sequence_number,
+                            slot: header.slot,
+                            timestamp: header.timestamp,
+                            signature: *sig,
+                            signer: header.signer,
+                            event_index: index as u64,
+                            details: MarketEventDetails::Fill(Fill {
+                                order_sequence_number,
+                                maker: maker_id,
+                                taker: header.signer,
+                                price_in_ticks,
+                                base_lots_filled,
+                                base_lots_remaining,
+                                side_filled: Side::from_order_sequence_number(
+                                    order_sequence_number,
+                                ),
+                                is_full_fill: base_lots_remaining == 0,
+                            }),
+                        });
+                        if trade_direction.is_none() {
+                            trade_direction = match side_filled {
+                                Side::Bid => Some(-1),
+                                Side::Ask => Some(1),
+                            }
+                        }
+                    }
+                    PhoenixMarketEvent::Reduce(ReduceEvent {
+                        index,
+                        order_sequence_number,
+                        price_in_ticks,
+                        base_lots_removed,
+                        base_lots_remaining,
+                    }) => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Reduce(Reduce {
+                            order_sequence_number,
+                            maker: header.signer,
+                            price_in_ticks,
+                            base_lots_removed,
+                            base_lots_remaining,
+                            is_full_cancel: base_lots_remaining == 0,
+                        }),
+                    }),
+
+                    PhoenixMarketEvent::Place(PlaceEvent {
+                        index,
+                        order_sequence_number,
+                        client_order_id,
+                        price_in_ticks,
+                        base_lots_placed,
+                    }) => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Place(Place {
+                            order_sequence_number,
+                            client_order_id,
+                            maker: header.signer,
+                            price_in_ticks,
+                            base_lots_placed,
+                        }),
+                    }),
+                    PhoenixMarketEvent::Evict(EvictEvent {
+                        index,
+                        maker_id,
+                        order_sequence_number,
+                        price_in_ticks,
+                        base_lots_evicted,
+                    }) => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Evict(Evict {
+                            order_sequence_number,
+                            maker: maker_id,
+                            price_in_ticks,
+                            base_lots_evicted,
+                        }),
+                    }),
+                    PhoenixMarketEvent::FillSummary(FillSummaryEvent {
+                        index,
+                        client_order_id,
+                        total_base_lots_filled,
+                        total_quote_lots_filled,
+                        total_fee_in_quote_lots,
+                    }) => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::FillSummary(FillSummary {
+                            client_order_id,
+                            total_base_filled: total_base_lots_filled * meta.base_lot_size,
+                            total_quote_filled_including_fees: total_quote_lots_filled
+                                * meta.quote_lot_size,
+                            total_quote_fees: total_fee_in_quote_lots * meta.quote_lot_size,
+                            trade_direction: trade_direction.unwrap_or(0),
+                        }),
+                    }),
+                    PhoenixMarketEvent::Fee(FeeEvent {
+                        index,
+                        fees_collected_in_quote_lots,
+                    }) => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Fee(
+                            fees_collected_in_quote_lots * meta.quote_lot_size,
+                        ),
+                    }),
+                    PhoenixMarketEvent::TimeInForce(TimeInForceEvent {
+                        index,
+                        order_sequence_number,
+                        last_valid_slot,
+                        last_valid_unix_timestamp_in_seconds,
+                    }) => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::TimeInForce(TimeInForce {
+                            order_sequence_number,
+                            last_valid_slot,
+                            last_valid_unix_timestamp_in_seconds,
+                        }),
+                    }),
+                    PhoenixMarketEvent::ExpiredOrder(ExpiredOrderEvent {
+                        index,
+                        maker_id,
+                        order_sequence_number,
+                        price_in_ticks,
+                        base_lots_removed,
+                    }) => market_events.push(PhoenixEvent {
+                        market: header.market,
+                        sequence_number: header.sequence_number,
+                        slot: header.slot,
+                        timestamp: header.timestamp,
+                        signature: *sig,
+                        signer: header.signer,
+                        event_index: index as u64,
+                        details: MarketEventDetails::Reduce(Reduce {
+                            order_sequence_number,
+                            maker: maker_id,
+                            price_in_ticks,
+                            base_lots_removed,
+                            base_lots_remaining: 0,
+                            is_full_cancel: true,
+                        }),
+                    }),
+                    _ => {
+                        println!("Unknown event: {:?}", phoenix_event);
+                    }
+                }
+            }
+        }
+        Some(market_events)
     }
 
-    pub async fn parse_places(
-        &self,
-        market_key: &Pubkey,
-        signature: &Signature,
-    ) -> Vec<PhoenixEvent> {
+    pub async fn parse_places(&self, signature: &Signature) -> Vec<PhoenixEvent> {
         let events = self
-            .parse_events_from_transaction(market_key, signature)
+            .parse_events_from_transaction(signature)
             .await
             .unwrap_or_default();
         events
@@ -458,13 +670,9 @@ impl SDKClient {
             .collect::<Vec<PhoenixEvent>>()
     }
 
-    pub async fn parse_cancels(
-        &self,
-        market_key: &Pubkey,
-        signature: &Signature,
-    ) -> Vec<PhoenixEvent> {
+    pub async fn parse_cancels(&self, signature: &Signature) -> Vec<PhoenixEvent> {
         let events = self
-            .parse_events_from_transaction(market_key, signature)
+            .parse_events_from_transaction(signature)
             .await
             .unwrap_or_default();
         events
@@ -476,13 +684,9 @@ impl SDKClient {
             .collect::<Vec<PhoenixEvent>>()
     }
 
-    pub async fn parse_fills(
-        &self,
-        market_key: &Pubkey,
-        signature: &Signature,
-    ) -> Vec<PhoenixEvent> {
+    pub async fn parse_fills(&self, signature: &Signature) -> Vec<PhoenixEvent> {
         let events = self
-            .parse_events_from_transaction(market_key, signature)
+            .parse_events_from_transaction(signature)
             .await
             .unwrap_or_default();
         events
@@ -496,11 +700,10 @@ impl SDKClient {
 
     pub async fn parse_fills_and_places(
         &self,
-        market_key: &Pubkey,
         signature: &Signature,
     ) -> (Vec<PhoenixEvent>, Vec<PhoenixEvent>) {
         let events = self
-            .parse_events_from_transaction(market_key, signature)
+            .parse_events_from_transaction(signature)
             .await
             .unwrap_or_default();
         let fills = events
@@ -534,7 +737,7 @@ impl SDKClient {
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(market_key, &signature).await;
+        let fills = self.parse_fills(&signature).await;
         Some((signature, fills))
     }
 
@@ -553,7 +756,7 @@ impl SDKClient {
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(market_key, &signature).await;
+        let fills = self.parse_fills(&signature).await;
         Some((signature, fills))
     }
 
@@ -572,7 +775,7 @@ impl SDKClient {
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(market_key, &signature).await;
+        let fills = self.parse_fills(&signature).await;
         Some((signature, fills))
     }
 
@@ -591,7 +794,7 @@ impl SDKClient {
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(market_key, &signature).await;
+        let fills = self.parse_fills(&signature).await;
         Some((signature, fills))
     }
 
@@ -608,7 +811,7 @@ impl SDKClient {
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let fills = self.parse_fills(market_key, &signature).await;
+        let fills = self.parse_fills(&signature).await;
         Some((signature, fills))
     }
 
@@ -627,7 +830,7 @@ impl SDKClient {
             .sign_send_instructions(vec![new_order_ix], vec![])
             .await
             .ok()?;
-        let (fills, places) = self.parse_fills_and_places(market_key, &signature).await;
+        let (fills, places) = self.parse_fills_and_places(&signature).await;
         Some((signature, places, fills))
     }
 
@@ -643,7 +846,7 @@ impl SDKClient {
             .await
             .ok()?;
 
-        let cancels = self.parse_cancels(market_key, &signature).await;
+        let cancels = self.parse_cancels(&signature).await;
         Some((signature, cancels))
     }
 
@@ -662,7 +865,7 @@ impl SDKClient {
             .await
             .ok()?;
 
-        let cancels = self.parse_cancels(market_key, &signature).await;
+        let cancels = self.parse_cancels(&signature).await;
         Some((signature, cancels))
     }
 
@@ -677,7 +880,7 @@ impl SDKClient {
             .await
             .ok()?;
 
-        let cancels = self.parse_cancels(market_key, &signature).await;
+        let cancels = self.parse_cancels(&signature).await;
         Some((signature, cancels))
     }
 }
