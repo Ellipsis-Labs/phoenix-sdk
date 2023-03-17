@@ -364,7 +364,7 @@ impl SDKClientCore {
         for event in events.iter() {
             let header_event =
                 PhoenixMarketEvent::try_from_slice(&event[..AUDIT_LOG_HEADER_LEN]).ok()?;
-            let mut header = match header_event {
+            let header = match header_event {
                 PhoenixMarketEvent::Header(header) => Some(header),
                 _ => {
                     panic!("Expected a header event");
@@ -381,8 +381,6 @@ impl SDKClientCore {
                         return None;
                     }
                 };
-            // Zero out the total_events field so we can group the headers
-            header.total_events = 0;
 
             market_events.push(RawPhoenixEvent {
                 header: RawPhoenixHeader {
