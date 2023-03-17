@@ -102,7 +102,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   );
 
   let count = 0;
-  // eslint-disable-next-line no-constant-condition
+  
   while (true) {
     const cancelAll = Phoenix.createCancelAllOrdersInstructionWithClient(
       client,

@@ -2721,7 +2721,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2738,6 +2738,7 @@ dependencies = [
  "rand 0.7.3",
  "rust_decimal",
  "rust_decimal_macros",
+ "serde",
  "solana-client",
  "solana-program",
  "solana-sdk",
@@ -2748,10 +2749,11 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk-core"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
+ "ellipsis-client",
  "itertools",
  "num-traits",
  "phoenix-v1",
@@ -2764,9 +2766,9 @@ dependencies = [
 
 [[package]]
 name = "phoenix-v1"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9099353a240c7bd61d6fc2e7f4570cffae472c3f3ca4c75dbaa2042583351c8"
+checksum = "37076e801aa5ab681fc5db78c0b09a7db0d55df12e95bc405f4080f3327edc90"
 dependencies = [
  "borsh 0.9.3",
  "bytemuck",
@@ -3501,9 +3503,9 @@ checksum = "58bc9567378fc7690d6b2addae4e60ac2eeea07becb2c64b9f218b53865cba2a"
 
 [[package]]
 name = "serde"
-version = "1.0.152"
+version = "1.0.154"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb7d1f0d3021d347a83e556fc4683dea2ea09d87bccdf88ff5c12545d89d5efb"
+checksum = "8cdd151213925e7f1ab45a9bbfb129316bd00799784b174b7cc7bcd16961c49e"
 dependencies = [
  "serde_derive",
 ]
@@ -3519,9 +3521,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.152"
+version = "1.0.154"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af487d118eecd09402d70a5d72551860e788df87b464af30e5ea6a38c75c541e"
+checksum = "4fc80d722935453bcafdc2c9a73cd6fac4dc1938f0346035d84bf99fa9e33217"
 dependencies = [
  "proc-macro2 1.0.51",
  "quote 1.0.23",

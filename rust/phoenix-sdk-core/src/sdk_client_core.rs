@@ -1,4 +1,8 @@
+use anyhow::anyhow;
+use anyhow::Result;
 use borsh::BorshDeserialize;
+use phoenix::program::PhoenixInstruction;
+use phoenix::quantities::QuoteLots;
 use phoenix::{
     program::events::PhoenixMarketEvent,
     program::instruction_builders::{
@@ -11,23 +15,21 @@ use phoenix::{
         TimeInForceEvent,
     },
     program::{reduce_order::CancelOrderParams, ReduceEvent},
-    quantities::WrapperU64,
+    quantities::{BaseLots, Ticks, WrapperU64},
     state::enums::{SelfTradeBehavior, Side},
     state::markets::FIFOOrderId,
     state::order_packet::OrderPacket,
     state::trader_state::TraderState,
 };
+use ellipsis_client::transaction_utils::ParsedTransaction;
 use rand::{rngs::StdRng, Rng};
+use solana_program::{instruction::Instruction, pubkey::Pubkey};
 use solana_sdk::signature::Signature;
 use std::{
     collections::BTreeMap,
     fmt::Display,
-    ops::{Deref, Div, Rem},
-    sync::{Arc, Mutex},
+    ops::{Div, Rem},
 };
-
-use anyhow;
-use solana_program::{instruction::Instruction, pubkey::Pubkey};
 
 use crate::{
     market_event::{
@@ -73,7 +75,7 @@ where
     format!("{}.{}", lhs, rhs)
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MarketMetadata {
     pub base_mint: Pubkey,
     pub quote_mint: Pubkey,
@@ -93,17 +95,7 @@ pub struct MarketMetadata {
 }
 pub struct SDKClientCore {
     pub markets: BTreeMap<Pubkey, MarketMetadata>,
-    pub rng: Arc<Mutex<StdRng>>,
-    pub active_market_key: Pubkey,
     pub trader: Pubkey,
-}
-
-impl Deref for SDKClientCore {
-    type Target = MarketMetadata;
-
-    fn deref(&self) -> &Self::Target {
-        self.markets.get(&self.active_market_key).unwrap()
-    }
 }
 
 impl SDKClientCore {
@@ -111,152 +103,239 @@ impl SDKClientCore {
     /// Converts raw base units (whole tokens) to base lots. For example if the base currency was a Widget and you wanted to
     /// convert 3 Widget tokens to base lots you would call sdk.raw_base_units_to_base_lots(3.0). This would return
     /// the number of base lots that would be equivalent to 3 Widget tokens.
-    pub fn raw_base_units_to_base_lots(&self, raw_base_units: f64) -> u64 {
+    pub fn raw_base_units_to_base_lots(
+        &self,
+        market_key: &Pubkey,
+        raw_base_units: f64,
+    ) -> Result<u64> {
+        let market = self
+            .markets
+            .get(market_key)
+            .ok_or(anyhow!("Market not found! Please load in the market first"))?;
         // Convert to Phoenix BaseUnits
-        let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
-        (base_units * (self.num_base_lots_per_base_unit as f64)).floor() as u64
+        let base_units = raw_base_units / market.raw_base_units_per_base_unit as f64;
+        Ok((base_units * (market.num_base_lots_per_base_unit as f64)).floor() as u64)
     }
 
     /// The same function as raw_base_units_to_base_lots, but rounds up instead of down.
-    pub fn raw_base_units_to_base_lots_rounded_up(&self, raw_base_units: f64) -> u64 {
+    pub fn raw_base_units_to_base_lots_rounded_up(
+        &self,
+        market_key: &Pubkey,
+        raw_base_units: f64,
+    ) -> Result<u64> {
+        let market = self
+            .markets
+            .get(market_key)
+            .ok_or(anyhow!("Market not found! Please load in the market first"))?;
         // Convert to Phoenix BaseUnits
-        let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
-        (base_units * (self.num_base_lots_per_base_unit as f64)).ceil() as u64
+        let base_units = raw_base_units / market.raw_base_units_per_base_unit as f64;
+        Ok((base_units * (market.num_base_lots_per_base_unit as f64)).ceil() as u64)
     }
 
     /// RECOMMENDED:
     /// Converts base atoms to base lots. For example if the base currency was a Widget with 9 decimals, where 1 atom is 1e-9 of one Widget and you wanted to
     /// convert 3 Widgets to base lots you would call sdk.base_amount_to_base_lots(3_000_000_000). This would return
     /// the number of base lots that would be equivalent to 3 Widgets or 3 * 1e9 Widget atoms.
-    pub fn base_atoms_to_base_lots(&self, base_atoms: u64) -> u64 {
-        base_atoms / self.base_lot_size // Lot size is the number of atoms in a lot
+    pub fn base_atoms_to_base_lots(&self, market_key: &Pubkey, base_atoms: u64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+
+        Ok(base_atoms / market.base_lot_size) // Lot size is the number of atoms in a lot
     }
 
     /// RECOMMENDED:
     /// Converts base lots to base atoms. For example if the base currency was a Widget where there are
     /// 1_000 base atoms per base lot of Widget, you would call sdk.base_lots_to_base_atoms(300) to convert 300 base lots
     /// to 300_000 Widget atoms.
-    pub fn base_lots_to_base_atoms(&self, base_lots: u64) -> u64 {
-        base_lots * self.base_lot_size // Lot size is the number of atoms in a lot
+    pub fn base_lots_to_base_atoms(&self, market_key: &Pubkey, base_lots: u64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(base_lots * market.base_lot_size) // Lot size is the number of atoms in a lot
     }
 
     /// RECOMMENDED:
     /// Converts quote units to quote lots. For example if the quote currency was USDC you wanted to
     /// convert 3 USDC to quote lots you would call sdk.quote_unit_to_quote_lots(3.0). This would return
     /// the number of quote lots that would be equivalent to 3 USDC.
-    pub fn quote_units_to_quote_lots(&self, quote_units: f64) -> u64 {
-        (quote_units * self.quote_multiplier as f64 / self.quote_lot_size as f64) as u64
+    pub fn quote_units_to_quote_lots(&self, market_key: &Pubkey, quote_units: f64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok((quote_units * market.quote_multiplier as f64 / market.quote_lot_size as f64) as u64)
     }
 
     /// RECOMMENDED:
     /// Converts quote atoms to quote lots. For example if the quote currency was USDC with 6 decimals and you wanted to
     /// convert 3 USDC, or 3_000_000 USDC atoms, to quote lots you would call sdk.quote_atoms_to_quote_lots(3_000_000). This would return
     /// the number of quote lots that would be equivalent to 3_000_000 USDC atoms.
-    pub fn quote_atoms_to_quote_lots(&self, quote_atoms: u64) -> u64 {
-        quote_atoms / self.quote_lot_size
+    pub fn quote_atoms_to_quote_lots(&self, market_key: &Pubkey, quote_atoms: u64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(quote_atoms / market.quote_lot_size)
     }
 
     /// RECOMMENDED:
     /// Converts quote lots to quote atoms. For example if the quote currency was USDC and there are
     /// 100 quote atoms per quote lot of USDC, you would call sdk.quote_lots_to_quote_atoms(300) to convert 300 quote lots
     /// to 30_000 USDC atoms.
-    pub fn quote_lots_to_quote_atoms(&self, quote_lots: u64) -> u64 {
-        quote_lots * self.quote_lot_size
+    pub fn quote_lots_to_quote_atoms(&self, market_key: &Pubkey, quote_lots: u64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(quote_lots * market.quote_lot_size)
     }
 
     /// Converts a number of base atoms to a floating point number of base units. For example if the base currency
     /// is a Widget where the token has 9 decimals and you wanted to convert 1_000_000_000 base atoms to
     /// a floating point number of whole Widget tokens you would call sdk.base_amount_to_float(1_000_000_000). This
     /// would return 1.0. This is useful for displaying the base amount in a human readable format.
-    pub fn base_atoms_to_base_unit_as_float(&self, base_atoms: u64) -> f64 {
-        base_atoms as f64 / self.base_multiplier as f64
+    pub fn base_atoms_to_base_unit_as_float(
+        &self,
+        market_key: &Pubkey,
+        base_atoms: u64,
+    ) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(base_atoms as f64 / market.base_multiplier as f64)
     }
 
     /// Converts a number of quote atoms to a floating point number of quote units. For example if the quote currency
     /// is USDC the token has 6 decimals and you wanted to convert 1_000_000 USDC atoms to
     /// a floating point number of whole USDC tokens you would call sdk.quote_amount_to_float(1_000_000). This
     /// would return 1.0. This is useful for displaying the quote amount in a human readable format.
-    pub fn quote_atoms_to_quote_unit_as_float(&self, quote_atoms: u64) -> f64 {
-        quote_atoms as f64 / self.quote_multiplier as f64
+    pub fn quote_atoms_to_quote_unit_as_float(
+        &self,
+        market_key: &Pubkey,
+        quote_atoms: u64,
+    ) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(quote_atoms as f64 / market.quote_multiplier as f64)
     }
 
     /// Takes in a number of quote atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
-    pub fn print_quote_amount(&self, quote_amount: u64) {
-        println!("{}", get_decimal_string(quote_amount, self.quote_decimals));
+    pub fn print_quote_amount(&self, market_key: &Pubkey, quote_amount: u64) -> Result<()> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        println!(
+            "{}",
+            get_decimal_string(quote_amount, market.quote_decimals)
+        );
+        Ok(())
     }
 
     /// Takes in a number of base atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
-    pub fn print_base_amount(&self, base_amount: u64) {
-        println!("{}", get_decimal_string(base_amount, self.base_decimals));
+    pub fn print_base_amount(&self, market_key: &Pubkey, base_amount: u64) -> Result<()> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        println!("{}", get_decimal_string(base_amount, market.base_decimals));
+        Ok(())
     }
 
     /// Takes in information from a fill event and converts it into the equivalent quote amount
-    pub fn fill_event_to_quote_amount(&self, fill: &Fill) -> u64 {
+    pub fn fill_event_to_quote_amount(&self, market_key: &Pubkey, fill: &Fill) -> Result<u64> {
         let &Fill {
             base_lots_filled: base_lots,
             price_in_ticks,
             ..
         } = fill;
-        self.order_to_quote_amount(base_lots, price_in_ticks)
+        self.order_to_quote_amount(market_key, base_lots, price_in_ticks)
     }
 
     /// Takes in tick price and base lots of an order converts it into the equivalent quote amount
-    pub fn order_to_quote_amount(&self, base_lots: u64, price_in_ticks: u64) -> u64 {
-        base_lots * price_in_ticks * self.tick_size_in_quote_atoms_per_base_unit
-            / self.num_base_lots_per_base_unit
+    pub fn order_to_quote_amount(
+        &self,
+        market_key: &Pubkey,
+        base_lots: u64,
+        price_in_ticks: u64,
+    ) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(
+            base_lots * price_in_ticks * market.tick_size_in_quote_atoms_per_base_unit
+                / market.num_base_lots_per_base_unit,
+        )
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded down)
-    pub fn float_price_to_ticks(&self, price: f64) -> u64 {
-        ((price * self.raw_base_units_per_base_unit as f64 * self.quote_multiplier as f64)
-            / self.tick_size_in_quote_atoms_per_base_unit as f64) as u64
+    pub fn float_price_to_ticks(&self, market_key: &Pubkey, price: f64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(
+            ((price * market.raw_base_units_per_base_unit as f64 * market.quote_multiplier as f64)
+                / market.tick_size_in_quote_atoms_per_base_unit as f64) as u64,
+        )
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded up)
-    pub fn float_price_to_ticks_rounded_up(&self, price: f64) -> u64 {
-        ((price * self.raw_base_units_per_base_unit as f64 * self.quote_multiplier as f64)
-            / self.tick_size_in_quote_atoms_per_base_unit as f64)
-            .ceil() as u64
+    pub fn float_price_to_ticks_rounded_up(&self, market_key: &Pubkey, price: f64) -> Result<u64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(
+            ((price * market.raw_base_units_per_base_unit as f64 * market.quote_multiplier as f64)
+                / market.tick_size_in_quote_atoms_per_base_unit as f64)
+                .ceil() as u64,
+        )
     }
 
     /// Takes in a number of ticks and converts it to a floating point number price
-    pub fn ticks_to_float_price(&self, ticks: u64) -> f64 {
-        (ticks as f64 * self.tick_size_in_quote_atoms_per_base_unit as f64)
-            / self.quote_multiplier as f64
+    pub fn ticks_to_float_price(&self, market_key: &Pubkey, ticks: u64) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(
+            (ticks as f64 * market.tick_size_in_quote_atoms_per_base_unit as f64)
+                / market.quote_multiplier as f64,
+        )
     }
 
-    pub fn base_lots_to_base_units_multiplier(&self) -> f64 {
-        1.0 / self.num_base_lots_per_base_unit as f64
+    /// Multiplier used to convert base lots to base units
+    pub fn base_lots_to_base_units_multiplier(&self, market_key: &Pubkey) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(1.0 / market.num_base_lots_per_base_unit as f64)
     }
 
-    pub fn ticks_to_float_price_multiplier(&self) -> f64 {
-        self.tick_size_in_quote_atoms_per_base_unit as f64 / self.quote_multiplier as f64
+    /// Multiplier used to convert ticks to a floating point number price
+    pub fn ticks_to_float_price_multiplier(&self, market_key: &Pubkey) -> Result<f64> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(market.tick_size_in_quote_atoms_per_base_unit as f64 / market.quote_multiplier as f64)
     }
 }
 
 impl SDKClientCore {
-    pub fn get_next_client_order_id(&self) -> u128 {
-        self.rng.lock().unwrap().gen::<u128>()
+    /// Generate a random client order id
+    pub fn get_next_client_order_id(&self, rng: &mut StdRng) -> u128 {
+        rng.gen::<u128>()
     }
 
-    pub fn change_active_market(&mut self, market: &Pubkey) -> anyhow::Result<()> {
-        if self.markets.get(market).is_some() {
-            self.active_market_key = *market;
-            Ok(())
-        } else {
-            Err(anyhow::Error::msg("Market not found"))
+    pub fn get_market_metadata(&self, market_key: &Pubkey) -> &MarketMetadata {
+        match self.markets.get(market_key) {
+            Some(market_metadata) => market_metadata,
+            None => panic!("Market not found! Please load in the market first."),
         }
-    }
-
-    pub fn get_active_market_metadata(&self) -> &MarketMetadata {
-        self.markets.get(&self.active_market_key).unwrap()
     }
 
     pub fn parse_phoenix_events(
         &self,
+        market_key: &Pubkey,
         sig: &Signature,
         events: Vec<Vec<u8>>,
     ) -> Option<Vec<PhoenixEvent>> {
+        let market = self.markets.get(market_key)?;
         let mut market_events: Vec<PhoenixEvent> = vec![];
 
         for event in events.iter() {
@@ -402,10 +481,10 @@ impl SDKClientCore {
                         event_index: index as u64,
                         details: MarketEventDetails::FillSummary(FillSummary {
                             client_order_id,
-                            total_base_filled: total_base_lots_filled * self.base_lot_size,
+                            total_base_filled: total_base_lots_filled * market.base_lot_size,
                             total_quote_filled_including_fees: total_quote_lots_filled
-                                * self.quote_lot_size,
-                            total_quote_fees: total_fee_in_quote_lots * self.quote_lot_size,
+                                * market.quote_lot_size,
+                            total_quote_fees: total_fee_in_quote_lots * market.quote_lot_size,
                             trade_direction: trade_direction.unwrap_or(0),
                         }),
                     }),
@@ -421,7 +500,7 @@ impl SDKClientCore {
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::Fee(
-                            fees_collected_in_quote_lots * self.quote_lot_size,
+                            fees_collected_in_quote_lots * market.quote_lot_size,
                         ),
                     }),
                     PhoenixMarketEvent::TimeInForce(TimeInForceEvent {
@@ -475,13 +554,65 @@ impl SDKClientCore {
         Some(market_events)
     }
 
-    pub fn get_ioc_ix(&self, price: u64, side: Side, num_base_lots: u64) -> Instruction {
-        self.get_ioc_generic_ix(price, side, num_base_lots, None, None, None, None)
+    pub fn parse_events_from_transaction(
+        &self,
+        market_key: &Pubkey,
+        sig: &Signature,
+        tx: &ParsedTransaction,
+    ) -> Option<Vec<PhoenixEvent>> {
+        
+        let mut event_list = vec![];
+        for inner_ixs in tx.inner_instructions.iter() {
+            for inner_ix in inner_ixs.iter() {
+                let current_program_id = inner_ix.instruction.program_id.clone();
+                if current_program_id != phoenix::id().to_string() {
+                    continue;
+                }
+                if inner_ix.instruction.data.is_empty() {
+                    continue;
+                }
+                let (tag, data) = match inner_ix.instruction.data.split_first() {
+                    Some((tag, data)) => (*tag, data),
+                    None => continue,
+                };
+                let ix_enum = match PhoenixInstruction::try_from(tag).ok() {
+                    Some(ix) => ix,
+                    None => continue,
+                };
+                if matches!(ix_enum, PhoenixInstruction::Log) {
+                    event_list.push(data.to_vec());
+                }
+            }
+        }
+        self.parse_phoenix_events(market_key, sig, event_list)
+    }
+    
+
+    pub fn get_ioc_ix(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        side: Side,
+        num_base_lots: u64,
+    ) -> Result<Instruction> {
+        self.get_ioc_generic_ix(
+            market_key,
+            price,
+            side,
+            num_base_lots,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
     pub fn get_ioc_generic_ix(
         &self,
+        market_key: &Pubkey,
         price: u64,
         side: Side,
         num_base_lots: u64,
@@ -489,42 +620,87 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
-        let num_quote_ticks_per_base_unit = price / self.tick_size_in_quote_atoms_per_base_unit;
+        last_valid_slot: Option<u64>,
+        last_valid_unix_timestamp_in_seconds: Option<u64>,
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        let num_quote_ticks_per_base_unit = price / market.tick_size_in_quote_atoms_per_base_unit;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
-        create_new_order_instruction(
-            &self.active_market_key.clone(),
+        let order_packet = OrderPacket::ImmediateOrCancel {
+            side,
+            price_in_ticks: Some(Ticks::new(num_quote_ticks_per_base_unit)),
+            num_base_lots: BaseLots::new(num_base_lots),
+            num_quote_lots: QuoteLots::new(0),
+            min_base_lots_to_fill: BaseLots::new(0),
+            min_quote_lots_to_fill: QuoteLots::new(0),
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        };
+        Ok(create_new_order_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
-            &OrderPacket::new_ioc_by_lots(
-                side,
-                num_quote_ticks_per_base_unit,
-                num_base_lots,
-                self_trade_behavior,
-                match_limit,
-                client_order_id,
-                use_only_deposited_funds,
-            ),
+            &market.base_mint,
+            &market.quote_mint,
+            &order_packet,
+        ))
+    }
+
+    pub fn get_fok_sell_ix(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        size_in_base_lots: u64,
+    ) -> Result<Instruction> {
+        self.get_fok_generic_ix(
+            market_key,
+            price,
+            Side::Ask,
+            size_in_base_lots,
+            None,
+            None,
+            None,
+            None,
         )
     }
 
-    pub fn get_fok_sell_ix(&self, price: u64, size_in_base_lots: u64) -> Instruction {
-        self.get_fok_generic_ix(price, Side::Ask, size_in_base_lots, None, None, None, None)
+    pub fn get_fok_buy_ix(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        size_in_base_lots: u64,
+    ) -> Result<Instruction> {
+        self.get_fok_generic_ix(
+            market_key,
+            price,
+            Side::Bid,
+            size_in_base_lots,
+            None,
+            None,
+            None,
+            None,
+        )
     }
 
     pub fn get_fok_buy_generic_ix(
         &self,
+        market_key: &Pubkey,
         price: u64,
         size_in_quote_lots: u64,
         self_trade_behavior: Option<SelfTradeBehavior>,
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_fok_generic_ix(
+            market_key,
             price,
             Side::Bid,
             size_in_quote_lots,
@@ -537,14 +713,16 @@ impl SDKClientCore {
 
     pub fn get_fok_sell_generic_ix(
         &self,
+        market_key: &Pubkey,
         price: u64,
         size_in_base_lots: u64,
         self_trade_behavior: Option<SelfTradeBehavior>,
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
         self.get_fok_generic_ix(
+            market_key,
             price,
             Side::Ask,
             size_in_base_lots,
@@ -558,6 +736,7 @@ impl SDKClientCore {
     #[allow(clippy::too_many_arguments)]
     pub fn get_fok_generic_ix(
         &self,
+        market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
@@ -565,19 +744,22 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::CancelProvide);
         let client_order_id = client_order_id.unwrap_or(0);
-        let target_price_in_ticks = price / self.tick_size_in_quote_atoms_per_base_unit;
+        let target_price_in_ticks = price / market.tick_size_in_quote_atoms_per_base_unit;
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         match side {
             Side::Bid => {
-                let quote_lot_budget = size / self.quote_lot_size;
-                create_new_order_instruction(
-                    &self.active_market_key.clone(),
+                let quote_lot_budget = size / market.quote_lot_size;
+                Ok(create_new_order_instruction(
+                    &market_key.clone(),
                     &self.trader,
-                    &self.base_mint,
-                    &self.quote_mint,
+                    &market.base_mint,
+                    &market.quote_mint,
                     &OrderPacket::new_fok_buy_with_limit_price(
                         target_price_in_ticks,
                         quote_lot_budget,
@@ -586,15 +768,15 @@ impl SDKClientCore {
                         client_order_id,
                         use_only_deposited_funds,
                     ),
-                )
+                ))
             }
             Side::Ask => {
-                let num_base_lots = size / self.base_lot_size;
-                create_new_order_instruction(
-                    &self.active_market_key.clone(),
+                let num_base_lots = size / market.base_lot_size;
+                Ok(create_new_order_instruction(
+                    &market_key.clone(),
                     &self.trader,
-                    &self.base_mint,
-                    &self.quote_mint,
+                    &market.base_mint,
+                    &market.quote_mint,
                     &OrderPacket::new_fok_sell_with_limit_price(
                         target_price_in_ticks,
                         num_base_lots,
@@ -603,100 +785,127 @@ impl SDKClientCore {
                         client_order_id,
                         use_only_deposited_funds,
                     ),
-                )
+                ))
             }
         }
     }
 
     pub fn get_ioc_with_slippage_ix(
         &self,
+        market_key: &Pubkey,
         lots_in: u64,
         min_lots_out: u64,
         side: Side,
-    ) -> Instruction {
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let order_type = match side {
             Side::Bid => OrderPacket::new_ioc_buy_with_slippage(lots_in, min_lots_out),
             Side::Ask => OrderPacket::new_ioc_sell_with_slippage(lots_in, min_lots_out),
         };
 
-        create_new_order_instruction(
-            &self.active_market_key.clone(),
+        Ok(create_new_order_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
+            &market.base_mint,
+            &market.quote_mint,
             &order_type,
-        )
+        ))
     }
 
     pub fn get_ioc_from_tick_price_ix(
         &self,
+        market_key: &Pubkey,
         tick_price: u64,
         side: Side,
         size: u64,
-    ) -> Instruction {
-        create_new_order_instruction(
-            &self.active_market_key.clone(),
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(create_new_order_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
+            &market.base_mint,
+            &market.quote_mint,
             &OrderPacket::new_ioc_by_lots(
                 side,
                 tick_price,
                 size,
                 SelfTradeBehavior::CancelProvide,
                 None,
-                self.rng.lock().unwrap().gen::<u128>(),
+                0,
                 false,
             ),
-        )
+        ))
     }
 
-    pub fn get_post_only_ix(&self, price: u64, side: Side, size: u64) -> Instruction {
-        self.get_post_only_generic_ix(price, side, size, None, None, None)
+    pub fn get_post_only_ix(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        side: Side,
+        size: u64,
+    ) -> Result<Instruction> {
+        self.get_post_only_generic_ix(market_key, price, side, size, None, None, None, None, None)
     }
 
     pub fn get_post_only_generic_ix(
         &self,
+        market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
         client_order_id: Option<u128>,
         reject_post_only: Option<bool>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
-        let price_in_ticks = price / self.tick_size_in_quote_atoms_per_base_unit;
+        last_valid_slot: Option<u64>,
+        last_valid_unix_timestamp_in_seconds: Option<u64>,
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        let price_in_ticks = price / market.tick_size_in_quote_atoms_per_base_unit;
         let client_order_id = client_order_id.unwrap_or(0);
         let reject_post_only = reject_post_only.unwrap_or(false);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
-        create_new_order_instruction(
-            &self.active_market_key.clone(),
+        let order_packet = OrderPacket::PostOnly {
+            side,
+            price_in_ticks: Ticks::new(price_in_ticks),
+            num_base_lots: BaseLots::new(size),
+            client_order_id,
+            reject_post_only,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        };
+        Ok(create_new_order_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
-            &OrderPacket::new_post_only(
-                side,
-                price_in_ticks,
-                size,
-                client_order_id,
-                reject_post_only,
-                use_only_deposited_funds,
-            ),
-        )
+            &market.base_mint,
+            &market.quote_mint,
+            &order_packet,
+        ))
     }
 
     pub fn get_post_only_ix_from_tick_price(
         &self,
+        market_key: &Pubkey,
         tick_price: u64,
         side: Side,
         size: u64,
         client_order_id: u128,
         improve_price_on_cross: bool,
-    ) -> Instruction {
-        create_new_order_instruction(
-            &self.active_market_key.clone(),
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(create_new_order_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
+            &market.base_mint,
+            &market.quote_mint,
             &if improve_price_on_cross {
                 OrderPacket::new_adjustable_post_only_default_with_client_order_id(
                     side,
@@ -712,16 +921,25 @@ impl SDKClientCore {
                     client_order_id,
                 )
             },
-        )
+        ))
     }
 
-    pub fn get_limit_order_ix(&self, price: u64, side: Side, size: u64) -> Instruction {
-        self.get_limit_order_generic_ix(price, side, size, None, None, None, None)
+    pub fn get_limit_order_ix(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        side: Side,
+        size: u64,
+    ) -> Result<Instruction> {
+        self.get_limit_order_generic_ix(
+            market_key, price, side, size, None, None, None, None, None, None,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
     pub fn get_limit_order_generic_ix(
         &self,
+        market_key: &Pubkey,
         price: u64,
         side: Side,
         size: u64,
@@ -729,50 +947,69 @@ impl SDKClientCore {
         match_limit: Option<u64>,
         client_order_id: Option<u128>,
         use_only_deposited_funds: Option<bool>,
-    ) -> Instruction {
-        let num_quote_ticks_per_base_unit = price / self.tick_size_in_quote_atoms_per_base_unit;
+        last_valid_slot: Option<u64>,
+        last_valid_unix_timestamp_in_seconds: Option<u64>,
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        let num_quote_ticks_per_base_unit = price / market.tick_size_in_quote_atoms_per_base_unit;
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::DecrementTake);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
-        create_new_order_instruction(
-            &self.active_market_key.clone(),
+        let order_packet = OrderPacket::Limit {
+            side,
+            price_in_ticks: Ticks::new(num_quote_ticks_per_base_unit),
+            num_base_lots: BaseLots::new(size),
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        };
+        Ok(create_new_order_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
-            &OrderPacket::new_limit_order(
-                side,
-                num_quote_ticks_per_base_unit,
-                size,
-                self_trade_behavior,
-                match_limit,
-                client_order_id,
-                use_only_deposited_funds,
-            ),
-        )
+            &market.base_mint,
+            &market.quote_mint,
+            &order_packet,
+        ))
     }
 
     pub fn get_limit_order_ix_from_tick_price(
         &self,
+        market_key: &Pubkey,
         tick_price: u64,
         side: Side,
         size: u64,
         client_order_id: u128,
-    ) -> Instruction {
-        create_new_order_instruction(
-            &self.active_market_key.clone(),
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(create_new_order_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
+            &market.base_mint,
+            &market.quote_mint,
             &OrderPacket::new_limit_order_default_with_client_order_id(
                 side,
                 tick_price,
                 size,
                 client_order_id,
             ),
-        )
+        ))
     }
 
-    pub fn get_cancel_ids_ix(&self, ids: Vec<FIFOOrderId>) -> Instruction {
+    pub fn get_cancel_ids_ix(
+        &self,
+        market_key: &Pubkey,
+        ids: Vec<FIFOOrderId>,
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let mut cancel_orders = vec![];
         for &FIFOOrderId {
             price_in_ticks,
@@ -790,16 +1027,24 @@ impl SDKClientCore {
             orders: cancel_orders,
         };
 
-        create_cancel_multiple_orders_by_id_instruction(
-            &self.active_market_key.clone(),
+        Ok(create_cancel_multiple_orders_by_id_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
+            &market.base_mint,
+            &market.quote_mint,
             &cancel_multiple_orders,
-        )
+        ))
     }
 
-    pub fn get_cancel_up_to_ix(&self, tick_limit: Option<u64>, side: Side) -> Instruction {
+    pub fn get_cancel_up_to_ix(
+        &self,
+        market_key: &Pubkey,
+        tick_limit: Option<u64>,
+        side: Side,
+    ) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
         let params = CancelUpToParams {
             side,
             tick_limit,
@@ -807,21 +1052,24 @@ impl SDKClientCore {
             num_orders_to_cancel: None,
         };
 
-        create_cancel_up_to_instruction(
-            &self.active_market_key.clone(),
+        Ok(create_cancel_up_to_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
+            &market.base_mint,
+            &market.quote_mint,
             &params,
-        )
+        ))
     }
 
-    pub fn get_cancel_all_ix(&self) -> Instruction {
-        create_cancel_all_orders_instruction(
-            &self.active_market_key.clone(),
+    pub fn get_cancel_all_ix(&self, market_key: &Pubkey) -> Result<Instruction> {
+        let market = self.markets.get(market_key).ok_or(anyhow!(
+            "Market not found! Please load in the market first."
+        ))?;
+        Ok(create_cancel_all_orders_instruction(
+            &market_key.clone(),
             &self.trader,
-            &self.base_mint,
-            &self.quote_mint,
-        )
+            &market.base_mint,
+            &market.quote_mint,
+        ))
     }
 }
