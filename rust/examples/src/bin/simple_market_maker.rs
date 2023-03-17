@@ -174,7 +174,6 @@ async fn main() -> anyhow::Result<()> {
 
         println!("Place Txid: {}", txid);
 
-        // sleep for 5 seconds
         tokio::time::sleep(std::time::Duration::from_millis(QUOTE_REFRESH_FREQUENCY)).await;
     }
 }
