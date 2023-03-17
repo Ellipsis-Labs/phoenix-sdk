@@ -1479,6 +1479,7 @@ name = "examples"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "borsh 0.9.3",
  "bs58 0.4.0",
  "bytemuck",
@@ -1488,8 +1489,11 @@ dependencies = [
  "phoenix-sdk",
  "phoenix-v1",
  "rand 0.7.3",
+ "reqwest",
+ "serde_json",
  "shellexpand",
  "solana-account-decoder",
+ "solana-cli-config",
  "solana-client",
  "solana-program",
  "solana-sdk",
@@ -3218,10 +3222,12 @@ dependencies = [
  "http-body",
  "hyper",
  "hyper-rustls",
+ "hyper-tls",
  "ipnet",
  "js-sys",
  "log",
  "mime",
+ "native-tls",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
@@ -3231,6 +3237,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
+ "tokio-native-tls",
  "tokio-rustls",
  "tokio-util 0.7.7",
  "tower-service",
@@ -3532,9 +3539,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.93"
+version = "1.0.94"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cad406b69c91885b5107daf2c29572f6c8cdb3c66826821e286c533490c0bc76"
+checksum = "1c533a59c9d8a93a09c6ab31f0fd5e5f4dd1b8fc9434804029839884765d04ea"
 dependencies = [
  "itoa",
  "ryu",
