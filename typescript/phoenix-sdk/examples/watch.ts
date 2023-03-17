@@ -1,6 +1,10 @@
 import { Connection } from "@solana/web3.js";
 
 import * as Phoenix from "../src";
+import { L3UiBook } from "../src";
+
+// Run with `ts-node examples/watch.ts`
+// This example will print the order book every time it changes
 
 export async function watch() {
   const connection = new Connection("http://127.0.0.1:8899");

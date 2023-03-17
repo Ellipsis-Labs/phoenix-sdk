@@ -20,10 +20,15 @@ import {
   restingOrderBeet,
   traderStateBeet,
 } from "./beet";
-import { PROGRAM_ID } from "..";
+import { L3Book, L3Order, L3UiBook, L3UiOrder, OrderId, PROGRAM_ID } from "..";
 import { Ladder, UiLadder, MarketData, TraderState } from "../market";
 
-export const DEFAULT_LADDER_DEPTH = 10;
+// Default ladder depth to use when fetching L2 ladder
+export const DEFAULT_L2_LADDER_DEPTH = 10;
+
+// Default book depth tho use when fetching L3 book
+export const DEFAULT_L3_BOOK_DEPTH = 20;
+
 export const DEFAULT_MATCH_LIMIT = 2048;
 export const DEFAULT_SLIPPAGE_PERCENT = 0.005;
 
@@ -49,13 +54,9 @@ export function deserializeMarketData(data: Buffer): MarketData {
   offset += 8;
   const takerFeeBps = Number(remaining.readBigUInt64LE(offset));
   offset += 8;
-  const collectedAdjustedQuoteLotFees = Number(
-    remaining.readBigUInt64LE(offset)
-  );
+  const collectedQuoteLotFees = Number(remaining.readBigUInt64LE(offset));
   offset += 8;
-  const unclaimedAdjustedQuoteLotFees = Number(
-    remaining.readBigUInt64LE(offset)
-  );
+  const unclaimedQuoteLotFees = Number(remaining.readBigUInt64LE(offset));
   offset += 8;
   remaining = remaining.subarray(offset);
 
@@ -90,15 +91,31 @@ export function deserializeMarketData(data: Buffer): MarketData {
     restingOrderBeet
   );
 
-  // TODO: Respect price-time ordering
-  const bids = [...bidsUnsorted].sort((a, b) =>
-    sign(toBN(b[0].priceInTicks).sub(toBN(a[0].priceInTicks)))
-  );
+  // Sort bids in descending order of price, and ascending order of sequence number
+  const bids = [...bidsUnsorted].sort((a, b) => {
+    const priceComparison = sign(
+      toBN(b[0].priceInTicks).sub(toBN(a[0].priceInTicks))
+    );
+    if (priceComparison !== 0) {
+      return priceComparison;
+    }
+    return sign(
+      getUiOrderSequenceNumber(a[0]).sub(getUiOrderSequenceNumber(b[0]))
+    );
+  });
 
-  // TODO: Respect price-time ordering
-  const asks = [...asksUnsorted].sort((a, b) =>
-    sign(toBN(a[0].priceInTicks).sub(toBN(b[0].priceInTicks)))
-  );
+  // Sort asks in ascending order of price, and ascending order of sequence number
+  const asks = [...asksUnsorted].sort((a, b) => {
+    const priceComparison = sign(
+      toBN(a[0].priceInTicks).sub(toBN(b[0].priceInTicks))
+    );
+    if (priceComparison !== 0) {
+      return priceComparison;
+    }
+    return sign(
+      getUiOrderSequenceNumber(a[0]).sub(getUiOrderSequenceNumber(b[0]))
+    );
+  });
 
   const traders = new Map<string, TraderState>();
   for (const [k, traderState] of deserializeRedBlackTree(
@@ -109,13 +126,15 @@ export function deserializeMarketData(data: Buffer): MarketData {
     traders.set(k.publicKey.toString(), traderState);
   }
 
-  const traderIndex = new Map<string, number>();
+  const traderPubkeyToTraderIndex = new Map<string, number>();
+  const traderIndexToTraderPubkey = new Map<number, string>();
   for (const [k, index] of getNodeIndices(
     traderBuffer,
     publicKeyBeet,
     traderStateBeet
   )) {
-    traderIndex.set(k.publicKey.toString(), index);
+    traderPubkeyToTraderIndex.set(k.publicKey.toString(), index);
+    traderIndexToTraderPubkey.set(index, k.publicKey.toString());
   }
 
   return {
@@ -124,12 +143,13 @@ export function deserializeMarketData(data: Buffer): MarketData {
     quoteLotsPerBaseUnitPerTick,
     sequenceNumber,
     takerFeeBps,
-    collectedAdjustedQuoteLotFees,
-    unclaimedAdjustedQuoteLotFees,
+    collectedQuoteLotFees,
+    unclaimedQuoteLotFees,
     bids,
     asks,
     traders,
-    traderIndex,
+    traderPubkeyToTraderIndex,
+    traderIndexToTraderPubkey,
   };
 }
 
@@ -141,7 +161,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
  * @param keyDeserializer The deserializer for the tree key
  * @param valueDeserializer The deserializer for the tree value
  */
-export function deserializeRedBlackTree<Key, Value>(
+function deserializeRedBlackTree<Key, Value>(
   data: Buffer,
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
@@ -172,7 +192,7 @@ export function deserializeRedBlackTree<Key, Value>(
  * @param keyDeserializer The deserializer for the tree key
  * @param valueDeserializer The deserializer for the tree value
  */
-export function getNodeIndices<Key, Value>(
+function getNodeIndices<Key, Value>(
   data: Buffer,
   keyDeserializer: beet.BeetArgsStruct<Key>,
   valueDeserializer: beet.BeetArgsStruct<Value>
@@ -198,8 +218,25 @@ export function getNodeIndices<Key, Value>(
 }
 
 /**
+ * Takes a raw order ID and returns a displayable order sequence number
+ *
+ * On the raw order book, sequence numbers are stored as unsigned 64-bit integers,
+ * with bits inverted for bids and left as-is for asks. This function converts
+ * the raw order ID to a signed 64-bit integer, and then converts it to a
+ * displayable order sequence number.
+ *
+ * @param orderId
+ */
+export function getUiOrderSequenceNumber(orderId: OrderId): BN {
+  const twosComplement = (orderId.orderSequenceNumber as BN).fromTwos(64);
+  return twosComplement.isNeg()
+    ? twosComplement.neg().sub(new BN(1))
+    : twosComplement;
+}
+
+/**
  * Deserializes a RedBlackTree from a given buffer and returns the nodes and free nodes
- * @description This deserialized the RedBlackTree defined in the sokoban library: https://github.com/Ellipsis-Labs/sokoban/tree/master
+ * @description This deserializes the RedBlackTree defined in the sokoban library: https://github.com/Ellipsis-Labs/sokoban/tree/master
  *
  * @param data The data buffer to deserialize
  * @param keyDeserializer The deserializer for the tree key
@@ -265,17 +302,19 @@ function deserializeRedBlackTreeNodes<Key, Value>(
 }
 
 /**
- * Returns a ladder of bids and asks for given `MarketData`
+ * Returns an L2 ladder of bids and asks for given `MarketData`
  * @description Bids are ordered in descending order by price, and asks are ordered in ascending order by price
  *
  * @param marketData The `MarketData` to get the ladder from
+ * @param slot The current slot
+ * @param unixTimestamp The current Unix timestamp, in seconds
  * @param levels The number of book levels to return, -1 to return the entire book
  */
 export function getMarketLadder(
   marketData: MarketData,
   slot: beet.bignum,
   unixTimestamp: beet.bignum,
-  levels: number = DEFAULT_LADDER_DEPTH
+  levels: number = DEFAULT_L2_LADDER_DEPTH
 ): Ladder {
   const bids: Array<[BN, BN]> = [];
   const asks: Array<[BN, BN]> = [];
@@ -360,10 +399,12 @@ function levelToUiLevel(
   quoteAtomsPerQuoteUnit: number
 ): [number, number] {
   return [
-    (toNum(priceInTicks) / quoteAtomsPerQuoteUnit) *
+    ((toNum(priceInTicks) / quoteAtomsPerQuoteUnit) *
       marketData.quoteLotsPerBaseUnitPerTick *
-      toNum(marketData.header.quoteLotSize),
-    toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit,
+      toNum(marketData.header.quoteLotSize)) /
+      marketData.header.rawBaseUnitsPerBaseUnit,
+    (toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit) *
+      marketData.header.rawBaseUnitsPerBaseUnit,
   ];
 }
 
@@ -375,7 +416,7 @@ function levelToUiLevel(
  */
 export function getMarketUiLadder(
   marketData: MarketData,
-  levels: number = DEFAULT_LADDER_DEPTH,
+  levels: number = DEFAULT_L2_LADDER_DEPTH,
   slot: beet.bignum = 0,
   unixTimestamp: beet.bignum = 0
 ): UiLadder {
@@ -435,6 +476,121 @@ export function printUiLadder(uiLadder: UiLadder) {
   for (const [price, size] of bids) {
     printLine(price, size, "green");
   }
+}
+
+/**
+ * Returns the L3 book of bids and asks for a given `MarketData`.
+ * @description Bids are ordered in descending order by price, and asks are ordered in ascending order by price
+ *
+ * @param marketData The `MarketData` to get the ladder from
+ * @param slot The current slot
+ * @param unixTimestamp The current Unix timestamp, in seconds
+ * @param ordersPerSide The max number of orders to return per side. -1 to return the entire book
+ */
+export function getMarketL3Book(
+  marketData: MarketData,
+  slot: beet.bignum,
+  unixTimestamp: beet.bignum,
+  ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
+): L3Book {
+  const bids: L3Order[] = [];
+  const asks: L3Order[] = [];
+
+  for (const side of [Side.Ask, Side.Bid]) {
+    const book = side === Side.Ask ? marketData.asks : marketData.bids;
+    for (const [orderId, restingOrder] of book) {
+      if (
+        restingOrder.lastValidSlot != 0 &&
+        restingOrder.lastValidSlot < slot
+      ) {
+        continue;
+      }
+      if (
+        restingOrder.lastValidUnixTimestampInSeconds != 0 &&
+        restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
+      ) {
+        continue;
+      }
+      const priceInTicks = toBN(orderId.priceInTicks);
+      const numBaseLots = toBN(restingOrder.numBaseLots);
+
+      const order: L3Order = {
+        priceInTicks,
+        sizeInBaseLots: numBaseLots,
+        side,
+        makerPubkey: marketData.traderIndexToTraderPubkey.get(
+          toNum(restingOrder.traderIndex)
+        ),
+        orderSequenceNumber: getUiOrderSequenceNumber(orderId),
+      };
+      if (side === Side.Ask) {
+        asks.push(order);
+      } else {
+        bids.push(order);
+      }
+
+      if (side === Side.Ask && asks.length === ordersPerSide) {
+        break;
+      }
+      if (side === Side.Bid && bids.length === ordersPerSide) {
+        break;
+      }
+    }
+  }
+
+  return {
+    asks,
+    bids,
+  };
+}
+
+/**
+ * Returns the L3 book of bids and asks as JS numbers
+ *
+ * @param marketData The `MarketData` to get the ladder from
+ * @param levels The number of book levels to return
+ */
+export function getMarketL3UiBook(
+  marketData: MarketData,
+  ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH,
+  slot: beet.bignum = 0,
+  unixTimestamp: beet.bignum = 0
+): L3UiBook {
+  const l3Book = getMarketL3Book(
+    marketData,
+    slot,
+    unixTimestamp,
+    ordersPerSide
+  );
+
+  return {
+    bids: l3Book.bids.map((b) => getL3UiOrder(b, marketData)),
+    asks: l3Book.asks.map((a) => getL3UiOrder(a, marketData)),
+  };
+}
+
+/**
+ * Converts a L3 order from BN to JS number representation
+ *
+ * @param l3Order The L3 order to convert
+ * @param marketData The `MarketData` the order was taken from
+ */
+function getL3UiOrder(l3Order: L3Order, marketData: MarketData): L3UiOrder {
+  return {
+    price:
+      (toNum(l3Order.priceInTicks) *
+        marketData.quoteLotsPerBaseUnitPerTick *
+        toNum(marketData.header.quoteLotSize)) /
+      (10 ** marketData.header.quoteParams.decimals *
+        marketData.header.rawBaseUnitsPerBaseUnit),
+    side: l3Order.side,
+    size:
+      (toNum(l3Order.sizeInBaseLots) *
+        marketData.header.rawBaseUnitsPerBaseUnit) /
+      marketData.baseLotsPerBaseUnit,
+    makerPubkey: l3Order.makerPubkey,
+    orderSequenceNumber: l3Order.orderSequenceNumber.toString(),
+  };
 }
 
 /**

@@ -3,12 +3,13 @@ import { Connection } from "@solana/web3.js";
 import * as Phoenix from "../src";
 import BN from "bn.js";
 import { bignum } from "@metaplex-foundation/beet";
+import { getUiOrderSequenceNumber, toNum } from "../src";
 
-const getOrderSequenceNumber = (orderId: Phoenix.OrderId): BN => {
-  return (orderId.orderSequenceNumber as BN).fromTwos(64);
-};
+// Run with `ts-node examples/openOrders.ts`
+// This example will find the first trader with locked orders and display them
+// Change the RPC URL and cluster name to connect to a different cluster (e.g. devnet)
 
-const displayOpenOrders = (
+const displayOpenOrder = (
   order: Phoenix.RestingOrder,
   slot: bignum,
   time: bignum,
@@ -52,7 +53,7 @@ export async function watch() {
   }
 
   const marketAddress = market.address.toBase58();
-  const traderIndex = market.data.traderIndex.get(traderKey);
+  const traderIndex = market.data.traderPubkeyToTraderIndex.get(traderKey);
   if (traderIndex === undefined) {
     throw new Error(`Trader index not found for ${traderKey}`);
   }
@@ -65,12 +66,12 @@ export async function watch() {
     const time = phoenix.clock.unixTimestamp;
     for (const [orderId, order] of market.data.asks) {
       if (Phoenix.toNum(order.traderIndex) === traderIndex) {
-        displayOpenOrders(
+        displayOpenOrder(
           order,
           slot,
           time,
           "ASK",
-          " " + orderId.orderSequenceNumber.toString(),
+          getUiOrderSequenceNumber(orderId).toString(),
           phoenix.ticksToFloatPrice(
             Phoenix.toNum(orderId.priceInTicks),
             marketAddress.toString()
@@ -88,12 +89,12 @@ export async function watch() {
 
     for (const [orderId, order] of market.data.bids) {
       if (Phoenix.toNum(order.traderIndex) === traderIndex) {
-        displayOpenOrders(
+        displayOpenOrder(
           order,
           slot,
           time,
           "BID",
-          getOrderSequenceNumber(orderId).toString(),
+          getUiOrderSequenceNumber(orderId).toString(),
           phoenix.ticksToFloatPrice(
             Phoenix.toNum(orderId.priceInTicks),
             marketAddress.toString()

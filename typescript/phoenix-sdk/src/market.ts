@@ -39,23 +39,74 @@ export type Ladder = {
   asks: Array<[BN, BN]>;
 };
 
+export type L3Order = {
+  priceInTicks: BN;
+  side: Side;
+  sizeInBaseLots: BN;
+  makerPubkey: string;
+  orderSequenceNumber: BN;
+};
+
+export type L3UiOrder = {
+  price: number;
+  side: Side;
+  size: number;
+  makerPubkey: string;
+  orderSequenceNumber: string;
+};
+
+export type L3Book = {
+  bids: L3Order[];
+  asks: L3Order[];
+};
+
+export type L3UiBook = {
+  bids: L3UiOrder[];
+  asks: L3UiOrder[];
+};
+
 export type UiLadder = {
   bids: Array<[number, number]>;
   asks: Array<[number, number]>;
 };
 
 export interface MarketData {
+  // The raw MarketHeader from the market account
   header: MarketHeader;
+
+  // The number of base lots per base unit
   baseLotsPerBaseUnit: number;
+
+  // Tick size of the market, in quote lots per base unit
+  // Note that the header contains tick size in quote atoms per base unit
   quoteLotsPerBaseUnitPerTick: number;
+
+  // The next order sequence number of the market
   sequenceNumber: number;
+
+  // Taker fee in basis points
   takerFeeBps: number;
-  collectedAdjustedQuoteLotFees: number;
-  unclaimedAdjustedQuoteLotFees: number;
+
+  // Total fees collected by the market and claimed by fee recipient, in quote lots
+  collectedQuoteLotFees: number;
+
+  // Total unclaimed fees in the market, in quote lots
+  unclaimedQuoteLotFees: number;
+
+  // The bids on the market, sorted from highest to lowest price
   bids: Array<[OrderId, RestingOrder]>;
+
+  // The asks on the market, sorted from lowest to highest price
   asks: Array<[OrderId, RestingOrder]>;
+
+  // Map from trader pubkey to trader state
   traders: Map<string, TraderState>;
-  traderIndex: Map<string, number>;
+
+  // Map from trader pubkey to trader index
+  traderPubkeyToTraderIndex: Map<string, number>;
+
+  // Map from trader index to trader pubkey
+  traderIndexToTraderPubkey: Map<number, string>;
 }
 
 export class Market {
