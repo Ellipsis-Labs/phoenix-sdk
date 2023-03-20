@@ -18,13 +18,20 @@
         "symbol": "Bonk",
         "mint": "8LN9tTVkGLqXRT2SxLUjN8YRHiKzYGLq1wGV1FL7E23P",
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/6dhTynDkYsVM7cbF7TKfC9DWB636TcEM935fq7JzL2ES/logo.png"
+      },
+      {
+        "name": "Marinade Staked SOL",
+        "symbol": "mSOL",
+        "mint": "7KowotNADmz2krLdRQKBWygyG4Rsvtne4EG7WU7MBQd8",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       }
     ],
     "markets": [
       "6EvJccKnfxXvbAoCwf2iGTAEgckWuU834XAgT7tV4oxm",
       "7EBrdSbDLvAJEMjigvSrBGkuRNdH9whvzkeojsHSVQib",
       "DKADSL9EGUBpighxAXriZGmkYzmRrXEr9qS7qB1cQbSu",
-      "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N"
+      "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N",
+      "626t4FAUCVWMSvZsjzyPDJjPAKvdrafJB2pAcC6Ags2m"
     ]
   },
   "mainnet-beta": {
@@ -42,6 +49,12 @@
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       },
       {
+        "name": "Marinade staked SOL",
+        "symbol": "mSOL",
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png"
+      },
+      {
         "name": "BASE",
         "symbol": "BASE",
         "mint": "7Z6Kczxo8ViRpfnsVvVaATB5fQ8bN2CQpxP8DHfd1vz5",
@@ -56,7 +69,8 @@
     ],
     "markets": [
       "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5",
-      "4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg"
+      "4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg",
+      "FZRgpfpvicJ3p23DfmZuvUgcQZBHJsWScTf2N2jK8dy6"
     ]
   },
   "localhost": {
