@@ -198,7 +198,7 @@ fn test_quote_lots_to_quote_atoms() {
 }
 
 #[test]
-fn test_base_atoms_to_raw_base_unit_as_float() {
+fn test_base_atoms_to_raw_base_units_as_float() {
     let market = Pubkey::new_unique();
     let core = setup(&market);
     let base_atoms = 1000000;
@@ -217,7 +217,7 @@ fn test_base_atoms_to_raw_base_unit_as_float() {
 }
 
 #[test]
-fn test_quote_atoms_to_quote_unit_as_float() {
+fn test_quote_atoms_to_quote_units_as_float() {
     let market = Pubkey::new_unique();
     let core = setup(&market);
     let quote_atoms = 1000;
