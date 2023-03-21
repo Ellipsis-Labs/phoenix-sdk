@@ -165,7 +165,7 @@ impl SDKClientCore {
         Ok((base_units * (metadata.num_base_lots_per_base_unit as f64)).floor() as u64)
     }
 
-    /// The same function as raw_base_units_to_base_lots, but rounds up instead of down.
+    /// The same function as raw_base_units_to_base_lots_rounded_down, but rounds up instead of down.
     pub fn raw_base_units_to_base_lots_rounded_up(
         &self,
         market_key: &Pubkey,
@@ -197,6 +197,7 @@ impl SDKClientCore {
         Ok(base_lots.into())
     }
 
+    /// The same function as base_atoms_to_base_lots_rounded_down, but rounds up instead of down.
     pub fn base_atoms_to_base_lots_rounded_up(
         &self,
         market_key: &Pubkey,
@@ -254,6 +255,7 @@ impl SDKClientCore {
         Ok(quote_lots.into())
     }
 
+    /// The same function as quote_atoms_to_quote_lots_rounded_down, but rounds up instead of down.
     pub fn quote_atoms_to_quote_lots_rounded_up(
         &self,
         market_key: &Pubkey,
@@ -313,7 +315,7 @@ impl SDKClientCore {
         Ok(quote_atoms as f64 / metadata.quote_atoms_per_quote_unit as f64)
     }
 
-    /// Takes in information from a fill event and converts it into the equivalent quote amount
+    /// Takes in information from a fill event and converts it into the equivalent quote atoms filled
     pub fn fill_event_to_quote_atoms(&self, market_key: &Pubkey, fill: &Fill) -> Result<u64> {
         let &Fill {
             base_lots_filled: base_lots,
