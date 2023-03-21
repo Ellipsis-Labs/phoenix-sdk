@@ -289,8 +289,10 @@ impl SDKClient {
             return Ok(default);
         }
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let base_lots_multiplier = self.base_lots_to_base_units_multiplier(market_key)?;
-        let ticks_multiplier = self.ticks_to_float_price_multiplier(market_key)?;
+        let meta = self.get_market_metadata_from_cache(market_key)?;
+        let base_lots_multiplier = meta.base_atoms_per_raw_base_unit as f64;
+        let ticks_multiplier = meta.tick_size_in_quote_atoms_per_base_unit as f64
+            / meta.quote_atoms_per_quote_unit as f64;
         Ok(bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
             .ok()
             .map(|header| {
@@ -363,11 +365,11 @@ impl SDKClient {
             .expect("Market configuration not found")
             .inner;
 
-        let orderbook = Orderbook::from_market(
-            market,
-            self.base_lots_to_base_units_multiplier(market_key)?,
-            self.ticks_to_float_price_multiplier(market_key)?,
-        );
+        let meta = self.get_market_metadata_from_cache(market_key)?;
+        let base_lots_multiplier = meta.base_atoms_per_raw_base_unit as f64;
+        let ticks_multiplier = meta.tick_size_in_quote_atoms_per_base_unit as f64
+            / meta.quote_atoms_per_quote_unit as f64;
+        let orderbook = Orderbook::from_market(market, base_lots_multiplier, ticks_multiplier);
 
         let traders = market
             .get_registered_traders()
