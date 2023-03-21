@@ -2749,7 +2749,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk-core"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",

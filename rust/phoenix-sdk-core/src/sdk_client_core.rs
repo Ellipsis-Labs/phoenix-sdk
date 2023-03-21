@@ -6,6 +6,10 @@ use ellipsis_client::transaction_utils::ParsedTransaction;
 use itertools::Itertools;
 use phoenix::program::MarketHeader;
 use phoenix::program::PhoenixInstruction;
+use phoenix::quantities::BaseAtoms;
+use phoenix::quantities::BaseAtomsPerBaseLot;
+use phoenix::quantities::QuoteAtoms;
+use phoenix::quantities::QuoteAtomsPerQuoteLot;
 use phoenix::quantities::QuoteLots;
 use phoenix::{
     program::cancel_multiple_orders::{CancelMultipleOrdersByIdParams, CancelUpToParams},
@@ -93,11 +97,11 @@ pub struct MarketMetadata {
     pub base_decimals: u32,
     pub quote_decimals: u32,
     /// 10^base_decimals
-    pub base_multiplier: u64,
+    pub base_atoms_per_raw_base_unit: u64,
     /// 10^quote_decimals
-    pub quote_multiplier: u64,
-    pub quote_lot_size: u64,
-    pub base_lot_size: u64,
+    pub quote_atoms_per_quote_unit: u64,
+    pub quote_atoms_per_quote_lot: u64,
+    pub base_atoms_per_base_lot: u64,
     pub tick_size_in_quote_atoms_per_base_unit: u64,
     pub num_base_lots_per_base_unit: u64,
     /// The adjustment factor to convert from the raw base unit (i.e. 1 BONK token) to the Phoenix BaseUnit (which may be a multiple of whole tokens).
@@ -107,29 +111,30 @@ pub struct MarketMetadata {
 
 impl MarketMetadata {
     pub fn from_header(header: &MarketHeader) -> Result<Self> {
-        let quote_lot_size = header.get_quote_lot_size().into();
-        let base_lot_size = header.get_base_lot_size().into();
-        let quote_multiplier = 10u64.pow(header.quote_params.decimals);
-        let base_multiplier = 10u64.pow(header.base_params.decimals);
+        let quote_atoms_per_quote_lot = header.get_quote_lot_size().into();
+        let base_atoms_per_base_lot = header.get_base_lot_size().into();
+        let quote_atoms_per_quote_unit = 10u64.pow(header.quote_params.decimals);
+        let base_atoms_per_base_unit = 10u64.pow(header.base_params.decimals);
         let base_mint = header.base_params.mint_key;
         let quote_mint = header.quote_params.mint_key;
         let tick_size_in_quote_atoms_per_base_unit =
             header.get_tick_size_in_quote_atoms_per_base_unit().into();
         // max(1) is only relevant for old markets where the raw_base_units_per_base_unit was not set
         let raw_base_units_per_base_unit = header.raw_base_units_per_base_unit.max(1);
-        let num_base_lots_per_base_unit =
-            base_multiplier * raw_base_units_per_base_unit as u64 / base_lot_size;
+        let num_base_lots_per_base_unit = base_atoms_per_base_unit
+            * raw_base_units_per_base_unit as u64
+            / base_atoms_per_base_lot;
 
         Ok(MarketMetadata {
             base_mint,
             quote_mint,
             base_decimals: header.base_params.decimals,
             quote_decimals: header.quote_params.decimals,
-            base_multiplier,
-            quote_multiplier,
+            base_atoms_per_raw_base_unit: base_atoms_per_base_unit,
+            quote_atoms_per_quote_unit,
             tick_size_in_quote_atoms_per_base_unit,
-            quote_lot_size,
-            base_lot_size,
+            quote_atoms_per_quote_lot,
+            base_atoms_per_base_lot,
             num_base_lots_per_base_unit,
             raw_base_units_per_base_unit,
         })
@@ -146,18 +151,18 @@ impl SDKClientCore {
     /// Converts raw base units (whole tokens) to base lots. For example if the base currency was a Widget and you wanted to
     /// convert 3 Widget tokens to base lots you would call sdk.raw_base_units_to_base_lots(3.0). This would return
     /// the number of base lots that would be equivalent to 3 Widget tokens.
-    pub fn raw_base_units_to_base_lots(
+    pub fn raw_base_units_to_base_lots_rounded_down(
         &self,
         market_key: &Pubkey,
         raw_base_units: f64,
     ) -> Result<u64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))?;
         // Convert to Phoenix BaseUnits
-        let base_units = raw_base_units / market.raw_base_units_per_base_unit as f64;
-        Ok((base_units * (market.num_base_lots_per_base_unit as f64)).floor() as u64)
+        let base_units = raw_base_units / metadata.raw_base_units_per_base_unit as f64;
+        Ok((base_units * (metadata.num_base_lots_per_base_unit as f64)).floor() as u64)
     }
 
     /// The same function as raw_base_units_to_base_lots, but rounds up instead of down.
@@ -166,26 +171,43 @@ impl SDKClientCore {
         market_key: &Pubkey,
         raw_base_units: f64,
     ) -> Result<u64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))?;
         // Convert to Phoenix BaseUnits
-        let base_units = raw_base_units / market.raw_base_units_per_base_unit as f64;
-        Ok((base_units * (market.num_base_lots_per_base_unit as f64)).ceil() as u64)
+        let base_units = raw_base_units / metadata.raw_base_units_per_base_unit as f64;
+        Ok((base_units * (metadata.num_base_lots_per_base_unit as f64)).ceil() as u64)
     }
 
     /// RECOMMENDED:
-    /// Converts base atoms to base lots. For example if the base currency was a Widget with 9 decimals, where 1 atom is 1e-9 of one Widget and you wanted to
+    /// Converts base atoms to base lots rounded down. For example if the base currency was a Widget with 9 decimals, where 1 atom is 1e-9 of one Widget and you wanted to
     /// convert 3 Widgets to base lots you would call sdk.base_amount_to_base_lots(3_000_000_000). This would return
     /// the number of base lots that would be equivalent to 3 Widgets or 3 * 1e9 Widget atoms.
-    pub fn base_atoms_to_base_lots(&self, market_key: &Pubkey, base_atoms: u64) -> Result<u64> {
-        let market = self
+    pub fn base_atoms_to_base_lots_rounded_down(
+        &self,
+        market_key: &Pubkey,
+        base_atoms: u64,
+    ) -> Result<u64> {
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
+        let base_lots = base_atoms / metadata.base_atoms_per_base_lot;
+        Ok(base_lots.into())
+    }
 
-        Ok(base_atoms / market.base_lot_size) // Lot size is the number of atoms in a lot
+    pub fn base_atoms_to_base_lots_rounded_up(
+        &self,
+        market_key: &Pubkey,
+        base_atoms: u64,
+    ) -> Result<u64> {
+        let metadata = self
+            .markets
+            .get(market_key)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
+        let base_lots = base_atoms.saturating_sub(1) / metadata.base_atoms_per_base_lot;
+        Ok(1 + base_lots)
     }
 
     /// RECOMMENDED:
@@ -193,11 +215,13 @@ impl SDKClientCore {
     /// 1_000 base atoms per base lot of Widget, you would call sdk.base_lots_to_base_atoms(300) to convert 300 base lots
     /// to 300_000 Widget atoms.
     pub fn base_lots_to_base_atoms(&self, market_key: &Pubkey, base_lots: u64) -> Result<u64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(base_lots * market.base_lot_size) // Lot size is the number of atoms in a lot
+        let base_atoms: BaseAtoms =
+            BaseLots::new(base_lots) * BaseAtomsPerBaseLot::new(metadata.base_atoms_per_base_lot);
+        Ok(base_atoms.into())
     }
 
     /// RECOMMENDED:
@@ -205,23 +229,42 @@ impl SDKClientCore {
     /// convert 3 USDC to quote lots you would call sdk.quote_unit_to_quote_lots(3.0). This would return
     /// the number of quote lots that would be equivalent to 3 USDC.
     pub fn quote_units_to_quote_lots(&self, market_key: &Pubkey, quote_units: f64) -> Result<u64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok((quote_units * market.quote_multiplier as f64 / market.quote_lot_size as f64) as u64)
+        Ok((quote_units * metadata.quote_atoms_per_quote_unit as f64
+            / metadata.quote_atoms_per_quote_lot as f64) as u64)
     }
 
     /// RECOMMENDED:
-    /// Converts quote atoms to quote lots. For example if the quote currency was USDC with 6 decimals and you wanted to
+    /// Converts quote atoms to quote lots rounded down. For example if the quote currency was USDC with 6 decimals and you wanted to
     /// convert 3 USDC, or 3_000_000 USDC atoms, to quote lots you would call sdk.quote_atoms_to_quote_lots(3_000_000). This would return
     /// the number of quote lots that would be equivalent to 3_000_000 USDC atoms.
-    pub fn quote_atoms_to_quote_lots(&self, market_key: &Pubkey, quote_atoms: u64) -> Result<u64> {
-        let market = self
+    pub fn quote_atoms_to_quote_lots_rounded_down(
+        &self,
+        market_key: &Pubkey,
+        quote_atoms: u64,
+    ) -> Result<u64> {
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(quote_atoms / market.quote_lot_size)
+        let quote_lots = quote_atoms / metadata.quote_atoms_per_quote_lot;
+        Ok(quote_lots.into())
+    }
+
+    pub fn quote_atoms_to_quote_lots_rounded_up(
+        &self,
+        market_key: &Pubkey,
+        quote_atoms: u64,
+    ) -> Result<u64> {
+        let metadata = self
+            .markets
+            .get(market_key)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
+        let quote_lots = quote_atoms.saturating_sub(1) / metadata.quote_atoms_per_quote_lot;
+        Ok(1 + quote_lots)
     }
 
     /// RECOMMENDED:
@@ -229,27 +272,29 @@ impl SDKClientCore {
     /// 100 quote atoms per quote lot of USDC, you would call sdk.quote_lots_to_quote_atoms(300) to convert 300 quote lots
     /// to 30_000 USDC atoms.
     pub fn quote_lots_to_quote_atoms(&self, market_key: &Pubkey, quote_lots: u64) -> Result<u64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(quote_lots * market.quote_lot_size)
+        let quote_atoms: QuoteAtoms = QuoteLots::new(quote_lots)
+            * QuoteAtomsPerQuoteLot::new(metadata.quote_atoms_per_quote_lot);
+        Ok(quote_atoms.into())
     }
 
     /// Converts a number of base atoms to a floating point number of base units. For example if the base currency
     /// is a Widget where the token has 9 decimals and you wanted to convert 1_000_000_000 base atoms to
     /// a floating point number of whole Widget tokens you would call sdk.base_amount_to_float(1_000_000_000). This
     /// would return 1.0. This is useful for displaying the base amount in a human readable format.
-    pub fn base_atoms_to_base_unit_as_float(
+    pub fn base_atoms_to_raw_base_unit_as_float(
         &self,
         market_key: &Pubkey,
         base_atoms: u64,
     ) -> Result<f64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(base_atoms as f64 / market.base_multiplier as f64)
+        Ok(base_atoms as f64 / metadata.base_atoms_per_raw_base_unit as f64)
     }
 
     /// Converts a number of quote atoms to a floating point number of quote units. For example if the quote currency
@@ -261,116 +306,80 @@ impl SDKClientCore {
         market_key: &Pubkey,
         quote_atoms: u64,
     ) -> Result<f64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(quote_atoms as f64 / market.quote_multiplier as f64)
-    }
-
-    /// Takes in a number of quote atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
-    pub fn print_quote_amount(&self, market_key: &Pubkey, quote_amount: u64) -> Result<()> {
-        let market = self
-            .markets
-            .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        println!(
-            "{}",
-            get_decimal_string(quote_amount, market.quote_decimals)
-        );
-        Ok(())
-    }
-
-    /// Takes in a number of base atoms, converts to floating point number of whole tokens, and prints it as a human readable string to the console
-    pub fn print_base_amount(&self, market_key: &Pubkey, base_amount: u64) -> Result<()> {
-        let market = self
-            .markets
-            .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        println!("{}", get_decimal_string(base_amount, market.base_decimals));
-        Ok(())
+        Ok(quote_atoms as f64 / metadata.quote_atoms_per_quote_unit as f64)
     }
 
     /// Takes in information from a fill event and converts it into the equivalent quote amount
-    pub fn fill_event_to_quote_amount(&self, market_key: &Pubkey, fill: &Fill) -> Result<u64> {
+    pub fn fill_event_to_quote_atoms(&self, market_key: &Pubkey, fill: &Fill) -> Result<u64> {
         let &Fill {
             base_lots_filled: base_lots,
             price_in_ticks,
             ..
         } = fill;
-        self.order_to_quote_amount(market_key, base_lots, price_in_ticks)
+        self.order_to_quote_atoms(market_key, base_lots, price_in_ticks)
     }
 
-    /// Takes in tick price and base lots of an order converts it into the equivalent quote amount
-    pub fn order_to_quote_amount(
+    /// Takes in tick price and base lots of an order converts it into the equivalent quote atoms
+    pub fn order_to_quote_atoms(
         &self,
         market_key: &Pubkey,
         base_lots: u64,
         price_in_ticks: u64,
     ) -> Result<u64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
         Ok(
-            base_lots * price_in_ticks * market.tick_size_in_quote_atoms_per_base_unit
-                / market.num_base_lots_per_base_unit,
+            base_lots * price_in_ticks * metadata.tick_size_in_quote_atoms_per_base_unit
+                / metadata.num_base_lots_per_base_unit,
         )
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded down)
-    pub fn float_price_to_ticks(&self, market_key: &Pubkey, price: f64) -> Result<u64> {
-        let market = self
+    pub fn float_price_to_ticks_rounded_down(
+        &self,
+        market_key: &Pubkey,
+        price: f64,
+    ) -> Result<u64> {
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(
-            ((price * market.raw_base_units_per_base_unit as f64 * market.quote_multiplier as f64)
-                / market.tick_size_in_quote_atoms_per_base_unit as f64) as u64,
-        )
+        Ok(((price
+            * metadata.raw_base_units_per_base_unit as f64
+            * metadata.quote_atoms_per_quote_unit as f64)
+            / metadata.tick_size_in_quote_atoms_per_base_unit as f64) as u64)
     }
 
     /// Takes in a price as a floating point number and converts it to a number of ticks (rounded up)
     pub fn float_price_to_ticks_rounded_up(&self, market_key: &Pubkey, price: f64) -> Result<u64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(
-            ((price * market.raw_base_units_per_base_unit as f64 * market.quote_multiplier as f64)
-                / market.tick_size_in_quote_atoms_per_base_unit as f64)
-                .ceil() as u64,
-        )
+        Ok(((price
+            * metadata.raw_base_units_per_base_unit as f64
+            * metadata.quote_atoms_per_quote_unit as f64)
+            / metadata.tick_size_in_quote_atoms_per_base_unit as f64)
+            .ceil() as u64)
     }
 
     /// Takes in a number of ticks and converts it to a floating point number price
     pub fn ticks_to_float_price(&self, market_key: &Pubkey, ticks: u64) -> Result<f64> {
-        let market = self
+        let metadata = self
             .markets
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
         Ok(
-            (ticks as f64 * market.tick_size_in_quote_atoms_per_base_unit as f64)
-                / market.quote_multiplier as f64,
+            ticks as f64 * metadata.tick_size_in_quote_atoms_per_base_unit as f64
+                / (metadata.quote_atoms_per_quote_unit as f64
+                    * metadata.raw_base_units_per_base_unit as f64),
         )
-    }
-
-    /// Multiplier used to convert base lots to base units
-    pub fn base_lots_to_base_units_multiplier(&self, market_key: &Pubkey) -> Result<f64> {
-        let market = self
-            .markets
-            .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(1.0 / market.num_base_lots_per_base_unit as f64)
-    }
-
-    /// Multiplier used to convert ticks to a floating point number price
-    pub fn ticks_to_float_price_multiplier(&self, market_key: &Pubkey) -> Result<f64> {
-        let market = self
-            .markets
-            .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(market.tick_size_in_quote_atoms_per_base_unit as f64 / market.quote_multiplier as f64)
     }
 }
 
@@ -648,7 +657,7 @@ impl SDKClientCore {
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
         match side {
             Side::Bid => {
-                let quote_lot_budget = size / market.quote_lot_size;
+                let quote_lot_budget = size / market.quote_atoms_per_quote_lot;
                 Ok(create_new_order_instruction(
                     &market_key.clone(),
                     &self.trader,
@@ -665,7 +674,7 @@ impl SDKClientCore {
                 ))
             }
             Side::Ask => {
-                let num_base_lots = size / market.base_lot_size;
+                let num_base_lots = size / market.base_atoms_per_base_lot;
                 Ok(create_new_order_instruction(
                     &market_key.clone(),
                     &self.trader,

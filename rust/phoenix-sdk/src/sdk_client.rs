@@ -548,10 +548,12 @@ impl SDKClient {
                         event_index: index as u64,
                         details: MarketEventDetails::FillSummary(FillSummary {
                             client_order_id,
-                            total_base_filled: total_base_lots_filled * meta.base_lot_size,
+                            total_base_filled: total_base_lots_filled
+                                * meta.base_atoms_per_base_lot,
                             total_quote_filled_including_fees: total_quote_lots_filled
-                                * meta.quote_lot_size,
-                            total_quote_fees: total_fee_in_quote_lots * meta.quote_lot_size,
+                                * meta.quote_atoms_per_quote_lot,
+                            total_quote_fees: total_fee_in_quote_lots
+                                * meta.quote_atoms_per_quote_lot,
                             trade_direction: trade_direction.unwrap_or(0),
                         }),
                     }),
@@ -567,7 +569,7 @@ impl SDKClient {
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::Fee(
-                            fees_collected_in_quote_lots * meta.quote_lot_size,
+                            fees_collected_in_quote_lots * meta.quote_atoms_per_quote_lot,
                         ),
                     }),
                     PhoenixMarketEvent::TimeInForce(TimeInForceEvent {
