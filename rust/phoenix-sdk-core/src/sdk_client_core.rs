@@ -121,7 +121,6 @@ impl MarketMetadata {
             header.get_tick_size_in_quote_atoms_per_base_unit().into();
         // max(1) is only relevant for old markets where the raw_base_units_per_base_unit was not set
         let raw_base_units_per_base_unit = header.raw_base_units_per_base_unit.max(1);
-        // Upcast the computation to ensure no overflow
         if base_atoms_per_raw_base_unit % base_atoms_per_base_lot != 0 {
             return Err(anyhow!(
                 "Invalid base lot size (in base atoms per base lot)"
