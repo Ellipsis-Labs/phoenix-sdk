@@ -52,7 +52,6 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let payer = get_payer_keypair();
     let url = &args.rpc;
-
     println!("RPC endpoint: {}", url);
 
     let client = EllipsisClient::from_rpc(
