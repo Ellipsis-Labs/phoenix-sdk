@@ -52,7 +52,6 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let payer = get_payer_keypair();
     let url = &args.rpc;
-
     println!("RPC endpoint: {}", url);
 
     let client = EllipsisClient::from_rpc(
@@ -106,7 +105,9 @@ async fn main() -> anyhow::Result<()> {
             market_pubkey, header.quote_params.mint_key, header.base_params.mint_key
         );
 
-        if header.base_params.mint_key == devnet_token_faucet::get_mint_address("SOL") {
+        if header.base_params.mint_key == devnet_token_faucet::get_mint_address("SOL")
+            || header.base_params.mint_key == spl_token::native_mint::id()
+        {
             sol_usdc_market = Some(market_pubkey);
         }
     }

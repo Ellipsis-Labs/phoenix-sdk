@@ -280,8 +280,8 @@ impl SDKClient {
             .await
             .unwrap_or_default();
         let default = Orderbook::<FIFOOrderId, PhoenixOrder> {
-            size_mult: 0.0,
-            price_mult: 0.0,
+            raw_base_units_per_base_lot: 0.0,
+            quote_units_per_raw_base_unit_per_tick: 0.0,
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         };
@@ -289,14 +289,22 @@ impl SDKClient {
             return Ok(default);
         }
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let base_lots_multiplier = self.base_lots_to_base_units_multiplier(market_key)?;
-        let ticks_multiplier = self.ticks_to_float_price_multiplier(market_key)?;
+        let meta = self.get_market_metadata_from_cache(market_key)?;
+        let raw_base_units_per_base_lot =
+            meta.base_atoms_per_base_lot as f64 / meta.base_atoms_per_raw_base_unit as f64;
+        let quote_units_per_raw_base_unit_per_tick = meta.tick_size_in_quote_atoms_per_base_unit
+            as f64
+            / (meta.quote_atoms_per_quote_unit as f64 * meta.raw_base_units_per_base_unit as f64);
         Ok(bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
             .ok()
             .map(|header| {
                 load_with_dispatch(&header.market_size_params, bytes)
                     .map(|market| {
-                        Orderbook::from_market(market.inner, base_lots_multiplier, ticks_multiplier)
+                        Orderbook::from_market(
+                            market.inner,
+                            raw_base_units_per_base_lot,
+                            quote_units_per_raw_base_unit_per_tick,
+                        )
                     })
                     .unwrap_or_else(|_| default.clone())
             })
@@ -347,8 +355,8 @@ impl SDKClient {
             Err(_) => {
                 return Ok(MarketState {
                     orderbook: Orderbook {
-                        size_mult: 0.0,
-                        price_mult: 0.0,
+                        raw_base_units_per_base_lot: 0.0,
+                        quote_units_per_raw_base_unit_per_tick: 0.0,
                         bids: BTreeMap::new(),
                         asks: BTreeMap::new(),
                     },
@@ -363,10 +371,16 @@ impl SDKClient {
             .expect("Market configuration not found")
             .inner;
 
+        let meta = self.get_market_metadata_from_cache(market_key)?;
+        let raw_base_units_per_base_lot =
+            meta.base_atoms_per_base_lot as f64 / meta.base_atoms_per_raw_base_unit as f64;
+        let quote_units_per_raw_base_unit_per_tick = meta.tick_size_in_quote_atoms_per_base_unit
+            as f64
+            / (meta.quote_atoms_per_quote_unit as f64 * meta.raw_base_units_per_base_unit as f64);
         let orderbook = Orderbook::from_market(
             market,
-            self.base_lots_to_base_units_multiplier(market_key)?,
-            self.ticks_to_float_price_multiplier(market_key)?,
+            raw_base_units_per_base_lot,
+            quote_units_per_raw_base_unit_per_tick,
         );
 
         let traders = market
