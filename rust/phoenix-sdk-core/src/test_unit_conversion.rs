@@ -203,7 +203,7 @@ fn test_base_atoms_to_raw_base_unit_as_float() {
     let core = setup(&market);
     let base_atoms = 1000000;
     let raw_base_unit = core
-        .base_atoms_to_raw_base_unit_as_float(&market, base_atoms)
+        .base_atoms_to_raw_base_units_as_float(&market, base_atoms)
         .unwrap();
     assert_eq!(raw_base_unit, 0.001);
 
@@ -211,7 +211,7 @@ fn test_base_atoms_to_raw_base_unit_as_float() {
     let core = setup_with_raw_base_unit_multiplier(&market, 1000);
     let base_atoms = 1000000;
     let raw_base_unit = core
-        .base_atoms_to_raw_base_unit_as_float(&market, base_atoms)
+        .base_atoms_to_raw_base_units_as_float(&market, base_atoms)
         .unwrap();
     assert_eq!(raw_base_unit, 0.001);
 }
@@ -222,7 +222,7 @@ fn test_quote_atoms_to_quote_unit_as_float() {
     let core = setup(&market);
     let quote_atoms = 1000;
     let quote_unit = core
-        .quote_atoms_to_quote_unit_as_float(&market, quote_atoms)
+        .quote_atoms_to_quote_units_as_float(&market, quote_atoms)
         .unwrap();
     assert_eq!(quote_unit, 0.001);
 }
