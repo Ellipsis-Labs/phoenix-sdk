@@ -69,8 +69,8 @@ impl OrderbookValue for Decimal {
 
 #[derive(Debug, Clone, Default)]
 pub struct Orderbook<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> {
-    pub size_mult: f64,
-    pub price_mult: f64,
+    pub raw_base_units_per_base_lot: f64,
+    pub quote_units_per_raw_base_unit_per_tick: f64,
     pub bids: BTreeMap<K, V>,
     pub asks: BTreeMap<K, V>,
 }
@@ -78,8 +78,8 @@ pub struct Orderbook<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> {
 impl Orderbook<FIFOOrderId, PhoenixOrder> {
     pub fn from_market(
         market: &dyn Market<Pubkey, FIFOOrderId, FIFORestingOrder, OrderPacket>,
-        size_mult: f64,
-        price_mult: f64,
+        raw_base_units_per_base_lot: f64,
+        quote_units_per_raw_base_unit_per_tick: f64,
     ) -> Self {
         let traders = market
             .get_registered_traders()
@@ -94,8 +94,8 @@ impl Orderbook<FIFOOrderId, PhoenixOrder> {
         }
 
         let mut orderbook = Orderbook {
-            size_mult,
-            price_mult,
+            raw_base_units_per_base_lot,
+            quote_units_per_raw_base_unit_per_tick,
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         };
@@ -151,10 +151,11 @@ impl<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> Orderbook<K, V> {
         let asks = self
             .get_asks()
             .iter()
-            .group_by(|(price, _)| price.price() * self.price_mult)
+            .group_by(|(price, _)| price.price() * self.quote_units_per_raw_base_unit_per_tick)
             .into_iter()
             .map(|(price, group)| {
-                let size = group.map(|(_, size)| size.size()).sum::<f64>() * self.size_mult;
+                let size = group.map(|(_, size)| size.size()).sum::<f64>()
+                    * self.raw_base_units_per_base_lot;
                 (price, size)
             })
             .take(levels)
@@ -163,10 +164,11 @@ impl<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> Orderbook<K, V> {
             .get_bids()
             .iter()
             .rev()
-            .group_by(|(price, _)| price.price() * self.price_mult)
+            .group_by(|(price, _)| price.price() * self.quote_units_per_raw_base_unit_per_tick)
             .into_iter()
             .map(|(price, group)| {
-                let size = group.map(|(_, size)| size.size()).sum::<f64>() * self.size_mult;
+                let size = group.map(|(_, size)| size.size()).sum::<f64>()
+                    * self.raw_base_units_per_base_lot;
                 (price, size)
             })
             .take(levels)
@@ -251,6 +253,6 @@ impl<K: Ord + OrderbookKey + Copy, V: OrderbookValue + Copy> Orderbook<K, V> {
                 },
             )
             .sum::<f64>();
-        num / (denom * self.price_mult)
+        num / (denom * self.quote_units_per_raw_base_unit_per_tick)
     }
 }
