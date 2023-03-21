@@ -6,10 +6,6 @@ use ellipsis_client::transaction_utils::ParsedTransaction;
 use itertools::Itertools;
 use phoenix::program::MarketHeader;
 use phoenix::program::PhoenixInstruction;
-use phoenix::quantities::BaseAtoms;
-use phoenix::quantities::BaseAtomsPerBaseLot;
-use phoenix::quantities::QuoteAtoms;
-use phoenix::quantities::QuoteAtomsPerQuoteLot;
 use phoenix::quantities::QuoteLots;
 use phoenix::{
     program::cancel_multiple_orders::{CancelMultipleOrdersByIdParams, CancelUpToParams},
@@ -294,12 +290,12 @@ impl SDKClientCore {
             price_in_ticks,
             ..
         } = fill;
-        self.order_to_quote_atoms(market_key, base_lots, price_in_ticks)
+        self.base_lots_and_price_to_quote_atoms(market_key, base_lots, price_in_ticks)
     }
 
-    /// Given a market pubkey, price in ticks, and size in base lots, returns the number of quote atoms required to post
-    /// or fill the corresponding order.
-    pub fn order_to_quote_atoms(
+    /// Given a market pubkey, number of base lots, and price in ticks, returns the equivalent number of quote atoms
+    /// for that price and number of base lots.
+    pub fn base_lots_and_price_to_quote_atoms(
         &self,
         market_key: &Pubkey,
         base_lots: u64,

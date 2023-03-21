@@ -319,7 +319,7 @@ fn test_fill_event_to_quote_atoms() {
         .unwrap();
     assert_eq!(
         quote_atoms,
-        core.order_to_quote_atoms(
+        core.base_lots_and_price_to_quote_atoms(
             &market,
             fill_event.base_lots_filled,
             fill_event.price_in_ticks
@@ -329,13 +329,13 @@ fn test_fill_event_to_quote_atoms() {
 }
 
 #[test]
-fn test_order_to_quote_atoms() {
+fn test_base_lots_and_price_to_quote_atoms() {
     let market = Pubkey::new_unique();
     let core = setup(&market);
     let base_lots = 1000000;
     let price_in_ticks = 10907;
     let quote_atoms = core
-        .order_to_quote_atoms(&market, base_lots, price_in_ticks)
+        .base_lots_and_price_to_quote_atoms(&market, base_lots, price_in_ticks)
         .unwrap();
     let meta = core.get_market_metadata(&market);
 
@@ -348,7 +348,7 @@ fn test_order_to_quote_atoms() {
     let base_lots = 1000000;
     let price_in_ticks = 10907;
     let quote_atoms = core
-        .order_to_quote_atoms(&market, base_lots, price_in_ticks)
+        .base_lots_and_price_to_quote_atoms(&market, base_lots, price_in_ticks)
         .unwrap();
     let meta = core.get_market_metadata(&market);
 
