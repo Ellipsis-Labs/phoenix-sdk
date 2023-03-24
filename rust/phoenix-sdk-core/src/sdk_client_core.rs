@@ -5,6 +5,7 @@ use borsh::BorshDeserialize;
 use ellipsis_client::transaction_utils::ParsedTransaction;
 use itertools::Itertools;
 use phoenix::program::MarketHeader;
+use phoenix::program::MarketSizeParams;
 use phoenix::program::PhoenixInstruction;
 use phoenix::quantities::QuoteLots;
 use phoenix::{
@@ -103,6 +104,7 @@ pub struct MarketMetadata {
     /// The adjustment factor to convert from the raw base unit (i.e. 1 BONK token) to the Phoenix BaseUnit (which may be a multiple of whole tokens).
     /// The adjustment factor is almost always 1, unless one base token is worth less than one quote atom (i.e. 1e-6 USDC)
     pub raw_base_units_per_base_unit: u32,
+    pub market_size_params: MarketSizeParams,
 }
 
 impl MarketMetadata {
@@ -140,7 +142,111 @@ impl MarketMetadata {
             base_atoms_per_base_lot,
             num_base_lots_per_base_unit,
             raw_base_units_per_base_unit,
+            market_size_params: header.market_size_params,
         })
+    }
+}
+
+impl MarketMetadata {
+    /// Given a number of raw base units, returns the equivalent number of base lots (rounded down).
+    pub fn raw_base_units_to_base_lots_rounded_down(&self, raw_base_units: f64) -> u64 {
+        let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
+        (base_units * (self.num_base_lots_per_base_unit as f64)).floor() as u64
+    }
+
+    /// Given a number of raw base units, returns the equivalent number of base lots (rounded up).
+    pub fn raw_base_units_to_base_lots_rounded_up(&self, raw_base_units: f64) -> u64 {
+        let base_units = raw_base_units / self.raw_base_units_per_base_unit as f64;
+        (base_units * (self.num_base_lots_per_base_unit as f64)).ceil() as u64
+    }
+
+    /// Given a number of base atoms, returns the equivalent number of base lots (rounded down).
+    pub fn base_atoms_to_base_lots_rounded_down(&self, base_atoms: u64) -> u64 {
+        base_atoms / self.base_atoms_per_base_lot
+    }
+
+    /// Given a number of base atoms, returns the equivalent number of base lots (rounded up).
+    pub fn base_atoms_to_base_lots_rounded_up(&self, base_atoms: u64) -> u64 {
+        1 + base_atoms.saturating_sub(1) / self.base_atoms_per_base_lot
+    }
+
+    /// Given a number of base lots, returns the equivalent number of base atoms.
+    pub fn base_lots_to_base_atoms(&self, base_lots: u64) -> u64 {
+        base_lots * self.base_atoms_per_base_lot
+    }
+
+    /// Given a number of quote units, returns the equivalent number of quote lots.
+    pub fn quote_units_to_quote_lots(&self, quote_units: f64) -> u64 {
+        (quote_units * (self.quote_atoms_per_quote_unit / self.quote_atoms_per_quote_lot) as f64)
+            as u64
+    }
+
+    /// Given a number of quote atoms, returns the equivalent number of quote lots (rounded down).
+    pub fn quote_atoms_to_quote_lots_rounded_down(&self, quote_atoms: u64) -> u64 {
+        quote_atoms / self.quote_atoms_per_quote_lot
+    }
+
+    /// Given a number of quote atoms, returns the equivalent number of quote lots (rounded up).
+    pub fn quote_atoms_to_quote_lots_rounded_up(&self, quote_atoms: u64) -> u64 {
+        1 + quote_atoms.saturating_sub(1) / self.quote_atoms_per_quote_lot
+    }
+
+    /// Given a number of quote lots, returns the equivalent number of quote atoms.
+    pub fn quote_lots_to_quote_atoms(&self, quote_lots: u64) -> u64 {
+        quote_lots * self.quote_atoms_per_quote_lot
+    }
+
+    /// Given a number of base atoms, returns the equivalent number of raw base units.
+    pub fn base_atoms_to_raw_base_units_as_float(&self, base_atoms: u64) -> f64 {
+        base_atoms as f64 / self.base_atoms_per_raw_base_unit as f64
+    }
+
+    /// Given a number of quote atoms, returns the equivalent number of quote units.
+    pub fn quote_atoms_to_quote_units_as_float(&self, quote_atoms: u64) -> f64 {
+        quote_atoms as f64 / self.quote_atoms_per_quote_unit as f64
+    }
+
+    /// Given a number of base lots and price in ticks, returns the equivalent number of quote atoms
+    /// for that price and number of base lots.
+    pub fn base_lots_and_price_to_quote_atoms(&self, base_lots: u64, price_in_ticks: u64) -> u64 {
+        base_lots * price_in_ticks * self.tick_size_in_quote_atoms_per_base_unit
+            / self.num_base_lots_per_base_unit
+    }
+
+    /// Given a price in quote units per raw base unit (represented as a float), returns
+    /// the corresponding number of ticks (rounded down)
+    pub fn float_price_to_ticks_rounded_down(&self, price: f64) -> u64 {
+        ((price
+            * self.raw_base_units_per_base_unit as f64
+            * self.quote_atoms_per_quote_unit as f64)
+            / self.tick_size_in_quote_atoms_per_base_unit as f64) as u64
+    }
+
+    /// Given a price in quote units per raw base unit (represented as a float), returns
+    /// the corresponding number of ticks (rounded up)
+    pub fn float_price_to_ticks_rounded_up(&self, price: f64) -> u64 {
+        ((price
+            * self.raw_base_units_per_base_unit as f64
+            * self.quote_atoms_per_quote_unit as f64)
+            / self.tick_size_in_quote_atoms_per_base_unit as f64)
+            .ceil() as u64
+    }
+
+    /// Given a number of ticks, returns the corresponding price in quote units per raw base unit (as a float)
+    pub fn ticks_to_float_price(&self, ticks: u64) -> f64 {
+        ticks as f64 * self.tick_size_in_quote_atoms_per_base_unit as f64
+            / (self.quote_atoms_per_quote_unit as f64 * self.raw_base_units_per_base_unit as f64)
+    }
+
+    /// Returns the base lot size in raw base units (as a float)
+    pub fn raw_base_units_per_base_lot(&self) -> f64 {
+        self.base_atoms_per_base_lot as f64 / self.base_atoms_per_raw_base_unit as f64
+    }
+
+    /// Returns the tick size in quote units per raw base unit
+    pub fn quote_units_per_raw_base_unit_per_tick(&self) -> f64 {
+        self.tick_size_in_quote_atoms_per_base_unit as f64
+            / (self.quote_atoms_per_quote_unit as f64 * self.raw_base_units_per_base_unit as f64)
     }
 }
 
@@ -149,6 +255,7 @@ pub struct SDKClientCore {
     pub trader: Pubkey,
 }
 
+/// Unit conversions
 impl SDKClientCore {
     /// Given a market pubkey and a number of raw base units, returns the equivalent number of base lots (rounded down).
     pub fn raw_base_units_to_base_lots_rounded_down(
@@ -156,12 +263,10 @@ impl SDKClientCore {
         market_key: &Pubkey,
         raw_base_units: f64,
     ) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))?;
-        let base_units = raw_base_units / metadata.raw_base_units_per_base_unit as f64;
-        Ok((base_units * (metadata.num_base_lots_per_base_unit as f64)).floor() as u64)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.raw_base_units_to_base_lots_rounded_down(raw_base_units))
     }
 
     /// Given a market pubkey and a number of raw base units, returns the equivalent number of base lots (rounded up).
@@ -170,12 +275,10 @@ impl SDKClientCore {
         market_key: &Pubkey,
         raw_base_units: f64,
     ) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))?;
-        let base_units = raw_base_units / metadata.raw_base_units_per_base_unit as f64;
-        Ok((base_units * (metadata.num_base_lots_per_base_unit as f64)).ceil() as u64)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.raw_base_units_to_base_lots_rounded_up(raw_base_units))
     }
 
     /// Given a market pubkey and a number of base atoms, returns the equivalent number of base lots (rounded down).
@@ -184,11 +287,10 @@ impl SDKClientCore {
         market_key: &Pubkey,
         base_atoms: u64,
     ) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(base_atoms / metadata.base_atoms_per_base_lot)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.base_atoms_to_base_lots_rounded_down(base_atoms))
     }
 
     /// Given a market pubkey and a number of base atoms, returns the equivalent number of base lots (rounded up).
@@ -197,32 +299,26 @@ impl SDKClientCore {
         market_key: &Pubkey,
         base_atoms: u64,
     ) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(1 + base_atoms.saturating_sub(1) / metadata.base_atoms_per_base_lot)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.base_atoms_to_base_lots_rounded_up(base_atoms))
     }
 
     /// Given a market pubkey and a number of base lots, returns the equivalent number of base atoms.
     pub fn base_lots_to_base_atoms(&self, market_key: &Pubkey, base_lots: u64) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-
-        Ok(base_lots * metadata.base_atoms_per_base_lot)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.base_lots_to_base_atoms(base_lots))
     }
 
     /// Given a market pubkey and a number of quote units, returns the equivalent number of quote lots.
     pub fn quote_units_to_quote_lots(&self, market_key: &Pubkey, quote_units: f64) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok((quote_units
-            * (metadata.quote_atoms_per_quote_unit / metadata.quote_atoms_per_quote_lot) as f64)
-            as u64)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.quote_units_to_quote_lots(quote_units))
     }
 
     /// Given a market pubkey and a number of quote atoms, returns the equivalent number of quote lots (rounded down).
@@ -231,11 +327,10 @@ impl SDKClientCore {
         market_key: &Pubkey,
         quote_atoms: u64,
     ) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(quote_atoms / metadata.quote_atoms_per_quote_lot)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.quote_atoms_to_quote_lots_rounded_down(quote_atoms))
     }
 
     /// Given a market pubkey and a number of quote atoms, returns the equivalent number of quote lots (rounded up).
@@ -244,20 +339,18 @@ impl SDKClientCore {
         market_key: &Pubkey,
         quote_atoms: u64,
     ) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(1 + quote_atoms.saturating_sub(1) / metadata.quote_atoms_per_quote_lot)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.quote_atoms_to_quote_lots_rounded_up(quote_atoms))
     }
 
     /// Given a market pubkey and a number of quote lots, returns the equivalent number of quote atoms.
     pub fn quote_lots_to_quote_atoms(&self, market_key: &Pubkey, quote_lots: u64) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(quote_lots * metadata.quote_atoms_per_quote_lot)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.quote_lots_to_quote_atoms(quote_lots))
     }
 
     /// Given a market pubkey and a number of base atoms, returns the equivalent number of raw base units.
@@ -266,11 +359,10 @@ impl SDKClientCore {
         market_key: &Pubkey,
         base_atoms: u64,
     ) -> Result<f64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(base_atoms as f64 / metadata.base_atoms_per_raw_base_unit as f64)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.base_atoms_to_raw_base_units_as_float(base_atoms))
     }
 
     /// Given a market pubkey and a number of quote atoms, returns the equivalent number of quote units.
@@ -279,11 +371,10 @@ impl SDKClientCore {
         market_key: &Pubkey,
         quote_atoms: u64,
     ) -> Result<f64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(quote_atoms as f64 / metadata.quote_atoms_per_quote_unit as f64)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.quote_atoms_to_quote_units_as_float(quote_atoms))
     }
 
     /// Given a market pubkey and a fill event, returns the number of quote atoms filled.
@@ -304,14 +395,10 @@ impl SDKClientCore {
         base_lots: u64,
         price_in_ticks: u64,
     ) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(
-            base_lots * price_in_ticks * metadata.tick_size_in_quote_atoms_per_base_unit
-                / metadata.num_base_lots_per_base_unit,
-        )
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.base_lots_and_price_to_quote_atoms(base_lots, price_in_ticks))
     }
 
     /// Given a market pubkey and a price in quote units per raw base unit (represented as a float), returns
@@ -321,41 +408,35 @@ impl SDKClientCore {
         market_key: &Pubkey,
         price: f64,
     ) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(((price
-            * metadata.raw_base_units_per_base_unit as f64
-            * metadata.quote_atoms_per_quote_unit as f64)
-            / metadata.tick_size_in_quote_atoms_per_base_unit as f64) as u64)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.float_price_to_ticks_rounded_down(price))
     }
 
     /// Given a market pubkey and a price in quote units per raw base unit (represented as a float), returns
     /// the corresponding number of ticks (rounded up)
     pub fn float_price_to_ticks_rounded_up(&self, market_key: &Pubkey, price: f64) -> Result<u64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(((price
-            * metadata.raw_base_units_per_base_unit as f64
-            * metadata.quote_atoms_per_quote_unit as f64)
-            / metadata.tick_size_in_quote_atoms_per_base_unit as f64)
-            .ceil() as u64)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.float_price_to_ticks_rounded_up(price))
     }
 
     /// Given a number of ticks, returns the corresponding price in quote units per raw base unit (as a float)
     pub fn ticks_to_float_price(&self, market_key: &Pubkey, ticks: u64) -> Result<f64> {
-        let metadata = self
-            .markets
+        self.markets
             .get(market_key)
-            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
-        Ok(
-            ticks as f64 * metadata.tick_size_in_quote_atoms_per_base_unit as f64
-                / (metadata.quote_atoms_per_quote_unit as f64
-                    * metadata.raw_base_units_per_base_unit as f64),
-        )
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.ticks_to_float_price(ticks))
+    }
+
+    /// Given a market, returns the base lot size in raw base units (as a float)
+    pub fn raw_base_units_per_base_lot(&self, market_key: &Pubkey) -> Result<f64> {
+        self.markets
+            .get(market_key)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.raw_base_units_per_base_lot())
     }
 }
 
@@ -462,7 +543,10 @@ impl SDKClientCore {
         }
         self.parse_raw_phoenix_events(sig, event_list)
     }
+}
 
+/// SDKClientCore instruction builders
+impl SDKClientCore {
     pub fn get_ioc_ix(
         &self,
         market_key: &Pubkey,

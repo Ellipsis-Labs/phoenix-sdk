@@ -2,7 +2,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 name = "phoenix-sdk"
-version = "0.3.6"
+version = "0.3.7"
 description = "SDK for interacting with the Phoenix program"
 edition = "2021"
 license = "MIT"
@@ -29,5 +29,5 @@ rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 bytemuck = { workspace = true }
 itertools = "0.10.5"
-phoenix-sdk-core = { version = "0.3.6", path = "../phoenix-sdk-core" }
+phoenix-sdk-core = { version = "0.3.7", path = "../phoenix-sdk-core" }
 serde = { workspace = true }
