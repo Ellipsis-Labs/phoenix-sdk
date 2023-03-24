@@ -438,6 +438,14 @@ impl SDKClientCore {
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
             .map(|m| m.raw_base_units_per_base_lot())
     }
+
+    /// Given a market, returns the tick size in quote units per raw base unit
+    pub fn quote_units_per_raw_base_unit_per_tick(&self, market_key: &Pubkey) -> Result<f64> {
+        self.markets
+            .get(market_key)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first"))
+            .map(|m| m.quote_units_per_raw_base_unit_per_tick())
+    }
 }
 
 impl SDKClientCore {
