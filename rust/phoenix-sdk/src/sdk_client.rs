@@ -61,6 +61,7 @@ impl DerefMut for SDKClient {
     }
 }
 
+/// Constuctor functions that create a new SDKClient
 impl SDKClient {
     /// Create a new SDKClient from an EllipsisClient.
     /// This does not have any markets added to it. You must call `add_market` or `add_all_markets` to
@@ -192,7 +193,10 @@ impl SDKClient {
         let rt = tokio::runtime::Runtime::new()?;
         rt.block_on(Self::new_with_market_keys(market_keys, payer, url))
     }
+}
 
+/// Mutable functions that modify the internal state of the SDKClient
+impl SDKClient {
     /// Load in all known markets from a pre-defined config file located in the SDK github.
     pub async fn add_all_markets(&mut self) -> Result<()> {
         let config_url = "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
@@ -233,6 +237,7 @@ impl SDKClient {
         rt.block_on(self.add_all_markets())
     }
 
+    /// This function adds the metadata for a market to the SDKClient's market cache.
     pub async fn add_market(&mut self, market_key: &Pubkey) -> anyhow::Result<()> {
         let market_metadata = self.get_market_metadata(market_key).await?;
         self.markets.insert(*market_key, market_metadata);
@@ -252,15 +257,53 @@ impl SDKClient {
     pub fn get_trader(&self) -> Pubkey {
         self.trader
     }
+}
+
+/// Getter functions that make asynchronous calls via a Solana RPC connection to fetch state and events from Phoenix.
+impl SDKClient {
+    pub async fn get_market_metadata(&self, market_key: &Pubkey) -> Result<MarketMetadata> {
+        match self.markets.get(market_key) {
+            Some(metadata) => return Ok(metadata.clone()),
+            None => {
+                let market_account_data = (self.client.get_account_data(market_key))
+                    .await
+                    .map_err(|_| anyhow!("Failed to find market account"))?;
+                self.get_market_metadata_from_header_bytes(&market_account_data)
+            }
+        }
+    }
+
+    fn get_market_metadata_from_header_bytes(&self, header_bytes: &[u8]) -> Result<MarketMetadata> {
+        bytemuck::try_from_bytes(header_bytes)
+            .map_err(|_| anyhow!("Failed to deserialize market header"))
+            .and_then(MarketMetadata::from_header)
+    }
+
+    /// Fetches a market's metadata from the SDKClient's market cache. This cache must be
+    /// explicitly populated by calling `add_market` or `add_all_markets`.
+    ///
+    /// Because the market metadata is static, it is recommended to call `add_market` and
+    /// use this function when repeatedly looking up metadata to avoid making
+    /// additional RPC calls.
+    pub fn get_market_metadata_from_cache(
+        &self,
+        market_key: &Pubkey,
+    ) -> anyhow::Result<&MarketMetadata> {
+        match self.markets.get(market_key) {
+            Some(metadata) => return Ok(metadata),
+            None => Err(anyhow!(
+                "Market metadata not found in cache. Try calling add_market first."
+            )),
+        }
+    }
 
     pub async fn get_market_ladder(&self, market_key: &Pubkey, levels: u64) -> Result<Ladder> {
         let market_account_data = (self.client.get_account_data(market_key))
             .await
             .map_err(|_| anyhow!("Failed to get market account data"))?;
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let header: &MarketHeader =
-            bytemuck::try_from_bytes(header_bytes).expect("Failed to deserialize market header");
-        let market = load_with_dispatch(&header.market_size_params, bytes)
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let market = load_with_dispatch(&meta.market_size_params, bytes)
             .map_err(|_| anyhow!("Market configuration not found"))?
             .inner;
 
@@ -279,36 +322,28 @@ impl SDKClient {
         let market_account_data = (self.client.get_account_data(market_key))
             .await
             .unwrap_or_default();
-        let default = Orderbook::<FIFOOrderId, PhoenixOrder> {
+        let default_orderbook = Orderbook::<FIFOOrderId, PhoenixOrder> {
             raw_base_units_per_base_lot: 0.0,
             quote_units_per_raw_base_unit_per_tick: 0.0,
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         };
         if market_account_data.is_empty() {
-            return Ok(default);
+            return Ok(default_orderbook);
         }
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let meta = self.get_market_metadata_from_cache(market_key)?;
-        let raw_base_units_per_base_lot =
-            meta.base_atoms_per_base_lot as f64 / meta.base_atoms_per_raw_base_unit as f64;
-        let quote_units_per_raw_base_unit_per_tick = meta.tick_size_in_quote_atoms_per_base_unit
-            as f64
-            / (meta.quote_atoms_per_quote_unit as f64 * meta.raw_base_units_per_base_unit as f64);
-        Ok(bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-            .ok()
-            .map(|header| {
-                load_with_dispatch(&header.market_size_params, bytes)
-                    .map(|market| {
-                        Orderbook::from_market(
-                            market.inner,
-                            raw_base_units_per_base_lot,
-                            quote_units_per_raw_base_unit_per_tick,
-                        )
-                    })
-                    .unwrap_or_else(|_| default.clone())
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let raw_base_units_per_base_lot = meta.raw_base_units_per_base_lot();
+        let quote_units_per_raw_base_unit_per_tick = meta.quote_units_per_raw_base_unit_per_tick();
+        Ok(load_with_dispatch(&meta.market_size_params, bytes)
+            .map(|market| {
+                Orderbook::from_market(
+                    market.inner,
+                    raw_base_units_per_base_lot,
+                    quote_units_per_raw_base_unit_per_tick,
+                )
             })
-            .unwrap_or(default))
+            .unwrap_or_else(|_| default_orderbook.clone()))
     }
 
     pub async fn get_market_orderbook_sync(
@@ -328,9 +363,8 @@ impl SDKClient {
             Err(_) => return Ok(BTreeMap::new()),
         };
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-            .map_err(|_| anyhow!("Failed to deserialize market header"))?;
-        let market = load_with_dispatch(&header.market_size_params, bytes)
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let market = load_with_dispatch(&meta.market_size_params, bytes)
             .map_err(|_| anyhow!("Market configuration not found"))?
             .inner;
 
@@ -365,22 +399,14 @@ impl SDKClient {
             }
         };
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
-        let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-            .expect("Failed to deserialize market header");
-        let market = load_with_dispatch(&header.market_size_params, bytes)
-            .expect("Market configuration not found")
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let market = load_with_dispatch(&meta.market_size_params, bytes)
+            .map_err(|_| anyhow!("Market configuration not found"))?
             .inner;
-
-        let meta = self.get_market_metadata_from_cache(market_key)?;
-        let raw_base_units_per_base_lot =
-            meta.base_atoms_per_base_lot as f64 / meta.base_atoms_per_raw_base_unit as f64;
-        let quote_units_per_raw_base_unit_per_tick = meta.tick_size_in_quote_atoms_per_base_unit
-            as f64
-            / (meta.quote_atoms_per_quote_unit as f64 * meta.raw_base_units_per_base_unit as f64);
         let orderbook = Orderbook::from_market(
             market,
-            raw_base_units_per_base_lot,
-            quote_units_per_raw_base_unit_per_tick,
+            meta.raw_base_units_per_base_lot(),
+            meta.quote_units_per_raw_base_unit_per_tick(),
         );
 
         let traders = market
@@ -390,34 +416,6 @@ impl SDKClient {
             .collect();
 
         Ok(MarketState { orderbook, traders })
-    }
-
-    pub async fn get_market_metadata(&self, market_key: &Pubkey) -> Result<MarketMetadata> {
-        match self.markets.get(market_key) {
-            Some(metadata) => return Ok(metadata.clone()),
-            None => {
-                let market_account_data = (self.client.get_account_data(market_key))
-                    .await
-                    .map_err(|_| anyhow!("Failed to find market account"))?;
-
-                let (header_bytes, _) = market_account_data.split_at(size_of::<MarketHeader>());
-                let header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
-                    .map_err(|_| anyhow!("Failed to deserialize market header"))?;
-                MarketMetadata::from_header(&header)
-            }
-        }
-    }
-
-    pub fn get_market_metadata_from_cache(
-        &self,
-        market_key: &Pubkey,
-    ) -> anyhow::Result<&MarketMetadata> {
-        match self.markets.get(market_key) {
-            Some(metadata) => return Ok(metadata),
-            None => Err(anyhow!(
-                "Market metadata not found in cache. Try calling add_market first."
-            )),
-        }
     }
 
     pub async fn parse_events_from_transaction(
@@ -704,7 +702,10 @@ impl SDKClient {
 
         (fills, places)
     }
+}
 
+/// Functions for sending transactions that interact with the Phoenix program
+impl SDKClient {
     pub async fn send_ioc(
         &self,
         market_key: &Pubkey,

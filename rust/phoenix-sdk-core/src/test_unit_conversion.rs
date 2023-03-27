@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use phoenix::state::Side;
+use phoenix::{program::MarketSizeParams, state::Side};
 use solana_program::pubkey::Pubkey;
 
 use crate::{
@@ -22,6 +22,8 @@ fn setup(market: &Pubkey) -> SDKClientCore {
         quote_decimals: 6,
         base_mint: Pubkey::new_unique(),
         quote_mint: Pubkey::new_unique(),
+        // Irrelevant for tests
+        market_size_params: MarketSizeParams::default(),
     };
     assert_eq!(
         meta.base_atoms_per_raw_base_unit * meta.raw_base_units_per_base_unit as u64
@@ -60,6 +62,8 @@ fn setup_with_raw_base_unit_multiplier(
         quote_decimals: 6,
         base_mint: Pubkey::new_unique(),
         quote_mint: Pubkey::new_unique(),
+        // Irrelevant for tests
+        market_size_params: MarketSizeParams::default(),
     };
     assert_eq!(
         meta.base_atoms_per_raw_base_unit * meta.raw_base_units_per_base_unit as u64
