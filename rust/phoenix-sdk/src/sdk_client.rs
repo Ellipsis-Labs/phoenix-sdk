@@ -96,6 +96,7 @@ impl SDKClient {
         println!("Creating SDKClient with all markets");
         let mut sdk = SDKClient { client, core };
         sdk.add_all_markets().await?;
+        println!("Added all markets");
         Ok(sdk)
     }
 
@@ -268,7 +269,9 @@ impl SDKClient {
                 let market_account_data = (self.client.get_account_data(market_key))
                     .await
                     .map_err(|_| anyhow!("Failed to find market account"))?;
-                self.get_market_metadata_from_header_bytes(&market_account_data)
+                self.get_market_metadata_from_header_bytes(
+                    &market_account_data[..size_of::<MarketHeader>()],
+                )
             }
         }
     }
