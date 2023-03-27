@@ -279,6 +279,12 @@ impl SDKClient {
             .and_then(MarketMetadata::from_header)
     }
 
+    /// Fetches a market's metadata from the SDKClient's market cache. This cache must be
+    /// explicitly populated by calling `add_market` or `add_all_markets`.
+    ///
+    /// Because the market metadata is static, it is recommended to call `add_market` and
+    /// use this function when repeatedly looking up metadata to avoid making
+    /// additional RPC calls.
     pub fn get_market_metadata_from_cache(
         &self,
         market_key: &Pubkey,
