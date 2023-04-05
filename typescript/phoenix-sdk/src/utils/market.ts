@@ -814,11 +814,12 @@ export function getMarketSwapOrderPacketWithTimeInForce({
 /**
  * Returns the expected amount out for a given swap order
  *
- * @param marketData The `MarketData` for the swap market
- * @param side The side of the order (Bid or Ask)
- * @param inAmount The amount of the input token
+ * @param ladder
+ * @param takerFeeBps
+ * @param side If this is Bid, then the inAmount represents the number of quote units offered; the returned result is the expected number of base units received.
+ * If this is Ask, then the inAmount represents the number of base units offered; the returned result is the expected number of quote units received.
+ * @param inAmount
  *
- * TODO this should use getMarketLadder and adjust its calculation
  */
 export function getMarketExpectedOutAmount({
   ladder,
@@ -860,4 +861,65 @@ export function getMarketExpectedOutAmount({
   }
 
   return expectedUnitsReceived;
+}
+
+/**
+ * Returns the expected amount in for a given desired amount out
+ *
+ * @param ladder
+ * @param takerFeeBps
+ * @param side If this is Bid, then the outAmount represents the number of base units desired; the returned result is the number of quote units required to get the desired amount of base units.
+ * If this is Ask, then the outAmount represents the number of quote units desired; the returned result is the number of base units requires to get the desired amount of quote units.
+ * @param outAmount
+ *
+ */
+export function getMarketExpectedInAmount({
+  ladder,
+  takerFeeBps,
+  side,
+  outAmount,
+}: {
+  ladder: UiLadder;
+  takerFeeBps: number;
+  side: Side;
+  outAmount: number;
+}): number {
+  let remainingUnitsOut = outAmount;
+  let expectedUnitsIn = 0;
+
+  if (side === Side.Bid) {
+    // The user wants outAmount of base units, so we need to calculate the number of quote units that will be required.
+    // We can do this by iterating through the asks and calculating the total base units available and at what price.
+    for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.asks) {
+      if (sizeInBaseUnits > remainingUnitsOut) {
+        expectedUnitsIn += remainingUnitsOut * priceInQuoteUnitsPerBaseUnit;
+        remainingUnitsOut = 0;
+        break;
+      } else {
+        expectedUnitsIn += sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
+        remainingUnitsOut -= sizeInBaseUnits;
+      }
+    }
+  } else {
+    // The user wants outAmount of quote units, so we need to calculate the number of base units that will be required.
+    // We can do this by iterating through the bids and calculating the total base units available and at what price.
+    for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.bids) {
+      const totalQuoteUnitsAvailable =
+        sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
+      if (totalQuoteUnitsAvailable > remainingUnitsOut) {
+        // Remaining quote units desired divided by price equals the necessary base units in.
+        expectedUnitsIn += remainingUnitsOut / priceInQuoteUnitsPerBaseUnit;
+        remainingUnitsOut = 0;
+        break;
+      } else {
+        expectedUnitsIn += sizeInBaseUnits;
+        remainingUnitsOut -= totalQuoteUnitsAvailable;
+      }
+    }
+  }
+
+  // Account for taker fees
+  expectedUnitsIn /= 1 - takerFeeBps / 10000;
+
+  return expectedUnitsIn;
 }

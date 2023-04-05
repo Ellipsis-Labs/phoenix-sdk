@@ -10,6 +10,7 @@ import {
   getMarketSwapTransaction,
   toNum,
   getMarketExpectedOutAmount,
+  getMarketExpectedInAmount,
 } from "./utils";
 import { Token } from "./token";
 import { TokenConfig } from "./index";
@@ -284,6 +285,41 @@ export class Market {
       takerFeeBps: this.data.takerFeeBps,
       side,
       inAmount,
+    });
+  }
+
+  /**
+   * Returns the expected amount in (required) for a desired amount of units out
+   *
+   * @param side The side of the order (Bid or Ask)
+   * @param outAmount The amount of the desired output token
+   * @param slot The current slot
+   * @param unixTimestamp The current unix timestamp, in seconds
+   */
+  getExpectedInAmount({
+    side,
+    outAmount,
+    slot,
+    unixTimestamp,
+  }: {
+    side: Side;
+    outAmount: number;
+    slot: beet.bignum;
+    unixTimestamp: beet.bignum;
+  }): number {
+    const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
+    const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
+    const ladder = getMarketUiLadder(
+      this.data,
+      Math.max(numBids, numAsks),
+      slot,
+      unixTimestamp
+    );
+    return getMarketExpectedInAmount({
+      ladder,
+      takerFeeBps: this.data.takerFeeBps,
+      side,
+      outAmount,
     });
   }
 
