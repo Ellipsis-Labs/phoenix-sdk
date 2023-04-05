@@ -16,7 +16,7 @@ const mockLadder: UiLadder = {
   ],
 };
 
-describe("Calculate expected amount in and expected amount out correctly", () => {
+describe("Calculate expected amount out correctly for both bid and ask", () => {
   it("Correctly calculate expected amount in given a desired amount out", () => {
     // Test case where a user wants to receive 16 units of the base token and wants to know how many quote units they need to provide.
     let side = Side.Bid;
