@@ -814,15 +814,15 @@ export function getMarketSwapOrderPacketWithTimeInForce({
 /**
  * Returns the expected amount out for a given swap order
  *
- * @param ladder
+ * @param uiLadder
  * @param takerFeeBps
- * @param side If this is Bid, then the inAmount represents the number of quote units offered; the returned result is the expected number of base units received.
- * If this is Ask, then the inAmount represents the number of base units offered; the returned result is the expected number of quote units received.
+ * @param side If this is Bid, then the inAmount represents the number of quote units offered; the returned result is the expected number of raw base units received.
+ * If this is Ask, then the inAmount represents the number of raw base units offered; the returned result is the expected number of quote units received.
  * @param inAmount
  *
  */
 export function getMarketExpectedOutAmount({
-  ladder,
+  ladder: uiLadder,
   takerFeeBps,
   side,
   inAmount,
@@ -835,7 +835,10 @@ export function getMarketExpectedOutAmount({
   let remainingUnits = inAmount * (1 - takerFeeBps / 10000);
   let expectedUnitsReceived = 0;
   if (side === Side.Bid) {
-    for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.asks) {
+    for (const [
+      priceInQuoteUnitsPerBaseUnit,
+      sizeInBaseUnits,
+    ] of uiLadder.asks) {
       const totalQuoteUnitsAvailable =
         sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
       if (totalQuoteUnitsAvailable > remainingUnits) {
@@ -848,7 +851,10 @@ export function getMarketExpectedOutAmount({
       }
     }
   } else {
-    for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.bids) {
+    for (const [
+      priceInQuoteUnitsPerBaseUnit,
+      sizeInBaseUnits,
+    ] of uiLadder.bids) {
       if (sizeInBaseUnits > remainingUnits) {
         expectedUnitsReceived += remainingUnits * priceInQuoteUnitsPerBaseUnit;
         remainingUnits = 0;
@@ -864,62 +870,149 @@ export function getMarketExpectedOutAmount({
 }
 
 /**
- * Returns the expected amount in for a given desired amount out
- *
- * @param ladder
- * @param takerFeeBps
- * @param side If this is Bid, then the outAmount represents the number of base units desired; the returned result is the number of quote units required to get the desired amount of base units.
- * If this is Ask, then the outAmount represents the number of quote units desired; the returned result is the number of base units requires to get the desired amount of quote units.
- * @param outAmount
- *
+ * Given an amount of quote units to spend, return the number of raw base units that will be received.
+ * This function represents a Buy order where the caller knows the amount of quote tokens they are willing to spend and want to know how many raw base units they can receive.
+ * @param uiLadder The UiLadder for the market
+ * @param takerFeeBps The taker fee in bps
+ * @param quoteUnitsIn The amount of quote units to spend to buy the base token
  */
-export function getMarketExpectedInAmount({
-  ladder,
+export function getRawBaseUnitsOutFromQuoteUnitsIn({
+  uiLadder,
   takerFeeBps,
-  side,
-  outAmount,
+  quoteUnitsIn,
 }: {
-  ladder: UiLadder;
+  uiLadder: UiLadder;
   takerFeeBps: number;
-  side: Side;
-  outAmount: number;
+  quoteUnitsIn: number;
 }): number {
-  let remainingUnitsOut = outAmount;
-  let expectedUnitsIn = 0;
+  return getBaseAmountFromQuoteAmountBudgetAndBook({
+    sideOfBook: uiLadder.asks,
+    quoteAmountBudget: quoteUnitsIn / (1 + takerFeeBps / 10000),
+  });
+}
 
-  if (side === Side.Bid) {
-    // The user wants outAmount of base units, so we need to calculate the number of quote units that will be required.
-    // We can do this by iterating through the asks and calculating the total base units available and at what price.
-    for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.asks) {
-      if (sizeInBaseUnits > remainingUnitsOut) {
-        expectedUnitsIn += remainingUnitsOut * priceInQuoteUnitsPerBaseUnit;
-        remainingUnitsOut = 0;
-        break;
-      } else {
-        expectedUnitsIn += sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
-        remainingUnitsOut -= sizeInBaseUnits;
-      }
-    }
-  } else {
-    // The user wants outAmount of quote units, so we need to calculate the number of base units that will be required.
-    // We can do this by iterating through the bids and calculating the total base units available and at what price.
-    for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of ladder.bids) {
-      const totalQuoteUnitsAvailable =
-        sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
-      if (totalQuoteUnitsAvailable > remainingUnitsOut) {
-        // Remaining quote units desired divided by price equals the necessary base units in.
-        expectedUnitsIn += remainingUnitsOut / priceInQuoteUnitsPerBaseUnit;
-        remainingUnitsOut = 0;
-        break;
-      } else {
-        expectedUnitsIn += sizeInBaseUnits;
-        remainingUnitsOut -= totalQuoteUnitsAvailable;
-      }
+/**
+ * Given an amount of raw base units to sell, return the number of quote units that will be received.
+ * This function represents a Sell order where the caller knows the amount of raw base units they are willing to sell and want to know how many raw base units they can receive.
+ * @param uiLadder The UiLadder for the market
+ * @param takerFeeBps The taker fee in bps
+ * @param rawBaseUnitsIn The amount of raw base units to sell
+ */
+export function getQuoteUnitsOutFromRawBaseUnitsIn({
+  uiLadder,
+  takerFeeBps,
+  rawBaseUnitsIn: rawBaseUnitsIn,
+}: {
+  uiLadder: UiLadder;
+  takerFeeBps: number;
+  rawBaseUnitsIn: number;
+}): number {
+  const quote_units_matched = getQuoteAmountFromBaseAmountBudgetAndBook({
+    sideOfBook: uiLadder.bids,
+    baseAmountBudget: rawBaseUnitsIn,
+  });
+
+  return quote_units_matched * (1 - takerFeeBps / 10000);
+}
+
+/**
+ * Given a desired amount of quote units to obtain, return the number of raw base units that need to be sold to get that amount of quote units.
+ * This function represents a Sell order where the caller knows the amount of quote units they want to obtain but does not know how many raw base units they need to sell in order to obtain that amount of quote units.
+ * @param uiLadder The UiLadder for the market
+ * @param takerFeeBps The taker fee in bps
+ * @param quoteUnitsOut The amount of quote units to obtain
+ */
+export function getRawBaseUnitsInFromQuoteUnitsOut({
+  uiLadder,
+  takerFeeBps,
+  quoteUnitsOut,
+}: {
+  uiLadder: UiLadder;
+  takerFeeBps: number;
+  quoteUnitsOut: number;
+}): number {
+  return getBaseAmountFromQuoteAmountBudgetAndBook({
+    sideOfBook: uiLadder.bids,
+    quoteAmountBudget: quoteUnitsOut / (1 - takerFeeBps / 10000),
+  });
+}
+
+/**
+ * Given a desired amount of raw base units to obtain, return the number of quote units that need to be spent to get that amount of raw base units.
+ * This function represents a Buy order where the caller knows the amount of raw base units they want to obtain but does not know how many quote units they need to spend in order to obtain that amount of raw base units.
+ * @param uiLadder The UiLadder for the market
+ * @param takerFeeBps The taker fee in bps
+ * @param rawBaseUnitsOut The amount of raw base units to obtain
+ */
+export function getQuoteUnitsInFromRawBaseUnitsOut({
+  uiLadder,
+  takerFeeBps,
+  rawBaseUnitsOut,
+}: {
+  uiLadder: UiLadder;
+  takerFeeBps: number;
+  rawBaseUnitsOut: number;
+}): number {
+  // Walk through the asks first and find quote units to match
+  const quoteUnitsToMatch = getQuoteAmountFromBaseAmountBudgetAndBook({
+    sideOfBook: uiLadder.asks,
+    baseAmountBudget: rawBaseUnitsOut,
+  });
+  // Amount for quote units should account for fee
+  return quoteUnitsToMatch * (1 + takerFeeBps / 10000);
+}
+
+// Given a budget of quote units in, return the number of raw base units that can be matched.
+// If the order is a buy order, then the sideOfBook input is the asks array.
+// If the order is a sell order, then the sideOfBook input is the bids array.
+export function getBaseAmountFromQuoteAmountBudgetAndBook({
+  sideOfBook,
+  quoteAmountBudget,
+}: {
+  sideOfBook: [number, number][];
+  quoteAmountBudget: number;
+}): number {
+  // Number returned is raw base units
+  let quoteAmountBudgetRemaining = quoteAmountBudget;
+  let baseAmount = 0;
+  for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of sideOfBook) {
+    if (
+      priceInQuoteUnitsPerBaseUnit * sizeInBaseUnits >
+      quoteAmountBudgetRemaining
+    ) {
+      baseAmount += quoteAmountBudgetRemaining / priceInQuoteUnitsPerBaseUnit;
+      quoteAmountBudgetRemaining = 0;
+      break;
+    } else {
+      baseAmount += sizeInBaseUnits;
+      quoteAmountBudgetRemaining -=
+        priceInQuoteUnitsPerBaseUnit * sizeInBaseUnits;
     }
   }
+  return baseAmount;
+}
 
-  // Account for taker fees
-  expectedUnitsIn /= 1 - takerFeeBps / 10000;
-
-  return expectedUnitsIn;
+// Given a budget of raw base units in, return the number of quote units that can be matched.
+// If the order is a buy order, then the sideOfBook input is the asks array.
+// If the order is a sell order, then the sideOfBook input is the bids array.
+export function getQuoteAmountFromBaseAmountBudgetAndBook({
+  sideOfBook,
+  baseAmountBudget,
+}: {
+  sideOfBook: [number, number][];
+  baseAmountBudget: number;
+}): number {
+  let baseAmountBudgetRemaining = baseAmountBudget;
+  let quoteAmount = 0;
+  for (const [priceInQuoteUnitsPerBaseUnit, sizeInBaseUnits] of sideOfBook) {
+    if (sizeInBaseUnits > baseAmountBudgetRemaining) {
+      quoteAmount += baseAmountBudgetRemaining * priceInQuoteUnitsPerBaseUnit;
+      baseAmountBudgetRemaining = 0;
+      break;
+    } else {
+      quoteAmount += sizeInBaseUnits * priceInQuoteUnitsPerBaseUnit;
+      baseAmountBudgetRemaining -= sizeInBaseUnits;
+    }
+  }
+  return quoteAmount;
 }
