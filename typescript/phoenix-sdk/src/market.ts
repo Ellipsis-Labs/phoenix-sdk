@@ -9,10 +9,13 @@ import {
   getMarketUiLadder,
   getMarketSwapTransaction,
   toNum,
-  getMarketExpectedOutAmount,
 } from "./utils";
 import { Token } from "./token";
-import { TokenConfig } from "./index";
+import {
+  TokenConfig,
+  getExpectedOutAmountRouter,
+  getExpectedInAmountRouter,
+} from "./index";
 
 export type OrderId = {
   priceInTicks: beet.bignum;
@@ -273,16 +276,17 @@ export class Market {
   }): number {
     const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
     const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
-    const ladder = getMarketUiLadder(
+    const uiLadder = getMarketUiLadder(
       this.data,
       Math.max(numBids, numAsks),
       slot,
       unixTimestamp
     );
-    return getMarketExpectedOutAmount({
-      ladder,
-      takerFeeBps: this.data.takerFeeBps,
+
+    return getExpectedOutAmountRouter({
+      uiLadder,
       side,
+      takerFeeBps: this.data.takerFeeBps,
       inAmount,
     });
   }
@@ -295,32 +299,33 @@ export class Market {
    * @param slot The current slot
    * @param unixTimestamp The current unix timestamp, in seconds
    */
-  // getExpectedInAmount({
-  //   side,
-  //   outAmount,
-  //   slot,
-  //   unixTimestamp,
-  // }: {
-  //   side: Side;
-  //   outAmount: number;
-  //   slot: beet.bignum;
-  //   unixTimestamp: beet.bignum;
-  // }): number {
-  //   const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
-  //   const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
-  //   const ladder = getMarketUiLadder(
-  //     this.data,
-  //     Math.max(numBids, numAsks),
-  //     slot,
-  //     unixTimestamp
-  //   );
-  //   return getMarketExpectedInAmount({
-  //     uiLadder: ladder,
-  //     takerFeeBps: this.data.takerFeeBps,
-  //     side,
-  //     outAmount,
-  //   });
-  // }
+  getExpectedInAmount({
+    side,
+    outAmount,
+    slot,
+    unixTimestamp,
+  }: {
+    side: Side;
+    outAmount: number;
+    slot: beet.bignum;
+    unixTimestamp: beet.bignum;
+  }): number {
+    const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
+    const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
+    const uiLadder = getMarketUiLadder(
+      this.data,
+      Math.max(numBids, numAsks),
+      slot,
+      unixTimestamp
+    );
+
+    return getExpectedInAmountRouter({
+      uiLadder,
+      side,
+      takerFeeBps: this.data.takerFeeBps,
+      outAmount,
+    });
+  }
 
   getPriceDecimalPlaces(): number {
     let target =
