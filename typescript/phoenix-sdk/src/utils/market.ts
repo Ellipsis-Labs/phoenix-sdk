@@ -921,7 +921,7 @@ export function getRawBaseUnitsOutFromQuoteUnitsIn({
 export function getQuoteUnitsOutFromRawBaseUnitsIn({
   uiLadder,
   takerFeeBps,
-  rawBaseUnitsIn: rawBaseUnitsIn,
+  rawBaseUnitsIn,
 }: {
   uiLadder: UiLadder;
   takerFeeBps: number;
