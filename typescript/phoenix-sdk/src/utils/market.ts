@@ -887,7 +887,7 @@ export function getExpectedInAmountRouter({
 
 /**
  * Given an amount of quote units to spend, return the number of raw base units that will be received.
- * This function represents a Buy order where the caller knows the amount of quote tokens they are willing to spend and want to know how many raw base units they can receive.
+ * This function represents a Buy order where the caller knows the amount of quote tokens they are willing to spend and wants to know how many raw base units they can receive.
  *
  * @param uiLadder The uiLadder for the market. Note that prices in the uiLadder are in quote units per raw base unit (units of USDC per unit of SOL for the SOL/USDC market).
  * @param takerFeeBps The taker fee in bps
@@ -911,7 +911,7 @@ export function getRawBaseUnitsOutFromQuoteUnitsIn({
 
 /**
  * Given an amount of raw base units to sell, return the number of quote units that will be received.
- * This function represents a Sell order where the caller knows the amount of raw base units they are willing to sell and want to know how many raw base units they can receive.
+ * This function represents a Sell order where the caller knows the amount of raw base units they are willing to sell and wants to know how many raw base units they can receive.
  *
  * @param uiLadder The uiLadder for the market. Note that prices in the uiLadder are in quote units per raw base unit (units of USDC per unit of SOL for the SOL/USDC market).
  * @param takerFeeBps The taker fee in bps
