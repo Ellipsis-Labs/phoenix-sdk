@@ -849,7 +849,7 @@ export function getExpectedOutAmountRouter({
 }
 
 /**
- * Given a side and a desired amount out, returns the expected amount in that would be required to get the desired amount out.
+ * Given a side and a desired amount out, returns the amount in that would be required to get the desired amount out.
  *
  * @param uiLadder The uiLadder for the market. Note that prices in the uiLadder are in quote units per raw base unit (units of USDC per unit of SOL for the SOL/USDC market).
  * @param side The side of the order
@@ -857,7 +857,7 @@ export function getExpectedOutAmountRouter({
  * @param outAmount The amount of the output token. Output amounts are in raw base units for bids and quote units for asks.
  *
  */
-export function getExpectedInAmountRouter({
+export function getRequiredInAmountRouter({
   uiLadder,
   side,
   takerFeeBps,
@@ -927,17 +927,17 @@ export function getQuoteUnitsOutFromRawBaseUnitsIn({
   takerFeeBps: number;
   rawBaseUnitsIn: number;
 }): number {
-  const quote_units_matched = getQuoteAmountFromBaseAmountBudgetAndBook({
+  const quoteUnitsMatched = getQuoteAmountFromBaseAmountBudgetAndBook({
     sideOfBook: uiLadder.bids,
     baseAmountBudget: rawBaseUnitsIn,
   });
 
-  return quote_units_matched * (1 - takerFeeBps / 10000);
+  return quoteUnitsMatched * (1 - takerFeeBps / 10000);
 }
 
 /**
  * Given a desired amount of quote units to obtain, return the number of raw base units that need to be sold to get that amount of quote units.
- * This function represents a Sell order where the caller knows the amount of quote units they want to obtain but does not know how many raw base units they need to sell in order to obtain that amount of quote units.
+ * This function represents a Sell order where the caller knows the amount of quote units they want to obtain and wants to know how many raw base units they need to sell in order to obtain that amount of quote units.
  *
  * @param uiLadder The uiLadder for the market. Note that prices in the uiLadder are in quote units per raw base unit (units of USDC per unit of SOL for the SOL/USDC market).
  * @param takerFeeBps The taker fee in bps
@@ -1003,18 +1003,22 @@ export function getBaseAmountFromQuoteAmountBudgetAndBook({
   // Number returned is raw base units
   let quoteAmountBudgetRemaining = quoteAmountBudget;
   let baseAmount = 0;
-  for (const [priceInQuoteUnitsPerBaseUnit, sizeInRawBaseUnits] of sideOfBook) {
+  for (const [
+    priceInQuoteUnitsPerRawBaseUnit,
+    sizeInRawBaseUnits,
+  ] of sideOfBook) {
     if (
-      priceInQuoteUnitsPerBaseUnit * sizeInRawBaseUnits >
+      priceInQuoteUnitsPerRawBaseUnit * sizeInRawBaseUnits >=
       quoteAmountBudgetRemaining
     ) {
-      baseAmount += quoteAmountBudgetRemaining / priceInQuoteUnitsPerBaseUnit;
+      baseAmount +=
+        quoteAmountBudgetRemaining / priceInQuoteUnitsPerRawBaseUnit;
       quoteAmountBudgetRemaining = 0;
       break;
     } else {
       baseAmount += sizeInRawBaseUnits;
       quoteAmountBudgetRemaining -=
-        priceInQuoteUnitsPerBaseUnit * sizeInRawBaseUnits;
+        priceInQuoteUnitsPerRawBaseUnit * sizeInRawBaseUnits;
     }
   }
   return baseAmount;
@@ -1036,13 +1040,17 @@ export function getQuoteAmountFromBaseAmountBudgetAndBook({
 }): number {
   let baseAmountBudgetRemaining = baseAmountBudget;
   let quoteAmount = 0;
-  for (const [priceInQuoteUnitsPerBaseUnit, sizeInRawBaseUnits] of sideOfBook) {
-    if (sizeInRawBaseUnits > baseAmountBudgetRemaining) {
-      quoteAmount += baseAmountBudgetRemaining * priceInQuoteUnitsPerBaseUnit;
+  for (const [
+    priceInQuoteUnitsPerRawBaseUnit,
+    sizeInRawBaseUnits,
+  ] of sideOfBook) {
+    if (sizeInRawBaseUnits >= baseAmountBudgetRemaining) {
+      quoteAmount +=
+        baseAmountBudgetRemaining * priceInQuoteUnitsPerRawBaseUnit;
       baseAmountBudgetRemaining = 0;
       break;
     } else {
-      quoteAmount += sizeInRawBaseUnits * priceInQuoteUnitsPerBaseUnit;
+      quoteAmount += sizeInRawBaseUnits * priceInQuoteUnitsPerRawBaseUnit;
       baseAmountBudgetRemaining -= sizeInRawBaseUnits;
     }
   }

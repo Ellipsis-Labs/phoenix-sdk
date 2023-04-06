@@ -2,7 +2,7 @@ import { assert } from "chai";
 import { UiLadder } from "../src/market";
 import { Side } from "../src/types";
 import {
-  getExpectedInAmountRouter,
+  getRequiredInAmountRouter,
   getExpectedOutAmountRouter,
 } from "../src/utils/market";
 
@@ -30,7 +30,7 @@ describe("Calculate expected amount out and expected amount in for both bid and 
       side,
       inAmount: quoteAmountIn,
     });
-    const expectedQuoteAmountIn = getExpectedInAmountRouter({
+    const expectedQuoteAmountIn = getRequiredInAmountRouter({
       uiLadder: mockLadder,
       takerFeeBps,
       side,
@@ -49,7 +49,7 @@ describe("Calculate expected amount out and expected amount in for both bid and 
       side,
       inAmount: baseAmountIn,
     });
-    const expectedBaseAmountIn = getExpectedInAmountRouter({
+    const expectedBaseAmountIn = getRequiredInAmountRouter({
       uiLadder: mockLadder,
       takerFeeBps,
       side,

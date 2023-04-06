@@ -14,7 +14,7 @@ import { Token } from "./token";
 import {
   TokenConfig,
   getExpectedOutAmountRouter,
-  getExpectedInAmountRouter,
+  getRequiredInAmountRouter,
 } from "./index";
 
 export type OrderId = {
@@ -292,14 +292,14 @@ export class Market {
   }
 
   /**
-   * Returns the expected amount in (required) for a desired amount of units out
+   * Returns the required amount in for a desired amount of units out
    *
    * @param side The side of the order (Bid or Ask)
    * @param outAmount The amount of the desired output token
    * @param slot The current slot
    * @param unixTimestamp The current unix timestamp, in seconds
    */
-  getExpectedInAmount({
+  getRequiredInAmount({
     side,
     outAmount,
     slot,
@@ -319,7 +319,7 @@ export class Market {
       unixTimestamp
     );
 
-    return getExpectedInAmountRouter({
+    return getRequiredInAmountRouter({
       uiLadder,
       side,
       takerFeeBps: this.data.takerFeeBps,
