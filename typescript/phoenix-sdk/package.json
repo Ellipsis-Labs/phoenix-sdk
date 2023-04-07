@@ -1,6 +1,6 @@
 {
   "name": "@ellipsis-labs/phoenix-sdk",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "description": "TypeScript SDK for Phoenix",
   "author": "Ellipsis Labs",
   "repository": "https://github.com/Ellipsis-Labs/phoenix-sdk",
@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsup",
     "clean": "rm -rf dist",
-    "lint": "eslint . --ext .ts --fix"
+    "lint": "eslint . --ext .ts --fix",
+    "test": "mocha --require ts-node/register test/**/*.ts"
   },
   "dependencies": {
     "@metaplex-foundation/beet": "^0.7.1",
@@ -24,9 +25,14 @@
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.1",
+    "@types/chai": "^4.3.4",
+    "@types/mocha": "^10.0.1",
     "@typescript-eslint/eslint-plugin": "^5.54.1",
     "@typescript-eslint/parser": "^5.54.1",
+    "chai": "^4.3.7",
     "eslint": "^8.35.0",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.1",
     "tsup": "^6.6.0",
     "typescript": "^4.9.4"
   }
