@@ -1,5 +1,6 @@
 import {
   Connection,
+  ParsedTransactionWithMeta,
   PartiallyDecodedInstruction,
   PublicKey,
 } from "@solana/web3.js";
@@ -46,15 +47,14 @@ export function readPublicKey(reader: BinaryReader): PublicKey {
   return new PublicKey(reader.readFixedArray(32));
 }
 
-export async function getEventsFromTransaction(
-  connection: Connection,
-  signature: string
-): Promise<PhoenixTransaction> {
-  const txData = await connection.getParsedTransaction(signature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 1,
-  });
-
+/**
+ * Returns a list of Phoenix events for a given transaction object
+ *
+ * @param txData The transaction object returned by `getParsedTransaction` of type `ParsedTransactionWithMeta`
+ */
+export function getPhoenixEventsFromTransactionData(
+  txData: ParsedTransactionWithMeta
+): PhoenixTransaction {
   const meta = txData?.meta;
   if (meta === undefined) {
     console.log("Transaction not found");
@@ -117,4 +117,39 @@ export async function getEventsFromTransaction(
     });
   }
   return { instructions: instructions, txReceived: true, txFailed: false };
+}
+
+/**
+ * Returns a list of Phoenix events for a given transaction signature
+ *
+ * @param connection The Solana `Connection` object
+ * @param signature The signature of the transaction to fetch
+ * @deprecated The method is deprecated. Please use `getPhoneixEventsFromTransactionSignature` instead
+ */
+export async function getEventsFromTransaction(
+  connection: Connection,
+  signature: string
+): Promise<PhoenixTransaction> {
+  const txData = await connection.getParsedTransaction(signature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 1,
+  });
+  return getPhoenixEventsFromTransactionData(txData);
+}
+
+/**
+ * Returns a list of Phoenix events for a given transaction signature
+ *
+ * @param connection The Solana `Connection` object
+ * @param signature The signature of the transaction to fetch
+ */
+export async function getPhoneixEventsFromTransactionSignature(
+  connection: Connection,
+  signature: string
+): Promise<PhoenixTransaction> {
+  const txData = await connection.getParsedTransaction(signature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 1,
+  });
+  return getPhoenixEventsFromTransactionData(txData);
 }
