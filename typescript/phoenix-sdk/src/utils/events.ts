@@ -50,7 +50,10 @@ export async function getEventsFromTransaction(
   connection: Connection,
   signature: string
 ): Promise<PhoenixTransaction> {
-  const txData = await connection.getParsedTransaction(signature, "confirmed");
+  const txData = await connection.getParsedTransaction(signature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 1,
+  });
 
   const meta = txData?.meta;
   if (meta === undefined) {
