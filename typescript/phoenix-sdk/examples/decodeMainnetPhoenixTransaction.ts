@@ -2,7 +2,6 @@ import { Connection } from "@solana/web3.js";
 
 import * as Phoenix from "../src";
 
-// Ex: ts-node examples/deserializeClock.ts
 export async function decodeTransaction() {
   const connection = new Connection("https://api.mainnet-beta.solana.com");
   console.log(
