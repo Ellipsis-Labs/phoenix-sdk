@@ -102,9 +102,15 @@ export function getPhoenixEventsFromTransactionData(
       totalEvents: reader.readU16(),
     };
 
+    // Borsh serializes the length of the vector as a u32
     const lengthBuffer = new ArrayBuffer(4);
     const view = new DataView(lengthBuffer);
+    // The size of the vector in the header event is a u16
     view.setUint16(0, header.totalEvents, true);
+
+    // By coercing the buffer to have the same byte serialization as a
+    // Borsh-encoded vector, we can leverage the Borsh deserializer to decode
+    // the events
     const events = decodePhoenixEvents(
       Buffer.concat([
         Buffer.from(lengthBuffer),
