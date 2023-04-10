@@ -6,7 +6,6 @@ import {
 } from "@solana/web3.js";
 import { BinaryReader } from "borsh";
 import base58 from "bs58";
-import BN from "bn.js";
 import * as beet from "@metaplex-foundation/beet";
 
 import { PROGRAM_ID } from "../index";
@@ -57,18 +56,15 @@ export function getPhoenixEventsFromTransactionData(
 ): PhoenixTransaction {
   const meta = txData?.meta;
   if (meta === undefined) {
-    console.log("Transaction not found");
     return { instructions: [], txReceived: false, txFailed: true };
   }
 
   if (meta?.err !== null) {
-    console.log("Transaction failed", meta?.err);
     return { instructions: [], txReceived: true, txFailed: true };
   }
 
   const innerIxs = txData?.meta?.innerInstructions;
   if (!innerIxs || !txData || !txData.slot) {
-    console.log("No inner instructions found");
     return { instructions: [], txReceived: true, txFailed: true };
   }
 
@@ -106,9 +102,14 @@ export function getPhoenixEventsFromTransactionData(
       totalEvents: reader.readU16(),
     };
 
-    const lengthPadding = new BN(header.totalEvents).toBuffer("le", 4);
+    const lengthBuffer = new ArrayBuffer(4);
+    const view = new DataView(lengthBuffer);
+    view.setUint16(0, header.totalEvents, true);
     const events = decodePhoenixEvents(
-      Buffer.concat([lengthPadding, Buffer.from(data.slice(reader.offset))])
+      Buffer.concat([
+        Buffer.from(lengthBuffer),
+        Buffer.from(data.slice(reader.offset)),
+      ])
     );
 
     instructions.push({
