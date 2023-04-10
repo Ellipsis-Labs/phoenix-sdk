@@ -1,6 +1,6 @@
 {
   "name": "@ellipsis-labs/phoenix-sdk",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "TypeScript SDK for Phoenix",
   "author": "Ellipsis Labs",
   "repository": "https://github.com/Ellipsis-Labs/phoenix-sdk",
