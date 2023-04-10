@@ -135,10 +135,16 @@ export async function swap() {
   await connection.confirmTransaction(txId, "confirmed");
   console.log("Transaction ID:", txId);
 
-  let txResult = await Phoenix.getEventsFromTransaction(connection, txId);
+  let txResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
+    connection,
+    txId
+  );
   let counter = 1;
   while (!txResult.txReceived) {
-    txResult = await Phoenix.getEventsFromTransaction(connection, txId);
+    txResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
+      connection,
+      txId
+    );
     counter += 1;
     if (counter == 10) {
       throw Error("Failed to fetch transaction");
@@ -180,14 +186,14 @@ export async function swap() {
   await connection.confirmTransaction(expiredTxId, "confirmed");
   console.log("Transaction ID:", expiredTxId);
 
-  let expiredTxResult = await Phoenix.getEventsFromTransaction(
+  let expiredTxResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
     connection,
     expiredTxId
   );
   let expiredCounter = 1;
   while (!expiredTxResult.txReceived) {
     console.log(expiredTxResult);
-    expiredTxResult = await Phoenix.getEventsFromTransaction(
+    expiredTxResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
       connection,
       expiredTxId
     );

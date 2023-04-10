@@ -143,7 +143,7 @@ export async function getEventsFromTransaction(
  * @param connection The Solana `Connection` object
  * @param signature The signature of the transaction to fetch
  */
-export async function getPhoneixEventsFromTransactionSignature(
+export async function getPhoenixEventsFromTransactionSignature(
   connection: Connection,
   signature: string
 ): Promise<PhoenixTransaction> {

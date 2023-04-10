@@ -53,7 +53,7 @@ export async function decodeTransaction() {
   console.log(
     JSON.stringify(
       (
-        await Phoenix.getEventsFromTransaction(
+        await Phoenix.getPhoenixEventsFromTransactionSignature(
           connection,
           "5uWatP9Dpsq7BjgUZ83kqhVnRWD3PKZrTH1KYYB7gdu22QXSKP3FBCZ3PcuzecFhxqRnp6aociU5x5RuNAP4F1mh"
         )
