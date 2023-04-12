@@ -1,5 +1,8 @@
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
+  createCloseAccountInstruction,
+  NATIVE_MINT,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
@@ -637,6 +640,7 @@ export function getMarketSwapTransaction({
   inAmount,
   slippage = DEFAULT_SLIPPAGE_PERCENT,
   clientOrderId = 0,
+  idempotent = false,
 }: {
   marketAddress: PublicKey;
   marketData: MarketData;
@@ -645,35 +649,60 @@ export function getMarketSwapTransaction({
   inAmount: number;
   slippage?: number;
   clientOrderId?: number;
+  idempotent?: boolean;
 }): Transaction {
-  const baseAccount = PublicKey.findProgramAddressSync(
-    [
-      trader.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.baseParams.mintKey.toBuffer(),
-    ],
+  const quoteMintKey = marketData.header.quoteParams.mintKey;
+  const baseMintKey = marketData.header.baseParams.mintKey;
+
+  const [baseTokenAccountKey] = PublicKey.findProgramAddressSync(
+    [trader.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), baseMintKey.toBuffer()],
     ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0];
-  const quoteAccount = PublicKey.findProgramAddressSync(
-    [
-      trader.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.quoteParams.mintKey.toBuffer(),
-    ],
+  );
+  const [quoteTokenAccountKey] = PublicKey.findProgramAddressSync(
+    [trader.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), quoteMintKey.toBuffer()],
     ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0];
+  );
+
   const logAuthority = PublicKey.findProgramAddressSync(
     [Buffer.from("log")],
     PROGRAM_ID
   )[0];
+
+  const swapTransaction = new Transaction();
+
+  if (baseMintKey.equals(NATIVE_MINT) || idempotent) {
+    swapTransaction.add(
+      createAssociatedTokenAccountIdempotentInstruction(
+        trader,
+        baseTokenAccountKey,
+        trader,
+        baseMintKey,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      )
+    );
+  }
+
+  if (quoteMintKey.equals(NATIVE_MINT) || idempotent) {
+    swapTransaction.add(
+      createAssociatedTokenAccountIdempotentInstruction(
+        trader,
+        quoteTokenAccountKey,
+        trader,
+        quoteMintKey,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      )
+    );
+  }
 
   const orderAccounts = {
     phoenixProgram: PROGRAM_ID,
     logAuthority,
     market: marketAddress,
     trader,
-    baseAccount,
-    quoteAccount,
+    baseAccount: baseTokenAccountKey,
+    quoteAccount: quoteTokenAccountKey,
     quoteVault: marketData.header.quoteParams.vaultKey,
     baseVault: marketData.header.baseParams.vaultKey,
   };
@@ -686,7 +715,7 @@ export function getMarketSwapTransaction({
     clientOrderId,
   });
 
-  const ix = createSwapInstruction(orderAccounts, {
+  const swapInstruction = createSwapInstruction(orderAccounts, {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore TODO why is __kind incompatible?
     orderPacket: {
@@ -695,7 +724,22 @@ export function getMarketSwapTransaction({
     },
   });
 
-  return new Transaction().add(ix);
+  swapTransaction.add(swapInstruction);
+
+  // Only close the token accounts if they are native mints
+  if (baseMintKey.equals(NATIVE_MINT)) {
+    swapTransaction.add(
+      createCloseAccountInstruction(baseTokenAccountKey, trader, trader)
+    );
+  }
+
+  if (quoteMintKey.equals(NATIVE_MINT)) {
+    swapTransaction.add(
+      createCloseAccountInstruction(quoteTokenAccountKey, trader, trader)
+    );
+  }
+
+  return swapTransaction;
 }
 
 /**
