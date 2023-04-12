@@ -6,7 +6,6 @@ import {
 } from "@solana/web3.js";
 import { BinaryReader } from "borsh";
 import base58 from "bs58";
-import BN from "bn.js";
 import * as beet from "@metaplex-foundation/beet";
 
 import { PROGRAM_ID } from "../index";
@@ -57,18 +56,15 @@ export function getPhoenixEventsFromTransactionData(
 ): PhoenixTransaction {
   const meta = txData?.meta;
   if (meta === undefined) {
-    console.log("Transaction not found");
     return { instructions: [], txReceived: false, txFailed: true };
   }
 
   if (meta?.err !== null) {
-    console.log("Transaction failed", meta?.err);
     return { instructions: [], txReceived: true, txFailed: true };
   }
 
   const innerIxs = txData?.meta?.innerInstructions;
   if (!innerIxs || !txData || !txData.slot) {
-    console.log("No inner instructions found");
     return { instructions: [], txReceived: true, txFailed: true };
   }
 
@@ -106,9 +102,20 @@ export function getPhoenixEventsFromTransactionData(
       totalEvents: reader.readU16(),
     };
 
-    const lengthPadding = new BN(header.totalEvents).toBuffer("le", 4);
+    // Borsh serializes the length of the vector as a u32
+    const lengthBuffer = new ArrayBuffer(4);
+    const view = new DataView(lengthBuffer);
+    // The size of the vector in the header event is a u16
+    view.setUint16(0, header.totalEvents, true);
+
+    // By coercing the buffer to have the same byte serialization as a
+    // Borsh-encoded vector, we can leverage the Borsh deserializer to decode
+    // the events
     const events = decodePhoenixEvents(
-      Buffer.concat([lengthPadding, Buffer.from(data.slice(reader.offset))])
+      Buffer.concat([
+        Buffer.from(lengthBuffer),
+        Buffer.from(data.slice(reader.offset)),
+      ])
     );
 
     instructions.push({
@@ -125,7 +132,7 @@ export function getPhoenixEventsFromTransactionData(
  * @param connection The Solana `Connection` object
  * @param signature The signature of the transaction to fetch
  */
-export async function getPhoneixEventsFromTransactionSignature(
+export async function getPhoenixEventsFromTransactionSignature(
   connection: Connection,
   signature: string
 ): Promise<PhoenixTransaction> {
@@ -141,7 +148,7 @@ export async function getPhoneixEventsFromTransactionSignature(
  *
  * @param connection The Solana `Connection` object
  * @param signature The signature of the transaction to fetch
- * @deprecated The method is deprecated. Please use `getPhoneixEventsFromTransactionSignature` instead
+ * @deprecated The method is deprecated. Please use `getPhoenixEventsFromTransactionSignature` instead
  */
 export async function getEventsFromTransaction(
   connection: Connection,
