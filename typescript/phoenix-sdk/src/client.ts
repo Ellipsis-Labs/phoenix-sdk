@@ -29,6 +29,7 @@ import {
   L3UiBook,
   getMarketL3UiBook,
 } from "./index";
+import { bignum } from "@metaplex-foundation/beet";
 
 export type TokenConfig = {
   name: string;
@@ -456,6 +457,31 @@ export class Client {
   }
 
   /**
+   * Returns the L3 book for a market, with a starting valid slot and starting unix timestamp.
+   * Time-in-force orders with a last valid slot or last valid timestamp after the specified starting slot or timestamp will be included.
+   * For example, if the startingValidSlot is 0 and startingUnixTimestamp is 0, all orders, including expired ones, will be included.
+   * @param marketAddress
+   * @param startingValidSlot
+   * @param startingUnixTimestamp
+   * @param ordersPerSide
+   */
+  public getL3BookWithParams(
+    marketAddress: string,
+    startingValidSlot: bignum,
+    startingUnixTimestamp: bignum,
+    ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
+  ): L3Book {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return getMarketL3Book(
+      market.data,
+      startingValidSlot,
+      startingUnixTimestamp,
+      ordersPerSide
+    );
+  }
+
+  /**
    * Returns the L3 UI book for a market
    * @param marketAddress The `PublicKey` of the market account
    * @param ordersPerSide The number of orders to return per side
@@ -471,6 +497,32 @@ export class Client {
       ordersPerSide,
       this.clock.slot,
       this.clock.unixTimestamp
+    );
+  }
+
+  /**
+   * Returns the L3 UI book for a market, with a starting valid slot and starting unix timestamp.
+   * Time-in-force orders with a last valid slot or last valid timestamp after the specified starting slot or timestamp will be included.
+   * For example, if the startingValidSlot is 0 and startingUnixTimestamp is 0, all orders, including expired ones, will be included.
+   * @param marketAddress
+   * @param startingValidSlot
+   * @param startingUnixTimestamp
+   * @param ordersPerSide
+   * @returns
+   */
+  public getL3UiBookWithParams(
+    marketAddress: string,
+    startingValidSlot: bignum,
+    startingUnixTimestamp: bignum,
+    ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
+  ): L3UiBook {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return getMarketL3UiBook(
+      market.data,
+      ordersPerSide,
+      startingValidSlot,
+      startingUnixTimestamp
     );
   }
 
