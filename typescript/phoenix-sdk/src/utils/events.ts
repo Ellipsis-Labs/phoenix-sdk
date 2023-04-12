@@ -132,7 +132,7 @@ export function getPhoenixEventsFromTransactionData(
  * @param connection The Solana `Connection` object
  * @param signature The signature of the transaction to fetch
  */
-export async function getPhoneixEventsFromTransactionSignature(
+export async function getPhoenixEventsFromTransactionSignature(
   connection: Connection,
   signature: string
 ): Promise<PhoenixTransaction> {
@@ -148,7 +148,7 @@ export async function getPhoneixEventsFromTransactionSignature(
  *
  * @param connection The Solana `Connection` object
  * @param signature The signature of the transaction to fetch
- * @deprecated The method is deprecated. Please use `getPhoneixEventsFromTransactionSignature` instead
+ * @deprecated The method is deprecated. Please use `getPhoenixEventsFromTransactionSignature` instead
  */
 export async function getEventsFromTransaction(
   connection: Connection,
