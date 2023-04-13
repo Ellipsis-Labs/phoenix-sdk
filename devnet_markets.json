@@ -1,12 +1,5 @@
 [
   {
-    "market": "DKADSL9EGUBpighxAXriZGmkYzmRrXEr9qS7qB1cQbSu",
-    "base_ticker": "BONK",
-    "quote_ticker": "USDC",
-    "base_pubkey": "8LN9tTVkGLqXRT2SxLUjN8YRHiKzYGLq1wGV1FL7E23P",
-    "quote_pubkey": "DK1gsSV2EubSE5S5FdXHpGzw2cAJNVzxeXRmAfxAMpU5"
-  },
-  {
     "market": "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N",
     "base_ticker": "SOL",
     "quote_ticker": "USDC",
