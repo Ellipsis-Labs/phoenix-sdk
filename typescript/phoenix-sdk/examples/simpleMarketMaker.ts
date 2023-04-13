@@ -1,141 +1,126 @@
-import {
-  Connection,
-  PublicKey,
-  Keypair,
-  TransactionMessage,
-  VersionedTransaction,
-} from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import * as Phoenix from "../src";
+import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
+import * as PhoenixSdk from "../src";
 import fs from "fs";
+import { airdropSplTokensForMarketIxs } from "../src/utils/genericTokenMint";
 
-// To run: ts-node examples/simpleMarketMaker.ts $PATH-TO-KEYPAIR
-// The keypair must be funded with the base and quote tokens for the market, and whitelisted for the market
+// This script runs a simple market maker example, which provides limit order bids and asks, on a devnet phoenix market.
+// To run: ts-node examples/simpleMarketMaker.ts $PATH-TO-KEYPAIR.
 export async function simpleMarketMaker(privateKeyPath: string) {
-  // mainnet test market (BASE/QUOTE)
+  // Devnet test market - SOL/USDC
   const marketPubkey = new PublicKey(
-    "3MZskhKUdNRkeMQ6zyNVSJcCx38o79ohwmSgZ2d5a4cu"
+    "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N"
   );
-  // use custom RPC for better performance
-  const connection = new Connection("http://127.0.0.1:8899");
-  let blockhash;
+  // Use custom RPC for better performance. Here we use the default devnet RPC.
+  const endpoint = "https://api.devnet.solana.com";
+  const connection = new Connection(endpoint);
 
   // Frequency in milliseconds to update quotes
   const QUOTE_REFRESH_FREQUENCY = 10000;
-
   // Edge in cents on quote. Places bid/ask at fair price -/+ edge
   const QUOTE_EDGE = 0.01;
-
   // Expected life time of order in seconds
   const ORDER_LIFETIME_IN_SECONDS = 7;
 
-  // Create a Phoenix client
-  const client = await Phoenix.Client.createWithMarketAddresses(
+  // Load in the keypair for the trader you wish to trade with
+  const privateKey = JSON.parse(fs.readFileSync(privateKeyPath, "utf-8"));
+  const trader = Keypair.fromSeed(Uint8Array.from(privateKey.slice(0, 32)));
+  // Create a Phoenix Client
+  const client = await PhoenixSdk.Client.create(
     connection,
-    "mainnet",
-    [marketPubkey]
+    endpoint,
+    trader.publicKey
   );
-
+  // Get the market metadata for the market you wish to trade on
   const market = client.markets.get(marketPubkey.toString());
   const marketData = market?.data;
   if (!marketData) {
     throw new Error("Market data not found");
   }
 
-  // load in keypair for the trader you wish to trade with (must have funds in the market)
-  const privateKey = JSON.parse(fs.readFileSync(privateKeyPath, "utf-8"));
-  const trader = Keypair.fromSeed(Uint8Array.from(privateKey.slice(0, 32)));
+  // Request a SOL airdrop to send the transaction in this example. Only needed, and will only work, on devnet.
+  await client.connection.requestAirdrop(trader.publicKey, 1_000_000_000);
+  console.log("Trader: ", trader.publicKey.toBase58());
 
-  // grab relevant accounts needed for sending instructions
-  const baseAccount = client.getBaseAccountKey(
-    trader.publicKey,
-    marketPubkey.toString()
-  );
-  const quoteAccount = client.getQuoteAccountKey(
-    trader.publicKey,
-    marketPubkey.toString()
-  );
-  const seat = client.getSeatKey(trader.publicKey, marketPubkey.toString());
-  const logAuthority = client.getLogAuthority();
-
-  // create account object for each instruction
-  const placeAccounts: Phoenix.PlaceLimitOrderInstructionAccounts = {
-    phoenixProgram: Phoenix.PROGRAM_ID,
-    logAuthority: logAuthority,
-    market: marketPubkey,
-    trader: trader.publicKey,
-    seat: seat,
-    baseAccount: baseAccount,
-    quoteAccount: quoteAccount,
-    quoteVault: marketData.header.quoteParams.vaultKey,
-    baseVault: marketData.header.baseParams.vaultKey,
-    tokenProgram: TOKEN_PROGRAM_ID,
-  };
-
-  //unused in this script, but example of accounts needed for withdraw
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const withdrawAccounts: Phoenix.WithdrawFundsInstructionAccounts = {
-    phoenixProgram: Phoenix.PROGRAM_ID,
-    logAuthority: logAuthority,
-    market: marketPubkey,
-    trader: trader.publicKey,
-    baseAccount: baseAccount,
-    quoteAccount: quoteAccount,
-    baseVault: marketData.header.baseParams.vaultKey,
-    quoteVault: marketData.header.quoteParams.vaultKey,
-    tokenProgram: TOKEN_PROGRAM_ID,
-  };
-
-  // Setting params to null will withdraw all funds
-  const withdrawParams: Phoenix.WithdrawParams = {
-    quoteLotsToWithdraw: null,
-    baseLotsToWithdraw: null,
-  };
-
-  const placeWithdraw = Phoenix.createWithdrawFundsInstructionWithClient(
+  // If the trader is a new maker (has not placed limit orders previously), you will need to create associated token accounts for the base and quote tokens, and claim a maker seat on the market.
+  // This function creates a bundle of new instructions that includes:
+  // - Create associated token accounts for base and quote tokens, if needed
+  // - Claim a maker seat on the market, if needed
+  const setupNewMakerIxs = await PhoenixSdk.getMakerSetupInstructionsForMarket(
     client,
-    {
-      withdrawFundsParams: withdrawParams,
-    },
-    marketPubkey.toString(),
+    marketPubkey,
+    marketData,
     trader.publicKey
   );
+  if (setupNewMakerIxs.length !== 0) {
+    const setupTx = new Transaction().add(...setupNewMakerIxs);
+    const setupTxId = await client.connection.sendTransaction(
+      setupTx,
+      [trader],
+      {
+        skipPreflight: true,
+      }
+    );
+    await client.connection.confirmTransaction(setupTxId, "confirmed");
+    console.log(
+      `Setup Tx Link: https://beta.solscan.io/tx/${setupTxId}?cluster=devnet`
+    );
+  } else {
+    console.log("No setup required. Continuing...");
+  }
 
+  // To place a limit order, you will need base and quote tokens. For this devnet example, we mint the base and quote tokens from a token faucet.
+  // To trade on mainnet, you will need to have base and quote tokens for the given market.
+  const airdropSplIxs = await airdropSplTokensForMarketIxs(
+    client,
+    marketData,
+    trader.publicKey
+  );
+  const airdropSplTx = new Transaction().add(...airdropSplIxs);
+  const airdropTxId = await client.connection.sendTransaction(
+    airdropSplTx,
+    [trader],
+    {
+      skipPreflight: true,
+    }
+  );
+  await client.connection.confirmTransaction(airdropTxId, "confirmed");
+  console.log(
+    `Airdrop Tx Link: https://beta.solscan.io/tx/${airdropTxId}?cluster=devnet`
+  );
+
+  // Track place transaction iterations
   let count = 0;
 
+  /* eslint-disable no-constant-condition */
   while (true) {
-    const cancelAll = Phoenix.createCancelAllOrdersInstructionWithClient(
+    // Before quoting, we cancel all outstanding orders
+    const cancelAll = PhoenixSdk.createCancelAllOrdersInstructionWithClient(
       client,
       marketPubkey.toString(),
       trader.publicKey
     );
 
-    // Send cancel all transaction.
     // Note we could bundle this with the place order transaction below, but we choose to cancel
-    // seperately since getting the price could take an undeterministic amount of time
+    // seperately since getting the price could take an non-deterministic amount of time
     try {
-      blockhash = await connection
-        .getLatestBlockhash()
-        .then((res) => res.blockhash);
+      const cancelTransaction = new Transaction().add(cancelAll);
+      const txid = await client.connection.sendTransaction(
+        cancelTransaction,
+        [trader],
+        {
+          skipPreflight: true,
+        }
+      );
 
-      const messageV0 = new TransactionMessage({
-        payerKey: trader.publicKey,
-        recentBlockhash: blockhash,
-        instructions: [cancelAll],
-      }).compileToV0Message();
-
-      const transaction = new VersionedTransaction(messageV0);
-      transaction.sign([trader]);
-
-      const txid = await connection.sendTransaction(transaction);
-
-      console.log("Cancel txid:", txid);
+      console.log(
+        `Cancel tx link: https://beta.solscan.io/tx/${txid}?cluster=devnet`
+      );
     } catch (err) {
       console.log("Error: ", err);
       continue;
     }
 
-    // grab the price from coinbase
+    // Get the price from a price source, here from Coinbase
     const price = await fetch("https://api.coinbase.com/v2/prices/SOL-USD/spot")
       .then((response) => response.json())
       .then((data) => {
@@ -149,90 +134,94 @@ export async function simpleMarketMaker(privateKeyPath: string) {
     // Get current time in seconds
     const currentTime = Math.floor(Date.now() / 1000);
 
-    // create bid and ask instructions for 1 SOL
-    const bidOrderPacket: Phoenix.OrderPacket = {
-      __kind: "PostOnly",
-      side: Phoenix.Side.Bid,
-      priceInTicks: Phoenix.toBN(
-        client.floatPriceToTicks(bidPrice, marketPubkey.toString())
-      ),
-      numBaseLots: Phoenix.toBN(
-        client.rawBaseUnitsToBaseLotsRoundedDown(1, marketPubkey.toString())
-      ),
-      clientOrderId: Phoenix.toBN(1),
-      rejectPostOnly: false,
+    // Create a LimitOrderTemplate for the bid and ask orders.
+    // the LimitOrderTemplate allows you to specify the price and size in commonly understood units:
+    // price is the floating point price (units of USDC per unit of SOL for the SOL/USDC market), and size is in whole base units (units of SOL for the SOL/USDC market).
+    const bidOrderTemplate: PhoenixSdk.LimitOrderTemplate = {
+      side: PhoenixSdk.Side.Bid,
+      priceAsFloat: bidPrice,
+      sizeInBaseUnits: 1,
+      selfTradeBehavior: PhoenixSdk.SelfTradeBehavior.CancelProvide,
+      clientOrderId: 1,
       useOnlyDepositedFunds: false,
-      lastValidSlot: null,
+      lastValidSlot: undefined,
       lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
     };
-    const placeBuy = Phoenix.createPlaceLimitOrderInstruction(placeAccounts, {
-      orderPacket: bidOrderPacket,
-    });
-
-    const askOrderPacket: Phoenix.OrderPacket = {
-      __kind: "PostOnly",
-      side: Phoenix.Side.Ask,
-      priceInTicks: Phoenix.toBN(
-        client.floatPriceToTicks(askPrice, marketPubkey.toString())
-      ),
-      numBaseLots: Phoenix.toBN(
-        client.rawBaseUnitsToBaseLotsRoundedDown(1, marketPubkey.toString())
-      ),
-      clientOrderId: Phoenix.toBN(2),
-      rejectPostOnly: false,
-      useOnlyDepositedFunds: false,
-      lastValidSlot: null,
-      lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
-    };
-
-    const placeAsk = Phoenix.createPlaceLimitOrderInstructionWithClient(
+    // Get the limit order instruction from the created template
+    const bidLimitOrderIx = PhoenixSdk.getLimitOrderIxfromTemplate(
       client,
-      {
-        orderPacket: askOrderPacket,
-      },
-      marketPubkey.toString(),
-      trader.publicKey
+      marketPubkey,
+      marketData,
+      trader.publicKey,
+      bidOrderTemplate
     );
 
-    const instructions = [placeBuy, placeAsk];
-    //every 5th iteration, add a withdraw funds instruction
-    if (count == 5) {
+    const askOrderTemplate: PhoenixSdk.LimitOrderTemplate = {
+      side: PhoenixSdk.Side.Ask,
+      priceAsFloat: askPrice,
+      sizeInBaseUnits: 1,
+      selfTradeBehavior: PhoenixSdk.SelfTradeBehavior.CancelProvide,
+      clientOrderId: 1,
+      useOnlyDepositedFunds: false,
+      lastValidSlot: undefined,
+      lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
+    };
+    const askLimitOrderIx = PhoenixSdk.getLimitOrderIxfromTemplate(
+      client,
+      marketPubkey,
+      marketData,
+      trader.publicKey,
+      askOrderTemplate
+    );
+    const instructions = [bidLimitOrderIx, askLimitOrderIx];
+
+    // Every 5th iteration, add a withdraw funds instruction
+    count++;
+    if (count % 5 == 0) {
+      // Create WithdrawParams. Setting params to null will withdraw all funds
+      const withdrawParams: PhoenixSdk.WithdrawParams = {
+        quoteLotsToWithdraw: null,
+        baseLotsToWithdraw: null,
+      };
+
+      const placeWithdraw = PhoenixSdk.createWithdrawFundsInstructionWithClient(
+        client,
+        {
+          withdrawFundsParams: withdrawParams,
+        },
+        marketPubkey.toString(),
+        trader.publicKey
+      );
       instructions.push(placeWithdraw);
-      count = 0;
-    } else {
-      count++;
     }
 
     // Send place orders/withdraw transaction
     try {
-      blockhash = await connection
-        .getLatestBlockhash()
-        .then((res) => res.blockhash);
+      const placeQuotesTx = new Transaction().add(...instructions);
 
-      const placeQuotesMessage = new TransactionMessage({
-        payerKey: trader.publicKey,
-        recentBlockhash: blockhash,
-        instructions: instructions,
-      }).compileToV0Message();
+      const placeQuotesTxId = await client.connection.sendTransaction(
+        placeQuotesTx,
+        [trader],
+        {
+          skipPreflight: true,
+        }
+      );
 
-      const placeQuotesTx = new VersionedTransaction(placeQuotesMessage);
-      placeQuotesTx.sign([trader]);
-
-      const placeQuotesTxid = await connection.sendTransaction(placeQuotesTx);
       console.log(
-        "place quotes",
+        "Place quotes",
         bidPrice.toFixed(market.getPriceDecimalPlaces()),
         "@",
-        askPrice.toFixed(market.getPriceDecimalPlaces()),
-        "txid",
-        placeQuotesTxid
+        askPrice.toFixed(market.getPriceDecimalPlaces())
+      );
+      console.log(
+        `Tx link: https://beta.solscan.io/tx/${placeQuotesTxId}?cluster=devnet`
       );
     } catch (err) {
       console.log("Error: ", err);
       continue;
     }
 
-    // refresh quotes every X milliseconds
+    // Sleep for QUOTE_REFRESH_FREQUENCY milliseconds
     await new Promise((r) => setTimeout(r, QUOTE_REFRESH_FREQUENCY));
   }
 }

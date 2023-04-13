@@ -9,6 +9,7 @@ export * from "./market";
 export * from "./trader";
 export * from "./client";
 export * from "./instructionCreationHelper";
+export * from "./orderPacketTemplate";
 
 /**
  * Program address

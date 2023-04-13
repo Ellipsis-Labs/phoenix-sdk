@@ -140,7 +140,7 @@ export class Market {
   }
 
   /**
-   * Returns a `Market` for a given market address and subscribes to updates.
+   * Returns a `Market` for a given address, a data buffer, and a list of tokens to use for the market
    *
    * @param connection The Solana `Connection` object
    * @param marketAddress The `PublicKey` of the market account
