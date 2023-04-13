@@ -20,6 +20,7 @@ export async function placeLimitOrderExample() {
   );
 
   // Request a SOL airdrop to send the transaction in this example. Only needed, and will only work, on devnet.
+  // This method has a high rate of failure. Use your own devnet RPC endpoint for more consistent results.
   await phoenixClient.connection.requestAirdrop(
     traderKeypair.publicKey,
     1_000_000_000
