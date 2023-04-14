@@ -2727,7 +2727,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk"
-version = "0.3.8"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2757,7 +2757,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk-core"
-version = "0.3.8"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
@@ -2777,6 +2777,8 @@ dependencies = [
 [[package]]
 name = "phoenix-seat-manager"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5436d4bfc3dcd89729d9098e85f00f6d2239e852cb9ba2f48154b5ffe3fd36e"
 dependencies = [
  "borsh 0.9.3",
  "bytemuck",
