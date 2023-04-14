@@ -1160,16 +1160,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e5c37193a1db1d8ed868c03ec7b152175f26160a5b740e5e484143877e0adf0"
 
 [[package]]
-name = "devnet-token-faucet"
-version = "0.1.1"
-source = "git+https://github.com/Ellipsis-Labs/devnet-token-faucet#39b3b09b202eca299ad49e3fb6e9b6401e5453bf"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "spl-associated-token-account",
-]
-
-[[package]]
 name = "dialoguer"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1479,17 +1469,22 @@ name = "examples"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "borsh 0.9.3",
  "bs58 0.4.0",
  "bytemuck",
  "clap 3.2.23",
- "devnet-token-faucet",
  "ellipsis-client",
+ "generic-token-faucet",
  "phoenix-sdk",
+ "phoenix-seat-manager",
  "phoenix-v1",
  "rand 0.7.3",
+ "reqwest",
+ "serde_json",
  "shellexpand",
  "solana-account-decoder",
+ "solana-cli-config",
  "solana-client",
  "solana-program",
  "solana-sdk",
@@ -1679,6 +1674,17 @@ dependencies = [
  "serde",
  "typenum",
  "version_check",
+]
+
+[[package]]
+name = "generic-token-faucet"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5771d5b8ad17607a958ba26902150157f4fcd681c27a314cf6c5d55d31231f15"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "spl-associated-token-account",
 ]
 
 [[package]]
@@ -2721,7 +2727,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk"
-version = "0.3.8"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2734,6 +2740,7 @@ dependencies = [
  "itertools",
  "num-traits",
  "phoenix-sdk-core",
+ "phoenix-seat-manager",
  "phoenix-v1",
  "rand 0.7.3",
  "rust_decimal",
@@ -2743,13 +2750,14 @@ dependencies = [
  "solana-program",
  "solana-sdk",
  "solana-transaction-status",
+ "spl-associated-token-account",
  "spl-token",
  "tokio",
 ]
 
 [[package]]
 name = "phoenix-sdk-core"
-version = "0.3.8"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
@@ -2764,6 +2772,28 @@ dependencies = [
  "solana-program",
  "solana-sdk",
  "spl-token",
+]
+
+[[package]]
+name = "phoenix-seat-manager"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5436d4bfc3dcd89729d9098e85f00f6d2239e852cb9ba2f48154b5ffe3fd36e"
+dependencies = [
+ "borsh 0.9.3",
+ "bytemuck",
+ "ellipsis-macros",
+ "itertools",
+ "lib-sokoban",
+ "num_enum",
+ "phoenix-v1",
+ "shank",
+ "solana-program",
+ "solana-security-txt",
+ "spl-associated-token-account",
+ "spl-token",
+ "static_assertions",
+ "thiserror",
 ]
 
 [[package]]
@@ -3220,10 +3250,12 @@ dependencies = [
  "http-body",
  "hyper",
  "hyper-rustls",
+ "hyper-tls",
  "ipnet",
  "js-sys",
  "log",
  "mime",
+ "native-tls",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
@@ -3233,6 +3265,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "tokio",
+ "tokio-native-tls",
  "tokio-rustls",
  "tokio-util 0.7.7",
  "tower-service",
@@ -3534,9 +3567,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.93"
+version = "1.0.95"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cad406b69c91885b5107daf2c29572f6c8cdb3c66826821e286c533490c0bc76"
+checksum = "d721eca97ac802aa7777b701877c8004d950fc142651367300d21c1cc0194744"
 dependencies = [
  "itoa",
  "ryu",

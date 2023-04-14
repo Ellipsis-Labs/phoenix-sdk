@@ -1,6 +1,12 @@
+use crate::order_packet_template::ImmediateOrCancelOrderTemplate;
+use crate::order_packet_template::LimitOrderTemplate;
+use crate::order_packet_template::PostOnlyOrderTemplate;
+use crate::utils::create_ata_ix_if_needed;
+use crate::utils::create_claim_seat_ix_if_needed;
 use anyhow::anyhow;
 use anyhow::Result;
 use ellipsis_client::EllipsisClient;
+use phoenix::program::create_new_order_instruction;
 use phoenix::program::dispatch_market::*;
 use phoenix::program::EvictEvent;
 use phoenix::program::ExpiredOrderEvent;
@@ -12,8 +18,13 @@ use phoenix::program::PhoenixMarketEvent;
 use phoenix::program::PlaceEvent;
 use phoenix::program::ReduceEvent;
 use phoenix::program::TimeInForceEvent;
+use phoenix::quantities::BaseLots;
+use phoenix::quantities::QuoteLots;
+use phoenix::quantities::Ticks;
+use phoenix::quantities::WrapperU64;
 use phoenix::state::enums::*;
 use phoenix::state::markets::*;
+use phoenix::state::OrderPacket;
 use phoenix::state::TraderState;
 use phoenix_sdk_core::market_event::TimeInForce;
 use phoenix_sdk_core::sdk_client_core::MarketState;
@@ -24,6 +35,7 @@ pub use phoenix_sdk_core::{
 use serde::{Deserialize, Serialize};
 use solana_client::client_error::reqwest;
 use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_program::instruction::Instruction;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     pubkey::Pubkey,
@@ -437,7 +449,7 @@ impl SDKClient {
             let header = raw_phoenix_event.header;
             if !cached_metadata.contains_key(&header.market) {
                 let metadata = self.get_market_metadata(&header.market).await.ok()?;
-                cached_metadata.insert(header.market.clone(), metadata);
+                cached_metadata.insert(header.market, metadata);
             }
             let meta = cached_metadata.get(&header.market)?;
 
@@ -790,10 +802,13 @@ impl SDKClient {
         side: Side,
         size: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>)> {
-        let new_order_ix = self.get_post_only_ix(market_key, price, side, size).ok()?;
+        let new_order_ixs = self
+            .get_post_only_new_maker_ixs(market_key, price, side, size)
+            .await
+            .ok()?;
         let signature = self
             .client
-            .sign_send_instructions(vec![new_order_ix], vec![])
+            .sign_send_instructions(new_order_ixs, vec![])
             .await
             .ok()?;
         let fills = self.parse_fills(&signature).await;
@@ -807,12 +822,13 @@ impl SDKClient {
         side: Side,
         size: u64,
     ) -> Option<(Signature, Vec<PhoenixEvent>, Vec<PhoenixEvent>)> {
-        let new_order_ix = self
-            .get_limit_order_ix(market_key, price, side, size)
+        let new_order_ixs = self
+            .get_limit_order_new_maker_ixs(market_key, price, side, size)
+            .await
             .ok()?;
         let signature = self
             .client
-            .sign_send_instructions(vec![new_order_ix], vec![])
+            .sign_send_instructions(new_order_ixs, vec![])
             .await
             .ok()?;
         let (fills, places) = self.parse_fills_and_places(&signature).await;
@@ -867,5 +883,238 @@ impl SDKClient {
 
         let cancels = self.parse_cancels(&signature).await;
         Some((signature, cancels))
+    }
+
+    /// Returns the instructions needed to set up a maker account for a market. Includes:
+    /// - Creation of associated token accounts for base and quote tokens, if needed.
+    /// - Claiming of the market's seat, if needed.
+    /// - Evicting a seat on the market if the market trader state is full.
+    pub async fn get_maker_setup_instructions_for_market(
+        &self,
+        market_key: &Pubkey,
+    ) -> anyhow::Result<Vec<Instruction>> {
+        let metadata = self.get_market_metadata(market_key).await?;
+        let mut instructions = Vec::with_capacity(4);
+        instructions.extend_from_slice(
+            &create_ata_ix_if_needed(
+                &self.client,
+                &self.trader,
+                &self.trader,
+                &metadata.base_mint,
+            )
+            .await,
+        );
+
+        instructions.extend_from_slice(
+            &create_ata_ix_if_needed(
+                &self.client,
+                &self.trader,
+                &self.trader,
+                &metadata.quote_mint,
+            )
+            .await,
+        );
+
+        instructions.extend_from_slice(
+            &create_claim_seat_ix_if_needed(&self.client, market_key, &self.trader).await?,
+        );
+
+        Ok(instructions)
+    }
+
+    // Useful if unsure trader has an ATA for the base or quote or has a seat on the market
+    pub async fn get_limit_order_new_maker_ixs(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        side: Side,
+        size: u64,
+    ) -> anyhow::Result<Vec<Instruction>> {
+        let mut instructions = Vec::with_capacity(5);
+        instructions.extend_from_slice(
+            &self
+                .get_maker_setup_instructions_for_market(market_key)
+                .await?,
+        );
+
+        let limit_order_ix = self.get_limit_order_ix(market_key, price, side, size)?;
+
+        instructions.push(limit_order_ix);
+        Ok(instructions)
+    }
+
+    // Useful if unsure trader has an ATA for the base or quote or has a seat on the market
+    pub async fn get_post_only_new_maker_ixs(
+        &self,
+        market_key: &Pubkey,
+        price: u64,
+        side: Side,
+        size: u64,
+    ) -> Result<Vec<Instruction>> {
+        let mut instructions = Vec::with_capacity(5);
+        instructions.extend_from_slice(
+            &self
+                .get_maker_setup_instructions_for_market(market_key)
+                .await?,
+        );
+        let post_only_ix = self.get_post_only_ix(market_key, price, side, size)?;
+
+        instructions.push(post_only_ix);
+        Ok(instructions)
+    }
+
+    // Create a limit order instruction from a LimitOrderTemplate
+    pub fn get_limit_order_ix_from_template(
+        &self,
+        market_key: &Pubkey,
+        market_metadata: &MarketMetadata,
+        limit_order_template: &LimitOrderTemplate,
+    ) -> Result<Instruction> {
+        let LimitOrderTemplate {
+            side,
+            price_as_float,
+            size_in_base_units,
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        } = limit_order_template;
+
+        let price_in_ticks = self.float_price_to_ticks_rounded_down(market_key, *price_as_float)?;
+        let size_in_num_base_lots =
+            self.raw_base_units_to_base_lots_rounded_down(market_key, *size_in_base_units)?;
+
+        let limit_order_packet = OrderPacket::Limit {
+            side: *side,
+            price_in_ticks: Ticks::new(price_in_ticks),
+            num_base_lots: BaseLots::new(size_in_num_base_lots),
+            self_trade_behavior: *self_trade_behavior,
+            match_limit: *match_limit,
+            client_order_id: *client_order_id,
+            use_only_deposited_funds: *use_only_deposited_funds,
+            last_valid_slot: *last_valid_slot,
+            last_valid_unix_timestamp_in_seconds: *last_valid_unix_timestamp_in_seconds,
+        };
+
+        let limit_order_ix = create_new_order_instruction(
+            market_key,
+            &self.get_trader(),
+            &market_metadata.base_mint,
+            &market_metadata.quote_mint,
+            &limit_order_packet,
+        );
+        Ok(limit_order_ix)
+    }
+
+    // Create a post-only order instruction from a PostOnlyOrderTemplate
+    pub fn get_post_only_ix_from_template(
+        &self,
+        market_key: &Pubkey,
+        market_metadata: &MarketMetadata,
+        post_only_order_template: &PostOnlyOrderTemplate,
+    ) -> Result<Instruction> {
+        let PostOnlyOrderTemplate {
+            side,
+            price_as_float,
+            size_in_base_units,
+            client_order_id,
+            reject_post_only,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        } = post_only_order_template;
+
+        let price_in_ticks = self.float_price_to_ticks_rounded_down(market_key, *price_as_float)?;
+        let size_in_num_base_lots =
+            self.raw_base_units_to_base_lots_rounded_down(market_key, *size_in_base_units)?;
+
+        let post_only_packet = OrderPacket::PostOnly {
+            side: *side,
+            price_in_ticks: Ticks::new(price_in_ticks),
+            num_base_lots: BaseLots::new(size_in_num_base_lots),
+            client_order_id: *client_order_id,
+            reject_post_only: *reject_post_only,
+            use_only_deposited_funds: *use_only_deposited_funds,
+            last_valid_slot: *last_valid_slot,
+            last_valid_unix_timestamp_in_seconds: *last_valid_unix_timestamp_in_seconds,
+        };
+
+        let post_only_ix = create_new_order_instruction(
+            market_key,
+            &self.get_trader(),
+            &market_metadata.base_mint,
+            &market_metadata.quote_mint,
+            &post_only_packet,
+        );
+
+        Ok(post_only_ix)
+    }
+
+    // Create an immediate or cancel order instruction from a ImmediateOrCancelOrderTemplate
+    pub fn get_ioc_ix_from_template(
+        &self,
+        market_key: &Pubkey,
+        market_metadata: &MarketMetadata,
+        ioc_order_template: &ImmediateOrCancelOrderTemplate,
+    ) -> Result<Instruction> {
+        let ImmediateOrCancelOrderTemplate {
+            side,
+            price_as_float: price_in_float,
+            size_in_base_units,
+            size_in_quote_units,
+            min_base_units_to_fill,
+            min_quote_units_to_fill,
+            self_trade_behavior,
+            match_limit,
+            client_order_id,
+            use_only_deposited_funds,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        } = ioc_order_template;
+
+        let price_in_ticks: Option<Ticks> = match price_in_float {
+            Some(price_in_float) => {
+                let price_in_ticks =
+                    self.float_price_to_ticks_rounded_down(market_key, *price_in_float)?;
+                Some(Ticks::new(price_in_ticks))
+            }
+            None => None,
+        };
+
+        let size_in_num_base_lots =
+            self.raw_base_units_to_base_lots_rounded_down(market_key, *size_in_base_units)?;
+        let size_in_num_quote_lots =
+            self.quote_units_to_quote_lots(market_key, *size_in_quote_units)?;
+        let min_base_lots_to_fill =
+            self.raw_base_units_to_base_lots_rounded_down(market_key, *min_base_units_to_fill)?;
+        let min_quote_lots_to_fill =
+            self.quote_units_to_quote_lots(market_key, *min_quote_units_to_fill)?;
+
+        let ioc_order_packet = OrderPacket::ImmediateOrCancel {
+            side: *side,
+            price_in_ticks,
+            num_base_lots: BaseLots::new(size_in_num_base_lots),
+            num_quote_lots: QuoteLots::new(size_in_num_quote_lots),
+            min_base_lots_to_fill: BaseLots::new(min_base_lots_to_fill),
+            min_quote_lots_to_fill: QuoteLots::new(min_quote_lots_to_fill),
+            self_trade_behavior: *self_trade_behavior,
+            match_limit: *match_limit,
+            client_order_id: *client_order_id,
+            use_only_deposited_funds: *use_only_deposited_funds,
+            last_valid_slot: *last_valid_slot,
+            last_valid_unix_timestamp_in_seconds: *last_valid_unix_timestamp_in_seconds,
+        };
+
+        let ioc_ix = create_new_order_instruction(
+            market_key,
+            &self.get_trader(),
+            &market_metadata.base_mint,
+            &market_metadata.quote_mint,
+            &ioc_order_packet,
+        );
+
+        Ok(ioc_ix)
     }
 }
