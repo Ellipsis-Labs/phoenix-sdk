@@ -167,6 +167,45 @@ export class Client {
     });
   }
 
+  static async createWithoutConfig(
+    connection: Connection,
+    marketAddresses: PublicKey[],
+    trader?: PublicKey
+  ): Promise<Client> {
+    const accounts = await connection.getMultipleAccountsInfo(
+      [...marketAddresses, SYSVAR_CLOCK_PUBKEY],
+      "confirmed"
+    );
+
+    const clockBuffer = accounts.pop()?.data;
+    if (clockBuffer === undefined) {
+      throw new Error("Unable to get clock");
+    }
+    const clock = deserializeClockData(clockBuffer);
+
+    const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
+      marketAddresses.map((marketAddress, index) => {
+        return [marketAddress, accounts[index] as AccountInfo<Buffer>];
+      });
+
+    const [markets, tokens] = Client.loadMarketsAndTokens(marketKeysToData, []);
+
+    return new Client({
+      connection,
+      tokens,
+      markets,
+      tokenConfig: [],
+      trader: trader
+        ? await Trader.create({
+            connection,
+            pubkey: trader,
+            tokens,
+          })
+        : undefined,
+      clock,
+    });
+  }
+
   static async createWithMarketAddresses(
     connection: Connection,
     endpoint: string,
