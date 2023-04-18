@@ -438,7 +438,8 @@ export class Client {
   }
 
   /**
-   * Returns the L3 book for a market
+   * Returns the L3 book for a market. Note that the returned book will not contain expired orders.
+   * To include expired orders, use `getL3BookWithParams`, with a startingValidSlot or startingUnixTimeStampInSeconds argument BEFORE the expiration slot or time.
    * @param marketAddress The `PublicKey` of the market account
    * @param ordersPerSide The number of orders to return per side
    */
@@ -459,16 +460,16 @@ export class Client {
   /**
    * Returns the L3 book for a market, with a starting valid slot and starting unix timestamp.
    * Time-in-force orders with a last valid slot or last valid timestamp after the specified starting slot or timestamp will be included.
-   * For example, if the startingValidSlot is 0 and startingUnixTimestamp is 0, all orders, including expired ones, will be included.
+   * For example, if the startingValidSlot is 0 and startingUnixTimestampInSeconds is 0, all orders, including expired ones, will be included.
    * @param marketAddress
    * @param startingValidSlot
-   * @param startingUnixTimestamp
+   * @param startingUnixTimestampInSeconds
    * @param ordersPerSide
    */
   public getL3BookWithParams(
     marketAddress: string,
     startingValidSlot: bignum,
-    startingUnixTimestamp: bignum,
+    startingUnixTimestampInSeconds: bignum,
     ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
   ): L3Book {
     const market = this.markets.get(marketAddress);
@@ -476,13 +477,14 @@ export class Client {
     return getMarketL3Book(
       market.data,
       startingValidSlot,
-      startingUnixTimestamp,
+      startingUnixTimestampInSeconds,
       ordersPerSide
     );
   }
 
   /**
-   * Returns the L3 UI book for a market
+   * Returns the L3 UI book for a market. Note that the returned book will not contain expired orders.
+   * To include expired orders, use `getL3UiBookWithParams`, with a startingValidSlot or startingUnixTimeStampInSeconds argument BEFORE the expiration slot or time.
    * @param marketAddress The `PublicKey` of the market account
    * @param ordersPerSide The number of orders to return per side
    */
@@ -503,17 +505,17 @@ export class Client {
   /**
    * Returns the L3 UI book for a market, with a starting valid slot and starting unix timestamp.
    * Time-in-force orders with a last valid slot or last valid timestamp after the specified starting slot or timestamp will be included.
-   * For example, if the startingValidSlot is 0 and startingUnixTimestamp is 0, all orders, including expired ones, will be included.
+   * For example, if the startingValidSlot is 0 and startingUnixTimestampInSeconds is 0, all orders, including expired ones, will be included.
    * @param marketAddress
    * @param startingValidSlot
-   * @param startingUnixTimestamp
+   * @param startingUnixTimestampInSeconds
    * @param ordersPerSide
    * @returns
    */
   public getL3UiBookWithParams(
     marketAddress: string,
     startingValidSlot: bignum,
-    startingUnixTimestamp: bignum,
+    startingUnixTimestampInSeconds: bignum,
     ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
   ): L3UiBook {
     const market = this.markets.get(marketAddress);
@@ -522,7 +524,7 @@ export class Client {
       market.data,
       ordersPerSide,
       startingValidSlot,
-      startingUnixTimestamp
+      startingUnixTimestampInSeconds
     );
   }
 
