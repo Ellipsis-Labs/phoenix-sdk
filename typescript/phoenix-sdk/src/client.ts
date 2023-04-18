@@ -71,13 +71,13 @@ export class Client {
   }
 
   static loadMarketsAndTokens(
-    marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]>,
+    marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]>,
     tokenConfig: Array<TokenConfig>
   ): [Map<string, Market>, Token[]] {
     const tokens: Array<Token> = [];
     const markets = new Map();
     // For every market:
-    marketKeysToData.map(([marketAddress, marketAccount]) => {
+    marketKeysAndData.map(([marketAddress, marketAccount]) => {
       // Load the market
       const market = Market.load({
         address: marketAddress,
@@ -141,13 +141,13 @@ export class Client {
     }
 
     const clock = deserializeClockData(clockBuffer);
-    const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
+    const marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
         return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
 
     const [markets, tokens] = Client.loadMarketsAndTokens(
-      marketKeysToData,
+      marketKeysAndData,
       tokenConfig
     );
 
@@ -183,12 +183,19 @@ export class Client {
     }
     const clock = deserializeClockData(clockBuffer);
 
-    const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
+    if (accounts.length !== marketAddresses.length) {
+      throw Error("Unable to get all market accounts");
+    }
+
+    const marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
         return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
 
-    const [markets, tokens] = Client.loadMarketsAndTokens(marketKeysToData, []);
+    const [markets, tokens] = Client.loadMarketsAndTokens(
+      marketKeysAndData,
+      []
+    );
 
     return new Client({
       connection,
@@ -231,13 +238,13 @@ export class Client {
     }
     const clock = deserializeClockData(clockBuffer);
 
-    const marketKeysToData: Array<[PublicKey, AccountInfo<Buffer>]> =
+    const marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
         return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
 
     const [markets, tokens] = Client.loadMarketsAndTokens(
-      marketKeysToData,
+      marketKeysAndData,
       tokenConfig
     );
 
