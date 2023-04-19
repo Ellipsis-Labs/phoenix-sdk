@@ -25,6 +25,7 @@ use phoenix::{
 use rand::{rngs::StdRng, Rng};
 use solana_program::{instruction::Instruction, pubkey::Pubkey};
 use solana_sdk::signature::Signature;
+use std::str::FromStr;
 use std::{
     collections::BTreeMap,
     fmt::Display,
@@ -523,9 +524,9 @@ impl SDKClientCore {
 
     pub fn parse_events_from_transaction(
         &self,
-        sig: &Signature,
         tx: &ParsedTransaction,
     ) -> Option<Vec<RawPhoenixEvent>> {
+        let sig = Signature::from_str(&tx.signature).ok()?;
         let mut event_list = vec![];
         for inner_ixs in tx.inner_instructions.iter() {
             for inner_ix in inner_ixs.iter() {
@@ -549,7 +550,7 @@ impl SDKClientCore {
                 }
             }
         }
-        self.parse_raw_phoenix_events(sig, event_list)
+        self.parse_raw_phoenix_events(&sig, event_list)
     }
 }
 
