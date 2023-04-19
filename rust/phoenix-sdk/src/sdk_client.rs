@@ -28,6 +28,7 @@ use phoenix::state::OrderPacket;
 use phoenix::state::TraderState;
 use phoenix_sdk_core::market_event::TimeInForce;
 use phoenix_sdk_core::sdk_client_core::MarketState;
+use phoenix_sdk_core::sdk_client_core::RawPhoenixEvent;
 pub use phoenix_sdk_core::{
     market_event::{Evict, Fill, FillSummary, MarketEventDetails, PhoenixEvent, Place, Reduce},
     sdk_client_core::{get_decimal_string, MarketMetadata, PhoenixOrder, SDKClientCore},
@@ -433,15 +434,10 @@ impl SDKClient {
         Ok(MarketState { orderbook, traders })
     }
 
-    pub async fn parse_events_from_transaction(
+    pub async fn parse_raw_phoenix_events(
         &self,
-        sig: &Signature,
+        raw_phoenix_events: Vec<RawPhoenixEvent>,
     ) -> Option<Vec<PhoenixEvent>> {
-        let tx = self.client.get_transaction(sig).await.ok()?;
-        if tx.is_err {
-            return None;
-        }
-        let raw_phoenix_events = self.core.parse_events_from_transaction(sig, &tx)?;
         let mut trade_direction = None;
         let mut market_events = vec![];
         let mut cached_metadata = self.markets.clone();
@@ -469,7 +465,7 @@ impl SDKClient {
                             sequence_number: header.sequence_number,
                             slot: header.slot,
                             timestamp: header.timestamp,
-                            signature: *sig,
+                            signature: header.signature,
                             signer: header.signer,
                             event_index: index as u64,
                             details: MarketEventDetails::Fill(Fill {
@@ -503,7 +499,7 @@ impl SDKClient {
                         sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
-                        signature: *sig,
+                        signature: header.signature,
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::Reduce(Reduce {
@@ -527,7 +523,7 @@ impl SDKClient {
                         sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
-                        signature: *sig,
+                        signature: header.signature,
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::Place(Place {
@@ -549,7 +545,7 @@ impl SDKClient {
                         sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
-                        signature: *sig,
+                        signature: header.signature,
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::Evict(Evict {
@@ -570,7 +566,7 @@ impl SDKClient {
                         sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
-                        signature: *sig,
+                        signature: header.signature,
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::FillSummary(FillSummary {
@@ -592,7 +588,7 @@ impl SDKClient {
                         sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
-                        signature: *sig,
+                        signature: header.signature,
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::Fee(
@@ -609,7 +605,7 @@ impl SDKClient {
                         sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
-                        signature: *sig,
+                        signature: header.signature,
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::TimeInForce(TimeInForce {
@@ -629,7 +625,7 @@ impl SDKClient {
                         sequence_number: header.sequence_number,
                         slot: header.slot,
                         timestamp: header.timestamp,
-                        signature: *sig,
+                        signature: header.signature,
                         signer: header.signer,
                         event_index: index as u64,
                         details: MarketEventDetails::Reduce(Reduce {
@@ -648,6 +644,18 @@ impl SDKClient {
             }
         }
         Some(market_events)
+    }
+
+    pub async fn parse_events_from_transaction(
+        &self,
+        sig: &Signature,
+    ) -> Option<Vec<PhoenixEvent>> {
+        let tx = self.client.get_transaction(sig).await.ok()?;
+        if tx.is_err {
+            return None;
+        }
+        let events = self.core.parse_events_from_transaction(&tx)?;
+        self.parse_raw_phoenix_events(events).await
     }
 
     pub async fn parse_places(&self, signature: &Signature) -> Vec<PhoenixEvent> {
