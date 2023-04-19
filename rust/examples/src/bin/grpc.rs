@@ -8,17 +8,17 @@ use tokio::{sync::mpsc::channel, try_join};
 #[clap(author, version, about)]
 struct Args {
     #[clap(short, long)]
-    /// Service endpoint
+    /// gRPC service endpoint
     url: String,
 
     #[clap(long)]
     x_token: Option<String>,
 
-    /// Filter included account in transactions
+    /// Filter included accounts in transactions
     #[clap(long, value_delimiter = ' ')]
     accounts_to_include: Vec<Pubkey>,
 
-    /// Filter excluded account in transactions
+    /// Filter excluded accounts in transactions
     #[clap(long, value_delimiter = ' ')]
     accounts_to_exclude: Vec<Pubkey>,
 }
