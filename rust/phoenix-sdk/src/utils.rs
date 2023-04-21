@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{collections::BTreeMap, mem::size_of};
 
 use ellipsis_client::EllipsisClient;
 use phoenix::program::{
@@ -80,22 +80,30 @@ pub async fn get_evictable_trader_ix(
     let market_header = bytemuck::try_from_bytes::<MarketHeader>(header_bytes)
         .map_err(|e| anyhow::anyhow!("Error deserializing market header. Error: {:?}", e))?;
 
-    let market =
-        dispatch_market::load_with_dispatch(&market_header.market_size_params, market_bytes)?.inner;
-
-    let trader_tree = market.get_registered_traders();
-    let num_traders = trader_tree.len();
-    let max_traders = trader_tree.capacity();
-
-    let seat_manager_address = get_seat_manager_address(market_pubkey).0;
-    let seat_manager_account = client.get_account_data(&seat_manager_address).await?;
-    let seat_manager_struct =
-        bytemuck::try_from_bytes::<SeatManager>(seat_manager_account.as_slice()).map_err(|e| {
-            anyhow::anyhow!("Error deserializing seat manager data. Error: {:?}", e)
-        })?;
+    let max_traders = market_header.market_size_params.num_seats;
+    let num_traders =
+        dispatch_market::load_with_dispatch(&market_header.market_size_params, market_bytes)?
+            .inner
+            .get_registered_traders()
+            .len() as u64;
 
     // If the market's trader state is full, evict a trader to make room for a new trader.
     if num_traders == max_traders {
+        let trader_tree =
+            dispatch_market::load_with_dispatch(&market_header.market_size_params, market_bytes)?
+                .inner
+                .get_registered_traders()
+                .iter()
+                .map(|(k, v)| (*k, *v))
+                .collect::<BTreeMap<_, _>>();
+
+        let seat_manager_address = get_seat_manager_address(market_pubkey).0;
+        let seat_manager_account = client.get_account_data(&seat_manager_address).await?;
+        let seat_manager_struct = bytemuck::try_from_bytes::<SeatManager>(
+            seat_manager_account.as_slice(),
+        )
+        .map_err(|e| anyhow::anyhow!("Error deserializing seat manager data. Error: {:?}", e))?;
+
         //Find a seat to evict (a trader with no locked base or quote lots) and evict trader.
         for (trader_pubkey, trader_state) in trader_tree.iter() {
             if trader_state.base_lots_locked == 0 && trader_state.quote_lots_locked == 0 {
