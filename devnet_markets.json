@@ -5,5 +5,12 @@
     "quote_ticker": "USDC",
     "base_pubkey": "B1sL3zxwyVnDGzRWCAsBkjL23wyu8HgwQP4XxgnHiSrv",
     "quote_pubkey": "DK1gsSV2EubSE5S5FdXHpGzw2cAJNVzxeXRmAfxAMpU5"
+  },
+  {
+    "market": "78ehDnHgbkFxqXZwdFxa8HK7saX58GymeX2wNGdkqYLp",
+    "base_ticker": "wSOL",
+    "quote_ticker": "USDC-Drift",
+    "base_pubkey": "So11111111111111111111111111111111111111112",
+    "quote_pubkey": "DK1gsSV2EubSE5S5FdXHpGzw2cAJNVzxeXRmAfxAMpU5"
   }
 ]
