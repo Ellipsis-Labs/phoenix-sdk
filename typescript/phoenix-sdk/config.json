@@ -24,12 +24,24 @@
         "symbol": "mSOL",
         "mint": "7KowotNADmz2krLdRQKBWygyG4Rsvtne4EG7WU7MBQd8",
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png"
+      },
+      {
+        "name": "Wrapped SOL",
+        "symbol": "wSOL",
+        "mint": "So11111111111111111111111111111111111111112",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+      },
+      {
+        "name": "Drift USDC",
+        "symbol": "USDC-Drift",
+        "mint": "8zGuJQqwhZafTah7Uc7Z4tXRnguqkn5KLFAP8oV6PHe2",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png"
       }
     ],
     "markets": [
-      "DKADSL9EGUBpighxAXriZGmkYzmRrXEr9qS7qB1cQbSu",
       "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N",
-      "626t4FAUCVWMSvZsjzyPDJjPAKvdrafJB2pAcC6Ags2m"
+      "626t4FAUCVWMSvZsjzyPDJjPAKvdrafJB2pAcC6Ags2m",
+      "78ehDnHgbkFxqXZwdFxa8HK7saX58GymeX2wNGdkqYLp"
     ]
   },
   "mainnet-beta": {
