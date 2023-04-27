@@ -94,8 +94,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   /* eslint-disable no-constant-condition */
   while (true) {
     // Before quoting, we cancel all outstanding orders
-    const cancelAll = PhoenixSdk.createCancelAllOrdersInstructionWithClient(
-      client,
+    const cancelAll = client.createCancelAllOrdersInstruction(
       marketPubkey.toString(),
       trader.publicKey
     );
@@ -184,8 +183,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
         baseLotsToWithdraw: null,
       };
 
-      const placeWithdraw = PhoenixSdk.createWithdrawFundsInstructionWithClient(
-        client,
+      const placeWithdraw = client.createWithdrawFundsInstruction(
         {
           withdrawFundsParams: withdrawParams,
         },

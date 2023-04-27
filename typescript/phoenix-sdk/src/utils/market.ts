@@ -38,6 +38,7 @@ import {
   L3Order,
   L3UiBook,
   L3UiOrder,
+  LadderLevel,
   OrderId,
   PROGRAM_ID,
 } from "..";
@@ -344,8 +345,8 @@ export function getMarketLadder(
   unixTimestamp: beet.bignum,
   levels: number = DEFAULT_L2_LADDER_DEPTH
 ): Ladder {
-  const bids: Array<[BN, BN]> = [];
-  const asks: Array<[BN, BN]> = [];
+  const bids: Array<LadderLevel> = [];
+  const asks: Array<LadderLevel> = [];
   for (const [orderId, restingOrder] of marketData.bids) {
     if (restingOrder.lastValidSlot != 0 && restingOrder.lastValidSlot < slot) {
       continue;
@@ -357,21 +358,21 @@ export function getMarketLadder(
       continue;
     }
     const priceInTicks = toBN(orderId.priceInTicks);
-    const numBaseLots = toBN(restingOrder.numBaseLots);
+    const sizeInBaseLots = toBN(restingOrder.numBaseLots);
     if (bids.length === 0) {
-      bids.push([priceInTicks, numBaseLots]);
+      bids.push({ priceInTicks, sizeInBaseLots });
     } else {
       const prev = bids[bids.length - 1];
       if (!prev) {
         throw Error;
       }
       if (priceInTicks.eq(prev[0])) {
-        prev[1] = prev[1].add(numBaseLots);
+        prev[1] = prev[1].add(sizeInBaseLots);
       } else {
         if (bids.length === levels) {
           break;
         }
-        bids.push([priceInTicks, numBaseLots]);
+        bids.push({ priceInTicks, sizeInBaseLots });
       }
     }
   }
@@ -387,21 +388,21 @@ export function getMarketLadder(
       continue;
     }
     const priceInTicks = toBN(orderId.priceInTicks);
-    const numBaseLots = toBN(restingOrder.numBaseLots);
+    const sizeInBaseLots = toBN(restingOrder.numBaseLots);
     if (asks.length === 0) {
-      asks.push([priceInTicks, numBaseLots]);
+      asks.push({ priceInTicks, sizeInBaseLots });
     } else {
       const prev = asks[asks.length - 1];
       if (!prev) {
         throw Error;
       }
       if (priceInTicks.eq(prev[0])) {
-        prev[1] = prev[1].add(numBaseLots);
+        prev[1] = prev[1].add(sizeInBaseLots);
       } else {
         if (asks.length === levels) {
           break;
         }
-        asks.push([priceInTicks, numBaseLots]);
+        asks.push({ priceInTicks, sizeInBaseLots });
       }
     }
   }
@@ -453,7 +454,7 @@ export function getMarketUiLadder(
   const quoteAtomsPerQuoteUnit =
     10 ** toNum(marketData.header.quoteParams.decimals);
   return {
-    bids: ladder.bids.map(([priceInTicks, sizeInBaseLots]) =>
+    bids: ladder.bids.map(({ priceInTicks, sizeInBaseLots }) =>
       levelToUiLevel(
         marketData,
         priceInTicks,
@@ -461,7 +462,7 @@ export function getMarketUiLadder(
         quoteAtomsPerQuoteUnit
       )
     ),
-    asks: ladder.asks.map(([priceInTicks, sizeInBaseLots]) =>
+    asks: ladder.asks.map(({ priceInTicks, sizeInBaseLots }) =>
       levelToUiLevel(
         marketData,
         priceInTicks,
@@ -631,6 +632,7 @@ function getL3UiOrder(l3Order: L3Order, marketData: MarketData): L3UiOrder {
  * @param inAmount The amount (in whole tokens) of the input token to swap
  * @param slippage The slippage tolerance (optional, default 0.5%)
  * @param clientOrderId The client order ID (optional)
+ * @param idempotent If set to true, the transaction will idempotently create both mint accounts (optional, default false)
  */
 export function getMarketSwapTransaction({
   marketAddress,
@@ -1598,4 +1600,6 @@ export function getImmediateOrCancelOrderIx(
   return createSwapInstruction(orderAccounts, {
     orderPacket,
   });
+
+  
 }
