@@ -90,11 +90,12 @@ export async function placeLimitOrderExample() {
     );
 
     // Create a limit order instruction
-    const limitOrderIx = PhoenixSdk.getLimitOrderIx(
-      marketAddress,
-      marketData,
-      traderKeypair.publicKey,
-      limitOrderPacket
+    const limitOrderIx = phoenixClient.createPlaceLimitOrderInstruction(
+      {
+        orderPacket: limitOrderPacket,
+      },
+      marketAddress.toBase58(),
+      traderKeypair.publicKey
     );
 
     const tx = new Transaction().add(limitOrderIx);
