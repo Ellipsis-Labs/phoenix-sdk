@@ -1,7 +1,3 @@
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
 import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
 import base58 from "bs58";
 
@@ -18,7 +14,7 @@ export async function swap() {
   );
 
   const marketAddress = new PublicKey(
-    "3PgJmaEKQqVzQNAT3WtMaSQxBFPL3WqnvyahRM28PGJH"
+    "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N"
   );
   const marketAccount = await connection.getAccountInfo(
     marketAddress,
@@ -54,38 +50,6 @@ export async function swap() {
     "% slippage"
   );
 
-  const baseAccount = PublicKey.findProgramAddressSync(
-    [
-      trader.publicKey.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.baseParams.mintKey.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0];
-  const quoteAccount = PublicKey.findProgramAddressSync(
-    [
-      trader.publicKey.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.quoteParams.mintKey.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0];
-  const logAuthority = PublicKey.findProgramAddressSync(
-    [Buffer.from("log")],
-    Phoenix.PROGRAM_ID
-  )[0];
-
-  const orderAccounts = {
-    phoenixProgram: Phoenix.PROGRAM_ID,
-    logAuthority,
-    market: marketAddress,
-    trader: trader.publicKey,
-    baseAccount,
-    quoteAccount,
-    quoteVault: marketData.header.quoteParams.vaultKey,
-    baseVault: marketData.header.baseParams.vaultKey,
-  };
-
   const orderPacket = Phoenix.getMarketSwapOrderPacket({
     marketData,
     side,
@@ -93,14 +57,16 @@ export async function swap() {
     slippage,
   });
 
-  const swapIx = Phoenix.createSwapInstruction(orderAccounts, {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore TODO why is __kind incompatible?
-    orderPacket: {
-      __kind: "ImmediateOrCancel",
-      ...orderPacket,
+  const swapIx = client.createSwapInstruction(
+    {
+      orderPacket: {
+        __kind: "ImmediateOrCancel",
+        ...orderPacket,
+      } as Phoenix.OrderPacket,
     },
-  });
+    marketAddress.toBase58(),
+    trader.publicKey
+  );
 
   const controlTx = new Transaction().add(swapIx);
 
@@ -166,14 +132,16 @@ export async function swap() {
     slippage,
   });
 
-  const expiredSwapIx = Phoenix.createSwapInstruction(orderAccounts, {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore TODO why is __kind incompatible?
-    orderPacket: {
-      __kind: "ImmediateOrCancel",
-      ...expiredOrderPacket,
+  const expiredSwapIx = client.createSwapInstruction(
+    {
+      orderPacket: {
+        __kind: "ImmediateOrCancel",
+        ...expiredOrderPacket,
+      } as Phoenix.OrderPacket,
     },
-  });
+    marketAddress.toBase58(),
+    trader.publicKey
+  );
 
   const expiredSwapTx = new Transaction().add(expiredSwapIx);
   const expiredTxId = await connection.sendTransaction(

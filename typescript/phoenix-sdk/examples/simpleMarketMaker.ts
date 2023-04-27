@@ -38,7 +38,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   }
 
   // Request a SOL airdrop to send the transaction in this example. Only needed, and will only work, on devnet.
-  await client.connection.requestAirdrop(trader.publicKey, 1_000_000_000);
+  // await client.connection.requestAirdrop(trader.publicKey, 1_000_000_000);
   console.log("Trader: ", trader.publicKey.toBase58());
 
   // If the trader is a new maker (has not placed limit orders previously), you will need to create associated token accounts for the base and quote tokens, and claim a maker seat on the market.

@@ -366,8 +366,8 @@ export function getMarketLadder(
       if (!prev) {
         throw Error;
       }
-      if (priceInTicks.eq(prev[0])) {
-        prev[1] = prev[1].add(sizeInBaseLots);
+      if (priceInTicks.eq(prev.priceInTicks)) {
+        prev.sizeInBaseLots = prev.sizeInBaseLots.add(sizeInBaseLots);
       } else {
         if (bids.length === levels) {
           break;
@@ -396,8 +396,8 @@ export function getMarketLadder(
       if (!prev) {
         throw Error;
       }
-      if (priceInTicks.eq(prev[0])) {
-        prev[1] = prev[1].add(sizeInBaseLots);
+      if (priceInTicks.eq(prev.priceInTicks)) {
+        prev.sizeInBaseLots = prev.sizeInBaseLots.add(sizeInBaseLots);
       } else {
         if (asks.length === levels) {
           break;
@@ -1600,6 +1600,4 @@ export function getImmediateOrCancelOrderIx(
   return createSwapInstruction(orderAccounts, {
     orderPacket,
   });
-
-  
 }
