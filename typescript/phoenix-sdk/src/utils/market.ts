@@ -1421,10 +1421,12 @@ export function getImmediateOrCancelOrderIxfromTemplate(
   trader: PublicKey,
   ImmediateOrCancelOrderTemplate: ImmediateOrCancelOrderTemplate
 ): TransactionInstruction {
-  const priceInTicks = client.floatPriceToTicks(
-    ImmediateOrCancelOrderTemplate.priceAsFloat,
-    market.toBase58()
-  );
+  const priceInTicks = ImmediateOrCancelOrderTemplate.priceAsFloat
+    ? client.floatPriceToTicks(
+        ImmediateOrCancelOrderTemplate.priceAsFloat,
+        market.toBase58()
+      )
+    : null;
   const numBaseLots = client.rawBaseUnitsToBaseLotsRoundedDown(
     ImmediateOrCancelOrderTemplate.sizeInBaseUnits,
     market.toBase58()
@@ -1476,7 +1478,7 @@ export function getImmediateOrCancelOrderIxfromTemplate(
  */
 export function getImmediateOrCancelOrderPacket(
   side: Side,
-  priceInTicks: number,
+  priceInTicks: number | null,
   numBaseLots: number,
   numQuoteLots: number,
   minBaseLotsToFill: number,

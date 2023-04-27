@@ -82,9 +82,9 @@ export class ImmediateOrCancelOrderTemplate {
   // The side for the order, a Side::Bid or a Side::Ask.
   side: Side;
 
-  /// The most aggressive price an order can be matched at. If this value is None, then the order
+  /// The most aggressive price an order can be matched at. If this value is null, then the order
   /// is treated as a market order.
-  priceAsFloat: number;
+  priceAsFloat: number | null;
 
   /// The number of base units to fill against the order book. Either this parameter or the `sizeInQuoteUnits`
   /// parameter must be set to a nonzero value.
