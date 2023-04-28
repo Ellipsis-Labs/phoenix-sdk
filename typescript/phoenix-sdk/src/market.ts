@@ -1,8 +1,8 @@
-import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
 import BN from "bn.js";
 
-import { MarketHeader, Side } from "./types";
+import { MarketHeader, OrderPacket, SelfTradeBehavior, Side } from "./types";
 import {
   DEFAULT_SLIPPAGE_PERCENT,
   deserializeMarketData,
@@ -16,15 +16,15 @@ import {
   CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
   CancelUpToInstructionArgs,
   CancelUpToWithFreeFundsInstructionArgs,
+  DEFAULT_MATCH_LIMIT,
   DepositFundsInstructionArgs,
+  LimitOrderTemplate,
   PROGRAM_ID,
-  PlaceLimitOrderInstructionArgs,
-  PlaceLimitOrderWithFreeFundsInstructionArgs,
   PlaceMultiplePostOnlyOrdersInstructionArgs,
+  PostOnlyOrderTemplate,
+  ImmediateOrCancelOrderTemplate,
   ReduceOrderInstructionArgs,
   ReduceOrderWithFreeFundsInstructionArgs,
-  SwapInstructionArgs,
-  SwapWithFreeFundsInstructionArgs,
   TokenConfig,
   WithdrawFundsInstructionArgs,
   createCancelAllOrdersInstruction,
@@ -45,8 +45,12 @@ import {
   createSwapWithFreeFundsInstruction,
   createWithdrawFundsInstruction,
   getExpectedOutAmountRouter,
+  getImmediateOrCancelOrderPacket,
+  getLimitOrderPacket,
   getLogAuthority,
+  getPostOnlyOrderPacket,
   getRequiredInAmountRouter,
+  getSeatAddress,
 } from "./index";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -154,37 +158,38 @@ export interface MarketData {
 }
 
 export class Market {
-  name: string;
   address: PublicKey;
-  baseToken: Token;
-  quoteToken: Token;
   data: MarketData;
+  name?: string;
+  baseToken?: Token;
+  quoteToken?: Token;
 
-  private constructor({
+  constructor({
     name,
     address,
     baseToken,
     quoteToken,
     data,
   }: {
-    name: string;
     address: PublicKey;
-    baseToken: Token;
-    quoteToken: Token;
     data: MarketData;
+    name?: string;
+    baseToken?: Token;
+    quoteToken?: Token;
   }) {
-    this.name = name;
     this.address = address;
+    this.data = data;
+    // These fields are optional because they are not always available
+    this.name = name;
     this.baseToken = baseToken;
     this.quoteToken = quoteToken;
-    this.data = data;
   }
 
   /**
    * Returns a `Market` for a given address, a data buffer, and a list of tokens to use for the market
    *
-   * @param connection The Solana `Connection` object
    * @param marketAddress The `PublicKey` of the market account
+   * @param buffer The buffer holding the market account data
    * @param tokenList The list of tokens to use for the market
    */
   static load({
@@ -251,6 +256,32 @@ export class Market {
   }
 
   /**
+   * Returns a `Market` for a given address, a data buffer, and a list of tokens to use for the market
+   *
+   * @param connection The Solana `Connection` object
+   * @param address The `PublicKey` of the market account
+   * @param tokenList The list of tokens to use for the market (optional)
+   */
+  static async loadFromAddress({
+    connection,
+    address,
+    tokenList,
+  }: {
+    connection: Connection;
+    address: PublicKey;
+    tokenList?: TokenConfig[];
+  }): Promise<Market> {
+    const buffer = await connection
+      .getAccountInfo(address, "confirmed")
+      .then((accountInfo) => accountInfo?.data);
+    if (tokenList) {
+      return Market.load({ address, buffer, tokenList });
+    } else {
+      return new Market({ address, data: deserializeMarketData(buffer) });
+    }
+  }
+
+  /**
    * Reloads market data from buffer
    *
    * @param buffer A data buffer with the serialized market data
@@ -259,6 +290,23 @@ export class Market {
    */
   reload(buffer: Buffer): Market {
     const marketData = deserializeMarketData(buffer);
+    this.data = marketData;
+    return this;
+  }
+
+  /**
+   * Reloads market data from buffer
+   *
+   * @param connection The Solana `Connection` object
+   *
+   * @returns The reloaded Market
+   */
+  async reloadFromNetwork(connection: Connection): Promise<Market> {
+    const marketData = deserializeMarketData(
+      await connection
+        .getAccountInfo(this.address, "confirmed")
+        .then((accountInfo) => accountInfo?.data)
+    );
     this.data = marketData;
     return this;
   }
@@ -314,11 +362,8 @@ export class Market {
    *
    * @param trader The `PublicKey` of the trader account
    */
-  public getSeatKey(trader: PublicKey): PublicKey {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("seat"), this.address.toBuffer(), trader.toBuffer()],
-      PROGRAM_ID
-    )[0];
+  public getSeatAddress(trader: PublicKey): PublicKey {
+    return getSeatAddress(this.address, trader);
   }
 
   /**
@@ -461,7 +506,7 @@ export class Market {
     return Math.round(
       (price *
         this.data.header.rawBaseUnitsPerBaseUnit *
-        10 ** this.quoteToken.data.decimals) /
+        10 ** this.data.header.quoteParams.decimals) /
         (this.data.quoteLotsPerBaseUnitPerTick *
           toNum(this.data.header.quoteLotSize))
     );
@@ -479,7 +524,7 @@ export class Market {
       (ticks *
         this.data.quoteLotsPerBaseUnitPerTick *
         toNum(this.data.header.quoteLotSize)) /
-      (10 ** this.quoteToken.data.decimals *
+      (10 ** this.data.header.quoteParams.decimals *
         this.data.header.rawBaseUnitsPerBaseUnit)
     );
   }
@@ -529,7 +574,7 @@ export class Market {
    */
   public quoteUnitsToQuoteLots(quoteUnits: number): number {
     return Math.round(
-      (quoteUnits * 10 ** this.quoteToken.data.decimals) /
+      (quoteUnits * 10 ** this.data.header.quoteParams.decimals) /
         toNum(this.data.header.quoteLotSize)
     );
   }
@@ -558,7 +603,7 @@ export class Market {
    * @param baseAtoms The amount of base atoms to convert
    */
   public baseAtomsToRawBaseUnits(baseAtoms: number): number {
-    return baseAtoms / 10 ** this.baseToken.data.decimals;
+    return baseAtoms / 10 ** this.data.header.baseParams.decimals;
   }
 
   /**
@@ -567,7 +612,7 @@ export class Market {
    * @param quoteAtoms The amount of quote atoms to convert
    */
   public quoteAtomsToQuoteUnits(quoteAtoms: number): number {
-    return quoteAtoms / 10 ** this.quoteToken.data.decimals;
+    return quoteAtoms / 10 ** this.data.header.quoteParams.decimals;
   }
 
   /**
@@ -733,7 +778,7 @@ export class Market {
         logAuthority: getLogAuthority(),
         market: this.address,
         trader,
-        seat: this.getSeatKey(trader),
+        seat: this.getSeatAddress(trader),
         baseAccount: this.getBaseAccountKey(trader),
         quoteAccount: this.getQuoteAccountKey(trader),
         baseVault: this.getBaseVaultKey(),
@@ -746,13 +791,13 @@ export class Market {
   /**
    * Creates a _PlaceLimitOrder_ instruction.
    *
-   * @param args to provide as instruction data to the program
+   * @param orderPacket to provide as instruction data to the program
    * @param trader Trader public key
    *
    * @category Instructions
    */
   public createPlaceLimitOrderInstruction(
-    args: PlaceLimitOrderInstructionArgs,
+    orderPacket: OrderPacket,
     trader?: PublicKey
   ): TransactionInstruction {
     return createPlaceLimitOrderInstruction(
@@ -761,26 +806,28 @@ export class Market {
         logAuthority: getLogAuthority(),
         market: this.address,
         trader,
-        seat: this.getSeatKey(trader),
+        seat: this.getSeatAddress(trader),
         baseAccount: this.getBaseAccountKey(trader),
         quoteAccount: this.getQuoteAccountKey(trader),
         baseVault: this.getBaseVaultKey(),
         quoteVault: this.getQuoteVaultKey(),
       },
-      args
+      {
+        orderPacket,
+      }
     );
   }
 
   /**
    * Creates a _PlaceLimitOrderWithFreeFunds_ instruction.
    *
-   * @param args to provide as instruction data to the program
+   * @param orderPacket to provide as instruction data to the program
    * @param trader Trader public key
    *
    * @category Instructions
    */
   public createPlaceLimitOrderWithFreeFundsInstruction(
-    args: PlaceLimitOrderWithFreeFundsInstructionArgs,
+    orderPacket: OrderPacket,
     trader?: PublicKey
   ) {
     return createPlaceLimitOrderWithFreeFundsInstruction(
@@ -789,9 +836,9 @@ export class Market {
         logAuthority: getLogAuthority(),
         market: this.address,
         trader,
-        seat: this.getSeatKey(trader),
+        seat: this.getSeatAddress(trader),
       },
-      args
+      { orderPacket }
     );
   }
 
@@ -813,7 +860,7 @@ export class Market {
         logAuthority: getLogAuthority(),
         market: this.address,
         trader,
-        seat: this.getSeatKey(trader),
+        seat: this.getSeatAddress(trader),
         baseAccount: this.getBaseAccountKey(trader),
         quoteAccount: this.getQuoteAccountKey(trader),
         baseVault: this.getBaseVaultKey(),
@@ -841,7 +888,7 @@ export class Market {
         logAuthority: getLogAuthority(),
         market: this.address,
         trader,
-        seat: this.getSeatKey(trader),
+        seat: this.getSeatAddress(trader),
       },
       args
     );
@@ -911,20 +958,20 @@ export class Market {
       logAuthority: getLogAuthority(),
       market: this.address,
       payer,
-      seat: this.getSeatKey(trader),
+      seat: this.getSeatAddress(trader),
     });
   }
 
   /**
    * Creates a _Swap_ instruction.
    *
-   * @param args to provide as instruction data to the program
+   * @param orderPacket to provide as instruction data to the program
    * @param trader Trader public key
    *
    * @category Instructions
    */
   public createSwapInstruction(
-    args: SwapInstructionArgs,
+    orderPacket: OrderPacket,
     trader: PublicKey
   ): TransactionInstruction {
     return createSwapInstruction(
@@ -938,20 +985,20 @@ export class Market {
         baseVault: this.getBaseVaultKey(),
         quoteVault: this.getQuoteVaultKey(),
       },
-      args
+      { orderPacket }
     );
   }
 
   /**
    * Creates a _SwapWithFreeFunds_ instruction.
    *
-   * @param args to provide as instruction data to the program
+   * @param orderPacket to provide as instruction data to the program
    * @param trader Trader public key
    *
    * @category Instructions
    */
   public createSwapWithFreeFundsInstruction(
-    args: SwapWithFreeFundsInstructionArgs,
+    orderPacket: OrderPacket,
     trader: PublicKey
   ) {
     return createSwapWithFreeFundsInstruction(
@@ -960,9 +1007,9 @@ export class Market {
         logAuthority: getLogAuthority(),
         market: this.address,
         trader,
-        seat: this.getSeatKey(trader),
+        seat: this.getSeatAddress(trader),
       },
-      args
+      { orderPacket }
     );
   }
 
@@ -991,5 +1038,183 @@ export class Market {
       },
       args
     );
+  }
+
+  public getSwapOrderPacket({
+    side,
+    inAmount,
+    slippage = DEFAULT_SLIPPAGE_PERCENT,
+    selfTradeBehavior = SelfTradeBehavior.Abort,
+    matchLimit = DEFAULT_MATCH_LIMIT,
+    clientOrderId = 0,
+    useOnlyDepositedFunds = false,
+    lastValidSlot = null,
+    lastValidUnixTimestampInSeconds = null,
+  }: {
+    side: Side;
+    inAmount: number;
+    slippage?: number;
+    selfTradeBehavior?: SelfTradeBehavior;
+    matchLimit?: number;
+    clientOrderId?: number;
+    useOnlyDepositedFunds?: boolean;
+    lastValidSlot?: number;
+    lastValidUnixTimestampInSeconds?: number;
+  }): OrderPacket {
+    const uiLadder = getMarketUiLadder(this.data, Number.MAX_SAFE_INTEGER);
+    const expectedOutAmount = getExpectedOutAmountRouter({
+      uiLadder,
+      takerFeeBps: this.data.takerFeeBps,
+      side,
+      inAmount,
+    });
+    const baseMul = 10 ** this.data.header.baseParams.decimals;
+    const quoteMul = 10 ** this.data.header.quoteParams.decimals;
+    const slippageDenom = 1 - slippage;
+    let numBaseLots = 0;
+    let minBaseLotsToFill = 0;
+    let numQuoteLots = 0;
+    let minQuoteLotsToFill = 0;
+
+    if (side === Side.Ask) {
+      numBaseLots =
+        (inAmount * baseMul) /
+        parseFloat(this.data.header.baseLotSize.toString());
+      minQuoteLotsToFill = Math.ceil(
+        ((expectedOutAmount * quoteMul) /
+          parseFloat(this.data.header.quoteLotSize.toString())) *
+          slippageDenom
+      );
+    } else {
+      numQuoteLots =
+        (inAmount * quoteMul) /
+        parseFloat(this.data.header.quoteLotSize.toString());
+      minBaseLotsToFill = Math.ceil(
+        ((expectedOutAmount * baseMul) /
+          parseFloat(this.data.header.baseLotSize.toString())) *
+          slippageDenom
+      );
+    }
+    return getImmediateOrCancelOrderPacket({
+      side,
+      numBaseLots,
+      numQuoteLots,
+      minBaseLotsToFill,
+      minQuoteLotsToFill,
+      selfTradeBehavior,
+      matchLimit,
+      clientOrderId,
+      useOnlyDepositedFunds,
+      lastValidSlot,
+      lastValidUnixTimestampInSeconds,
+    });
+  }
+
+  /**
+   * Returns an instruction to place a limit order on a market, using a LimitOrderPacketTemplate, which takes in human-friendly units
+   * @param trader The trader's address
+   * @param limitOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getLimitOrderInstructionfromTemplate(
+    trader: PublicKey,
+    limitOrderTemplate: LimitOrderTemplate
+  ): TransactionInstruction {
+    const priceInTicks = this.floatPriceToTicks(
+      limitOrderTemplate.priceAsFloat
+    );
+    const numBaseLots = this.rawBaseUnitsToBaseLotsRoundedDown(
+      limitOrderTemplate.sizeInBaseUnits
+    );
+
+    const orderPacket = getLimitOrderPacket({
+      side: limitOrderTemplate.side,
+      priceInTicks,
+      numBaseLots,
+      selfTradeBehavior: limitOrderTemplate.selfTradeBehavior,
+      matchLimit: limitOrderTemplate.matchLimit,
+      clientOrderId: limitOrderTemplate.clientOrderId,
+      useOnlyDepositedFunds: limitOrderTemplate.useOnlyDepositedFunds,
+      lastValidSlot: limitOrderTemplate.lastValidSlot,
+      lastValidUnixTimestampInSeconds:
+        limitOrderTemplate.lastValidUnixTimestampInSeconds,
+    });
+    return this.createPlaceLimitOrderInstruction(orderPacket, trader);
+  }
+
+  /**
+   * Returns an instruction to place a post only on a market, using a PostOnlyOrderPacketTemplate, which takes in human-friendly units.
+   * @param trader The trader's address
+   * @param postOnlyOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getPostOnlyOrderInstructionfromTemplate(
+    trader: PublicKey,
+    postOnlyOrderTemplate: PostOnlyOrderTemplate
+  ): TransactionInstruction {
+    const priceInTicks = this.floatPriceToTicks(
+      postOnlyOrderTemplate.priceAsFloat
+    );
+    const numBaseLots = this.rawBaseUnitsToBaseLotsRoundedDown(
+      postOnlyOrderTemplate.sizeInBaseUnits
+    );
+
+    const orderPacket = getPostOnlyOrderPacket({
+      side: postOnlyOrderTemplate.side,
+      priceInTicks,
+      numBaseLots,
+      clientOrderId: postOnlyOrderTemplate.clientOrderId,
+      rejectPostOnly: postOnlyOrderTemplate.rejectPostOnly,
+      useOnlyDepositedFunds: postOnlyOrderTemplate.useOnlyDepositedFunds,
+      lastValidSlot: postOnlyOrderTemplate.lastValidSlot,
+      lastValidUnixTimestampInSeconds:
+        postOnlyOrderTemplate.lastValidUnixTimestampInSeconds,
+    });
+    return this.createPlaceLimitOrderInstruction(orderPacket, trader);
+  }
+
+  /**
+   * Returns an instruction to place an immediate or cancel on a market, using a ImmediateOrCancelPacketTemplate, which takes in human-friendly units.
+   * @param trader The trader's address
+   * @param immediateOrCancelOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getImmediateOrCancelOrderInstructionfromTemplate(
+    trader: PublicKey,
+    immediateOrCancelOrderTemplate: ImmediateOrCancelOrderTemplate
+  ): TransactionInstruction {
+    const priceInTicks = this.floatPriceToTicks(
+      immediateOrCancelOrderTemplate.priceAsFloat
+    );
+    const numBaseLots = this.rawBaseUnitsToBaseLotsRoundedDown(
+      immediateOrCancelOrderTemplate.sizeInBaseUnits
+    );
+    const numQuoteLots = this.quoteUnitsToQuoteLots(
+      immediateOrCancelOrderTemplate.sizeInQuoteUnits
+    );
+    const minBaseLotsToFill = this.rawBaseUnitsToBaseLotsRoundedDown(
+      immediateOrCancelOrderTemplate.minBaseUnitsToFill
+    );
+    const minQuoteLotsToFill = this.quoteUnitsToQuoteLots(
+      immediateOrCancelOrderTemplate.minQuoteUnitsToFill
+    );
+
+    const orderPacket = getImmediateOrCancelOrderPacket({
+      side: immediateOrCancelOrderTemplate.side,
+      priceInTicks,
+      numBaseLots,
+      numQuoteLots,
+      minBaseLotsToFill,
+      minQuoteLotsToFill,
+      selfTradeBehavior: immediateOrCancelOrderTemplate.selfTradeBehavior,
+      matchLimit: immediateOrCancelOrderTemplate.matchLimit,
+      clientOrderId: immediateOrCancelOrderTemplate.clientOrderId,
+      useOnlyDepositedFunds:
+        immediateOrCancelOrderTemplate.useOnlyDepositedFunds,
+      lastValidSlot: immediateOrCancelOrderTemplate.lastValidSlot,
+      lastValidUnixTimestampInSeconds:
+        immediateOrCancelOrderTemplate.lastValidUnixTimestampInSeconds,
+    });
+    return this.createSwapInstruction(orderPacket, trader);
   }
 }

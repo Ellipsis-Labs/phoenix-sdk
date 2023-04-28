@@ -32,7 +32,8 @@ export async function swap() {
     [marketAddress]
   );
 
-  const marketData = client.markets.get(marketAddress.toBase58())?.data;
+  const market = client.markets.get(marketAddress.toBase58());
+  const marketData = market?.data;
   if (marketData === undefined) throw Error("Market not found");
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
@@ -50,20 +51,14 @@ export async function swap() {
     "% slippage"
   );
 
-  const orderPacket = Phoenix.getMarketSwapOrderPacket({
-    marketData,
+  const orderPacket = market.getSwapOrderPacket({
     side,
     inAmount,
     slippage,
   });
 
   const swapIx = client.createSwapInstruction(
-    {
-      orderPacket: {
-        __kind: "ImmediateOrCancel",
-        ...orderPacket,
-      } as Phoenix.OrderPacket,
-    },
+    orderPacket,
     marketAddress.toBase58(),
     trader.publicKey
   );
@@ -122,23 +117,16 @@ export async function swap() {
     return;
   }
 
-  // Really dirty test for expired TIF
-  const expiredOrderPacket = Phoenix.getMarketSwapOrderPacketWithTimeInForce({
-    marketData,
+  const expiredOrderPacket = market.getSwapOrderPacket({
     side,
     inAmount,
+    slippage,
     lastValidUnixTimestampInSeconds: 10, // This time will be treated as expired
     lastValidSlot: null,
-    slippage,
   });
 
   const expiredSwapIx = client.createSwapInstruction(
-    {
-      orderPacket: {
-        __kind: "ImmediateOrCancel",
-        ...expiredOrderPacket,
-      } as Phoenix.OrderPacket,
-    },
+    expiredOrderPacket,
     marketAddress.toBase58(),
     trader.publicKey
   );

@@ -5,7 +5,7 @@ import {
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
 import * as beetSolana from "@metaplex-foundation/beet-solana";
-import { Client, getLogAuthorityAddress, getSeatAddress, PROGRAM_ID } from "..";
+import { Client, getLogAuthority, getSeatAddress, PROGRAM_ID } from "..";
 import { MarketData } from "../market";
 
 import {
@@ -85,7 +85,7 @@ export function getClaimSeatIx(
   const seatManager = getSeatManagerAddress(market);
   const seatDepositCollector = getSeatDepositCollectorAddress(market);
   const seat = getSeatAddress(market, trader);
-  const logAuthority = getLogAuthorityAddress();
+  const logAuthority = getLogAuthority();
 
   const claimSeatAccounts = {
     phoenixProgram: PROGRAM_ID,
@@ -123,7 +123,7 @@ export function getEvictSeatIx(
   const seatManager = getSeatManagerAddress(market);
   const seatDepositCollector = getSeatDepositCollectorAddress(market);
   const seat = getSeatAddress(market, trader);
-  const logAuthority = getLogAuthorityAddress();
+  const logAuthority = getLogAuthority();
 
   const baseAccount = PublicKey.findProgramAddressSync(
     [

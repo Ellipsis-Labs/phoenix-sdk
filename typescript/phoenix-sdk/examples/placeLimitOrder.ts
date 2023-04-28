@@ -83,17 +83,15 @@ export async function placeLimitOrderExample() {
 
   // Once you have tokens and a maker seat on the market, you can place any number of limit orders by sending the limit order instruction, created with the limit order packet.
   for (let i = 0; i < 5; i++) {
-    const limitOrderPacket = PhoenixSdk.getLimitOrderPacket(
-      PhoenixSdk.Side.Bid,
-      200,
-      1
-    );
+    const limitOrderPacket = PhoenixSdk.getLimitOrderPacket({
+      side: PhoenixSdk.Side.Bid,
+      priceInTicks: 200,
+      numBaseLots: 1,
+    });
 
     // Create a limit order instruction
     const limitOrderIx = phoenixClient.createPlaceLimitOrderInstruction(
-      {
-        orderPacket: limitOrderPacket,
-      },
+      limitOrderPacket,
       marketAddress.toBase58(),
       traderKeypair.publicKey
     );

@@ -147,10 +147,8 @@ export async function simpleMarketMaker(privateKeyPath: string) {
       lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
     };
     // Get the limit order instruction from the created template
-    const bidLimitOrderIx = PhoenixSdk.getLimitOrderIxfromTemplate(
-      client,
-      marketPubkey,
-      marketData,
+    const bidLimitOrderIx = client.getLimitOrderInstructionfromTemplate(
+      marketPubkey.toBase58(),
       trader.publicKey,
       bidOrderTemplate
     );
@@ -165,10 +163,8 @@ export async function simpleMarketMaker(privateKeyPath: string) {
       lastValidSlot: undefined,
       lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
     };
-    const askLimitOrderIx = PhoenixSdk.getLimitOrderIxfromTemplate(
-      client,
-      marketPubkey,
-      marketData,
+    const askLimitOrderIx = client.getLimitOrderInstructionfromTemplate(
+      marketPubkey.toBase58(),
       trader.publicKey,
       askOrderTemplate
     );

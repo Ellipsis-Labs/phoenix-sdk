@@ -34,6 +34,7 @@ import {
 } from "./beet";
 import {
   Client,
+  getLogAuthority,
   L3Book,
   L3Order,
   L3UiBook,
@@ -46,11 +47,6 @@ import { Ladder, UiLadder, MarketData, TraderState } from "../market";
 import { getCreateTokenAccountInstructions } from "./token";
 
 import { confirmOrCreateClaimSeatIxs } from "./seatManager";
-import {
-  LimitOrderTemplate,
-  PostOnlyOrderTemplate,
-  ImmediateOrCancelOrderTemplate,
-} from "orderPacketTemplate";
 
 // Default ladder depth to use when fetching L2 ladder
 export const DEFAULT_L2_LADDER_DEPTH = 10;
@@ -60,6 +56,23 @@ export const DEFAULT_L3_BOOK_DEPTH = 20;
 
 export const DEFAULT_MATCH_LIMIT = 2048;
 export const DEFAULT_SLIPPAGE_PERCENT = 0.005;
+
+/**
+ * Find the trader's seat account on Phoenix market.
+ * If the trader does not have a seat account, the PDA seat pubkey will still be returned.
+ * In that case, the seat account will need to be initialized with the claim seat instruction.
+ * @param marketPubkey The market's address
+ * @param trader The trader's address
+ */
+export function getSeatAddress(
+  market: PublicKey,
+  trader: PublicKey
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("seat"), market.toBuffer(), trader.toBuffer()],
+    PROGRAM_ID
+  )[0];
+}
 
 /**
  * Deserializes market data from a given buffer and returns a `MarketData` object
@@ -1129,30 +1142,6 @@ export function getQuoteAmountFromBaseAmountBudgetAndBook({
 }
 
 /**
- * Get the log authority's address
- */
-export function getLogAuthorityAddress(): PublicKey {
-  return PublicKey.findProgramAddressSync([Buffer.from("log")], PROGRAM_ID)[0];
-}
-
-/**
- * Find the trader's seat account on Phoenix market.
- * If the trader does not have a seat account, the PDA seat pubkey will still be returned.
- * In that case, the seat account will need to be initialized with the claim seat instruction.
- * @param marketPubkey The market's address
- * @param trader The trader's address
- */
-export function getSeatAddress(
-  market: PublicKey,
-  trader: PublicKey
-): PublicKey {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("seat"), market.toBuffer(), trader.toBuffer()],
-    PROGRAM_ID
-  )[0];
-}
-
-/**
  * Returns an instruction to place a limit order on a market
  * Does not check for existence of associated token accounts or seat (no network calls)
  * Should be used to place limit orders after it's confirmed that the maker has ATAs and a seat on the market
@@ -1168,7 +1157,7 @@ export function getLimitOrderIx(
   orderPacket: OrderPacket
 ): TransactionInstruction {
   const seat = getSeatAddress(market, trader);
-  const logAuthority = getLogAuthorityAddress();
+  const logAuthority = getLogAuthority();
 
   const baseAccount = PublicKey.findProgramAddressSync(
     [
@@ -1204,80 +1193,6 @@ export function getLimitOrderIx(
   };
 
   return createPlaceLimitOrderInstruction(limitOrderAccounts, args);
-}
-/**
- * Returns an instruction to place a limit order on a market, using a LimitOrderPacketTemplate, which takes in human-friendly units
- * @param client An instance of the Client class to use for converting units
- * @param market The market's address
- * @param marketData The market's data, containing base and quote mint information
- * @param trader The trader's address
- * @param limitOrderTemplate The order packet template to place
- * @returns
- */
-export function getLimitOrderIxfromTemplate(
-  client: Client,
-  market: PublicKey,
-  marketData: MarketData,
-  trader: PublicKey,
-  limitOrderTemplate: LimitOrderTemplate
-): TransactionInstruction {
-  const priceInTicks = client.floatPriceToTicks(
-    limitOrderTemplate.priceAsFloat,
-    market.toBase58()
-  );
-  const numBaseLots = client.rawBaseUnitsToBaseLotsRoundedDown(
-    limitOrderTemplate.sizeInBaseUnits,
-    market.toBase58()
-  );
-
-  const orderPacket = getLimitOrderPacket(
-    limitOrderTemplate.side,
-    priceInTicks,
-    numBaseLots,
-    limitOrderTemplate.selfTradeBehavior,
-    limitOrderTemplate.matchLimit,
-    limitOrderTemplate.clientOrderId,
-    limitOrderTemplate.useOnlyDepositedFunds,
-    limitOrderTemplate.lastValidSlot,
-    limitOrderTemplate.lastValidUnixTimestampInSeconds
-  );
-  return getLimitOrderIx(market, marketData, trader, orderPacket);
-}
-
-/**
- * Returns a limit order packet
- * @param side The side of the order
- * @param priceInTicks The price of the order in ticks
- * @param numBaseLots The number of base lots to trade
- * @param selfTradeBehavior The self trade behavior
- * @param clientOrderId The client order id
- * @param useOnlyDepositedFunds Whether to use only deposited funds
- * @param lastValidSlot The last valid slot for a time in force order
- * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for a time in force order
- */
-export function getLimitOrderPacket(
-  side: Side,
-  priceInTicks: number,
-  numBaseLots: number,
-  selfTradeBehavior?: SelfTradeBehavior,
-  matchLimit?: beet.COption<beet.bignum>,
-  clientOrderId?: number,
-  useOnlyDepositedFunds?: boolean,
-  lastValidSlot?: beet.COption<beet.bignum>,
-  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>
-): OrderPacket {
-  return {
-    __kind: "Limit",
-    side,
-    priceInTicks,
-    numBaseLots,
-    selfTradeBehavior: selfTradeBehavior ?? SelfTradeBehavior.CancelProvide,
-    matchLimit,
-    clientOrderId: clientOrderId ?? 0,
-    useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
-    lastValidSlot,
-    lastValidUnixTimestampInSeconds,
-  };
 }
 
 /**
@@ -1377,227 +1292,4 @@ export async function getLimitOrderUnknownSeatIxs(
   instructions.push(getLimitOrderIx(market, marketData, trader, orderPacket));
 
   return instructions;
-}
-
-/**
- * Returns an instruction to place a post only on a market, using a PostOnlyOrderPacketTemplate, which takes in human-friendly units.
- * @param client An instance of the Client class to use for converting units
- * @param market The market's address
- * @param marketData The market's data, containing base and quote mint information
- * @param trader The trader's address
- * @param postOnlyOrderTemplate The order packet template to place
- * @returns
- */
-export function getPostOnlyOrderIxfromTemplate(
-  client: Client,
-  market: PublicKey,
-  marketData: MarketData,
-  trader: PublicKey,
-  postOnlyOrderTemplate: PostOnlyOrderTemplate
-): TransactionInstruction {
-  const priceInTicks = client.floatPriceToTicks(
-    postOnlyOrderTemplate.priceAsFloat,
-    market.toBase58()
-  );
-  const numBaseLots = client.rawBaseUnitsToBaseLotsRoundedDown(
-    postOnlyOrderTemplate.sizeInBaseUnits,
-    market.toBase58()
-  );
-
-  const orderPacket = getPostOnlyOrderPacket(
-    postOnlyOrderTemplate.side,
-    priceInTicks,
-    numBaseLots,
-    postOnlyOrderTemplate.clientOrderId,
-    postOnlyOrderTemplate.rejectPostOnly,
-    postOnlyOrderTemplate.useOnlyDepositedFunds,
-    postOnlyOrderTemplate.lastValidSlot,
-    postOnlyOrderTemplate.lastValidUnixTimestampInSeconds
-  );
-  return getLimitOrderIx(market, marketData, trader, orderPacket);
-}
-
-/**
- * Returns a post only order packet.
- * @param side The side of the order
- * @param priceInTicks The price of the order in ticks
- * @param numBaseLots The number of base lots to trade
- * @param clientOrderId The client order id
- * @param rejectPostOnly Whether a post only order should be rejcted if it crosses. Default is true.
- * @param useOnlyDepositedFunds Whether to use only deposited funds
- * @param lastValidSlot The last valid slot for a time in force order
- * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for a time in force order
- */
-export function getPostOnlyOrderPacket(
-  side: Side,
-  priceInTicks: number,
-  numBaseLots: number,
-  clientOrderId?: number,
-  rejectPostOnly?: boolean,
-  useOnlyDepositedFunds?: boolean,
-  lastValidSlot?: beet.COption<beet.bignum>,
-  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>
-): OrderPacket {
-  return {
-    __kind: "PostOnly",
-    side,
-    priceInTicks,
-    numBaseLots,
-    clientOrderId: clientOrderId ?? 0,
-    rejectPostOnly: rejectPostOnly ?? true,
-    useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
-    lastValidSlot,
-    lastValidUnixTimestampInSeconds,
-  };
-}
-
-/**
- * Returns an instruction to place an immediate or cancel on a market, using a ImmediateOrCancelPacketTemplate, which takes in human-friendly units.
- * @param client An instance of the Client class to use for converting units
- * @param market The market's address
- * @param marketData The market's data, containing base and quote mint information
- * @param trader The trader's address
- * @param ImmediateOrCancelOrderTemplate The order packet template to place
- * @returns
- */
-export function getImmediateOrCancelOrderIxfromTemplate(
-  client: Client,
-  market: PublicKey,
-  marketData: MarketData,
-  trader: PublicKey,
-  ImmediateOrCancelOrderTemplate: ImmediateOrCancelOrderTemplate
-): TransactionInstruction {
-  const priceInTicks = client.floatPriceToTicks(
-    ImmediateOrCancelOrderTemplate.priceAsFloat,
-    market.toBase58()
-  );
-  const numBaseLots = client.rawBaseUnitsToBaseLotsRoundedDown(
-    ImmediateOrCancelOrderTemplate.sizeInBaseUnits,
-    market.toBase58()
-  );
-  const numQuoteLots = client.quoteUnitsToQuoteLots(
-    ImmediateOrCancelOrderTemplate.sizeInQuoteUnits,
-    market.toBase58()
-  );
-  const minBaseLotsToFill = client.rawBaseUnitsToBaseLotsRoundedDown(
-    ImmediateOrCancelOrderTemplate.minBaseUnitsToFill,
-    market.toBase58()
-  );
-  const minQuoteLotsToFill = client.quoteUnitsToQuoteLots(
-    ImmediateOrCancelOrderTemplate.minQuoteUnitsToFill,
-    market.toBase58()
-  );
-
-  const orderPacket = getImmediateOrCancelOrderPacket(
-    ImmediateOrCancelOrderTemplate.side,
-    priceInTicks,
-    numBaseLots,
-    numQuoteLots,
-    minBaseLotsToFill,
-    minQuoteLotsToFill,
-    ImmediateOrCancelOrderTemplate.selfTradeBehavior,
-    ImmediateOrCancelOrderTemplate.matchLimit,
-    ImmediateOrCancelOrderTemplate.clientOrderId,
-    ImmediateOrCancelOrderTemplate.useOnlyDepositedFunds,
-    ImmediateOrCancelOrderTemplate.lastValidSlot,
-    ImmediateOrCancelOrderTemplate.lastValidUnixTimestampInSeconds
-  );
-  return getImmediateOrCancelOrderIx(market, marketData, trader, orderPacket);
-}
-
-/**
- * Returns an immediate-or-cancel order packet.
- * @param side The side of the order
- * @param priceInTicks The price of the order in ticks
- * @param numBaseLots The number of base lots to trade
- * @param numQuoteLots The number of quote lots to trade
- * @param minBaseLotsToFill The minimum number of base lots to fill
- * @param minQuoteLotsToFill The minimum number of quote lots to fill
- * @param selfTradeBehavior The self trade behavior
- * @param matchLimit The match limit
- * @param clientOrderId The client order id
- * @param useOnlyDepositedFunds Whether to use only deposited funds
- * @param lastValidSlot The last valid slot for a time in force order
- * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for a time in force order
- */
-export function getImmediateOrCancelOrderPacket(
-  side: Side,
-  priceInTicks: number,
-  numBaseLots: number,
-  numQuoteLots: number,
-  minBaseLotsToFill: number,
-  minQuoteLotsToFill: number,
-  selfTradeBehavior?: SelfTradeBehavior,
-  matchLimit?: beet.COption<beet.bignum>,
-  clientOrderId?: number,
-  useOnlyDepositedFunds?: boolean,
-  lastValidSlot?: beet.COption<beet.bignum>,
-  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>
-): OrderPacket {
-  return {
-    __kind: "ImmediateOrCancel",
-    side,
-    priceInTicks,
-    numBaseLots,
-    numQuoteLots,
-    minBaseLotsToFill,
-    minQuoteLotsToFill,
-    selfTradeBehavior: selfTradeBehavior ?? SelfTradeBehavior.CancelProvide,
-    matchLimit,
-    clientOrderId: clientOrderId ?? 0,
-    useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
-    lastValidSlot,
-    lastValidUnixTimestampInSeconds,
-  };
-}
-
-/**
- * Returns a Phoenix swap transaction (an immediate-or-cancel order)
- *
- * @param marketAddress The address of the market to swap in
- * @param marketData The `MarketData` for the swap market
- * @param trader The `PublicKey` of the trader
- * @param orderPacket The OrderPacket to place
- */
-export function getImmediateOrCancelOrderIx(
-  marketAddress: PublicKey,
-  marketData: MarketData,
-  trader: PublicKey,
-  orderPacket: OrderPacket
-): TransactionInstruction {
-  const baseAccount = PublicKey.findProgramAddressSync(
-    [
-      trader.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.baseParams.mintKey.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0];
-  const quoteAccount = PublicKey.findProgramAddressSync(
-    [
-      trader.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.quoteParams.mintKey.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0];
-  const logAuthority = PublicKey.findProgramAddressSync(
-    [Buffer.from("log")],
-    PROGRAM_ID
-  )[0];
-
-  const orderAccounts = {
-    phoenixProgram: PROGRAM_ID,
-    logAuthority,
-    market: marketAddress,
-    trader,
-    baseAccount,
-    quoteAccount,
-    quoteVault: marketData.header.quoteParams.vaultKey,
-    baseVault: marketData.header.baseParams.vaultKey,
-  };
-
-  return createSwapInstruction(orderAccounts, {
-    orderPacket,
-  });
 }

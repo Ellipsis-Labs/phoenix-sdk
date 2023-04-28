@@ -11,6 +11,7 @@ import { Market } from "./market";
 import { Trader } from "./trader";
 import {
   ClockData,
+  PostOnlyOrderTemplate,
   DEFAULT_L2_LADDER_DEPTH,
   Ladder,
   Side,
@@ -24,19 +25,18 @@ import {
   L3Book,
   L3UiBook,
   getMarketL3UiBook,
-  SwapInstructionArgs,
   CancelMultipleOrdersByIdInstructionArgs,
   CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
   CancelUpToInstructionArgs,
   CancelUpToWithFreeFundsInstructionArgs,
   DepositFundsInstructionArgs,
-  PlaceLimitOrderInstructionArgs,
-  PlaceLimitOrderWithFreeFundsInstructionArgs,
   PlaceMultiplePostOnlyOrdersInstructionArgs,
   ReduceOrderInstructionArgs,
   ReduceOrderWithFreeFundsInstructionArgs,
-  SwapWithFreeFundsInstructionArgs,
   WithdrawFundsInstructionArgs,
+  OrderPacket,
+  LimitOrderTemplate,
+  ImmediateOrCancelOrderTemplate,
 } from "./index";
 import { bignum } from "@metaplex-foundation/beet";
 
@@ -632,7 +632,7 @@ export class Client {
   public getSeatKey(trader: PublicKey, marketAddress: string): PublicKey {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return market.getSeatKey(trader);
+    return market.getSeatAddress(trader);
   }
 
   /**
@@ -956,14 +956,14 @@ export class Client {
   /**
    * Creates a _PlaceLimitOrder_ instruction.
    *
-   * @param args to provide as instruction data to the program
+   * @param orderPacket to provide as instruction data to the program
    * @param marketAddress Market address string
    * @param trader Trader public key
    *
    * @category Instructions
    */
   public createPlaceLimitOrderInstruction(
-    args: PlaceLimitOrderInstructionArgs,
+    orderPacket: OrderPacket,
     marketAddress: string,
     trader?: PublicKey
   ): TransactionInstruction {
@@ -972,20 +972,20 @@ export class Client {
     }
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return market.createPlaceLimitOrderInstruction(args, trader);
+    return market.createPlaceLimitOrderInstruction(orderPacket, trader);
   }
 
   /**
    * Creates a _PlaceLimitOrderWithFreeFunds_ instruction.
    *
-   * @param args to provide as instruction data to the program
+   * @param orderPacket to provide as instruction data to the program
    * @param marketAddress Market address string
    * @param trader Trader public key
    *
    * @category Instructions
    */
   public createPlaceLimitOrderWithFreeFundsInstruction(
-    args: PlaceLimitOrderWithFreeFundsInstructionArgs,
+    orderPacket: OrderPacket,
     marketAddress: string,
     trader?: PublicKey
   ) {
@@ -994,7 +994,10 @@ export class Client {
     }
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return market.createPlaceLimitOrderWithFreeFundsInstruction(args, trader);
+    return market.createPlaceLimitOrderWithFreeFundsInstruction(
+      orderPacket,
+      trader
+    );
   }
 
   /**
@@ -1118,14 +1121,14 @@ export class Client {
   /**
    * Creates a _Swap_ instruction.
    *
-   * @param args to provide as instruction data to the program
+   * @param orderPacket to provide as instruction data to the program
    * @param marketAddress Market address string
    * @param trader Trader public key
    *
    * @category Instructions
    */
   public createSwapInstruction(
-    args: SwapInstructionArgs,
+    orderPacket: OrderPacket,
     marketAddress: string,
     trader?: PublicKey
   ): TransactionInstruction {
@@ -1134,20 +1137,20 @@ export class Client {
     }
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return market.createSwapInstruction(args, trader);
+    return market.createSwapInstruction(orderPacket, trader);
   }
 
   /**
    * Creates a _SwapWithFreeFunds_ instruction.
    *
-   * @param args to provide as instruction data to the program
+   * @param orderPacket to provide as instruction data to the program
    * @param marketAddress Market address string
    * @param trader Trader public key
    *
    * @category Instructions
    */
   public createSwapWithFreeFundsInstruction(
-    args: SwapWithFreeFundsInstructionArgs,
+    orderPacket: OrderPacket,
     marketAddress: string,
     trader?: PublicKey
   ) {
@@ -1156,7 +1159,7 @@ export class Client {
     }
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return market.createSwapWithFreeFundsInstruction(args, trader);
+    return market.createSwapWithFreeFundsInstruction(orderPacket, trader);
   }
 
   /**
@@ -1179,5 +1182,68 @@ export class Client {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createWithdrawFundsInstruction(args, trader);
+  }
+
+  /**
+   * Returns an instruction to place a limit order on a market, using a LimitOrderPacketTemplate, which takes in human-friendly units
+   * @param marketAddress The market's address
+   * @param trader The trader's address
+   * @param limitOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getLimitOrderInstructionfromTemplate(
+    marketAddress: string,
+    trader: PublicKey,
+    limitOrderTemplate: LimitOrderTemplate
+  ): TransactionInstruction {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+
+    return market.getLimitOrderInstructionfromTemplate(
+      trader,
+      limitOrderTemplate
+    );
+  }
+
+  /**
+   * Returns an instruction to place a post only on a market, using a PostOnlyOrderPacketTemplate, which takes in human-friendly units.
+   * @param marketAddress The market's address
+   * @param trader The trader's address
+   * @param postOnlyOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getPostOnlyOrderInstructionfromTemplate(
+    marketAddress: string,
+    trader: PublicKey,
+    postOnlyOrderTemplate: PostOnlyOrderTemplate
+  ): TransactionInstruction {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+
+    return market.getPostOnlyOrderInstructionfromTemplate(
+      trader,
+      postOnlyOrderTemplate
+    );
+  }
+
+  /**
+   * Returns an instruction to place an immediate or cancel on a market, using a ImmediateOrCancelPacketTemplate, which takes in human-friendly units.
+   * @param marketAddress The market's address
+   * @param trader The trader's address
+   * @param immediateOrCancelOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getImmediateOrCancelOrderIxfromTemplate(
+    marketAddress: string,
+    trader: PublicKey,
+    immediateOrCancelOrderTemplate: ImmediateOrCancelOrderTemplate
+  ): TransactionInstruction {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+
+    return market.getImmediateOrCancelOrderInstructionfromTemplate(
+      trader,
+      immediateOrCancelOrderTemplate
+    );
   }
 }
