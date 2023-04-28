@@ -7,7 +7,6 @@ import {
   DEFAULT_SLIPPAGE_PERCENT,
   deserializeMarketData,
   getMarketUiLadder,
-  getMarketSwapTransaction,
   toNum,
 } from "./utils";
 import { Token } from "./token";
@@ -367,39 +366,6 @@ export class Market {
   }
 
   /**
-   * Returns a Phoenix swap transaction
-   *
-   * @param trader The `PublicKey` of the trader
-   * @param side The side of the order to place (Bid, Ask)
-   * @param inAmount The amount (in whole tokens) of the input token to swap
-   * @param slippage The slippage tolerance (optional, default 0.5%)
-   * @param clientOrderId The client order ID (optional)
-   */
-  getSwapTransaction({
-    trader,
-    side,
-    inAmount,
-    slippage = DEFAULT_SLIPPAGE_PERCENT,
-    clientOrderId = 0,
-  }: {
-    trader: PublicKey;
-    side: Side;
-    inAmount: number;
-    slippage?: number;
-    clientOrderId?: number;
-  }) {
-    return getMarketSwapTransaction({
-      marketAddress: this.address,
-      marketData: this.data,
-      trader,
-      side,
-      inAmount,
-      slippage,
-      clientOrderId,
-    });
-  }
-
-  /**
    * Returns the expected amount out for a given swap order
    *
    * @param side The side of the order (Bid or Ask)
@@ -568,6 +534,15 @@ export class Market {
   }
 
   /**
+   * Given a number of base lots, returns the equivalent number of raw base units.
+   *
+   * @param baseLots The amount of base lots to convert
+   */
+  public baseLotsToRawBaseUnits(baseLots: number): number {
+    return this.baseAtomsToRawBaseUnits(this.baseLotsToBaseAtoms(baseLots));
+  }
+
+  /**
    * Given a number of quote units, returns the equivalent number of quote lots.
    *
    * @param quoteUnits The amount of quote units to convert
@@ -595,6 +570,15 @@ export class Market {
    */
   public quoteLotsToQuoteAtoms(quoteLots: number): number {
     return quoteLots * toNum(this.data.header.quoteLotSize);
+  }
+
+  /**
+   * Given a number of quote lots, returns the equivalent number of raw quote units.
+   *
+   * @param quoteLots The amount of quote lots to convert
+   */
+  public quoteLotsToQuoteUnits(quoteLots: number): number {
+    return this.quoteAtomsToQuoteUnits(this.quoteLotsToQuoteAtoms(quoteLots));
   }
 
   /**

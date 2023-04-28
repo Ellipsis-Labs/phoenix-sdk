@@ -6,6 +6,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
+  Connection,
   PublicKey,
   Transaction,
   TransactionInstruction,
@@ -13,18 +14,7 @@ import {
 import BN from "bn.js";
 import * as beet from "@metaplex-foundation/beet";
 
-import {
-  marketHeaderBeet,
-  OrderPacket,
-  SelfTradeBehavior,
-  Side,
-} from "../types";
-import {
-  createSwapInstruction,
-  createPlaceLimitOrderInstruction,
-  PlaceLimitOrderInstructionArgs,
-  PlaceLimitOrderInstructionAccounts,
-} from "../instructions";
+import { marketHeaderBeet, OrderPacket, Side } from "../types";
 import { sign, toBN, toNum } from "./numbers";
 import {
   orderIdBeet,
@@ -33,13 +23,12 @@ import {
   traderStateBeet,
 } from "./beet";
 import {
-  Client,
-  getLogAuthority,
   L3Book,
   L3Order,
   L3UiBook,
   L3UiOrder,
   LadderLevel,
+  Market,
   OrderId,
   PROGRAM_ID,
 } from "..";
@@ -638,8 +627,7 @@ function getL3UiOrder(l3Order: L3Order, marketData: MarketData): L3UiOrder {
 /**
  * Returns a Phoenix swap transaction
  *
- * @param marketAddress The address of the market to swap in
- * @param marketData The `MarketData` for the swap market
+ * @param market The market object
  * @param trader The `PublicKey` of the trader
  * @param side The side of the order to place (Bid, Ask)
  * @param inAmount The amount (in whole tokens) of the input token to swap
@@ -648,8 +636,7 @@ function getL3UiOrder(l3Order: L3Order, marketData: MarketData): L3UiOrder {
  * @param idempotent If set to true, the transaction will idempotently create both mint accounts (optional, default false)
  */
 export function getMarketSwapTransaction({
-  marketAddress,
-  marketData,
+  market,
   trader,
   side,
   inAmount,
@@ -657,8 +644,7 @@ export function getMarketSwapTransaction({
   clientOrderId = 0,
   idempotent = false,
 }: {
-  marketAddress: PublicKey;
-  marketData: MarketData;
+  market: Market;
   trader: PublicKey;
   side: Side;
   inAmount: number;
@@ -666,22 +652,11 @@ export function getMarketSwapTransaction({
   clientOrderId?: number;
   idempotent?: boolean;
 }): Transaction {
-  const quoteMintKey = marketData.header.quoteParams.mintKey;
-  const baseMintKey = marketData.header.baseParams.mintKey;
+  const quoteMintKey = market.data.header.quoteParams.mintKey;
+  const baseMintKey = market.data.header.baseParams.mintKey;
 
-  const [baseTokenAccountKey] = PublicKey.findProgramAddressSync(
-    [trader.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), baseMintKey.toBuffer()],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  );
-  const [quoteTokenAccountKey] = PublicKey.findProgramAddressSync(
-    [trader.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), quoteMintKey.toBuffer()],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  );
-
-  const logAuthority = PublicKey.findProgramAddressSync(
-    [Buffer.from("log")],
-    PROGRAM_ID
-  )[0];
+  const baseTokenAccountKey = market.getBaseAccountKey(trader);
+  const quoteTokenAccountKey = market.getQuoteAccountKey(trader);
 
   const swapTransaction = new Transaction();
 
@@ -711,33 +686,14 @@ export function getMarketSwapTransaction({
     );
   }
 
-  const orderAccounts = {
-    phoenixProgram: PROGRAM_ID,
-    logAuthority,
-    market: marketAddress,
-    trader,
-    baseAccount: baseTokenAccountKey,
-    quoteAccount: quoteTokenAccountKey,
-    quoteVault: marketData.header.quoteParams.vaultKey,
-    baseVault: marketData.header.baseParams.vaultKey,
-  };
-
-  const orderPacket = getMarketSwapOrderPacket({
-    marketData,
+  const orderPacket = market.getSwapOrderPacket({
     side,
     inAmount,
     slippage,
     clientOrderId,
   });
 
-  const swapInstruction = createSwapInstruction(orderAccounts, {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore TODO why is __kind incompatible?
-    orderPacket: {
-      __kind: "ImmediateOrCancel",
-      ...orderPacket,
-    },
-  });
+  const swapInstruction = market.createSwapInstruction(orderPacket, trader);
 
   swapTransaction.add(swapInstruction);
 
@@ -755,144 +711,6 @@ export function getMarketSwapTransaction({
   }
 
   return swapTransaction;
-}
-
-/**
- * Returns a Phoenix swap order packet
- *
- * @param marketData The `MarketData` for the swap market
- * @param side The side of the order
- * @param inAmount The amount of the input token
- * @param slippage The slippage tolerance in bps (optional, default 0.5%)
- * @param selfTradeBehavior The self trade behavior (optional, default Abort)
- * @param matchLimit The match limit (optional)
- * @param clientOrderId The client order ID (optional)
- * @param useOnlyDepositedFunds Whether to use only deposited funds (optional)
- */
-export function getMarketSwapOrderPacket({
-  marketData,
-  side,
-  inAmount,
-  slippage = DEFAULT_SLIPPAGE_PERCENT,
-  selfTradeBehavior = SelfTradeBehavior.Abort,
-  matchLimit = DEFAULT_MATCH_LIMIT,
-  clientOrderId = 0,
-  useOnlyDepositedFunds = false,
-}: {
-  marketData: MarketData;
-  side: Side;
-  inAmount: number;
-  slippage?: number;
-  selfTradeBehavior?: SelfTradeBehavior;
-  matchLimit?: number;
-  clientOrderId?: number;
-  useOnlyDepositedFunds?: boolean;
-}): Partial<OrderPacket> {
-  const numBids = toNum(marketData.header.marketSizeParams.bidsSize);
-  const numAsks = toNum(marketData.header.marketSizeParams.asksSize);
-  const uiLadder = getMarketUiLadder(marketData, Math.max(numBids, numAsks));
-  const expectedOutAmount = getExpectedOutAmountRouter({
-    uiLadder,
-    takerFeeBps: marketData.takerFeeBps,
-    side,
-    inAmount,
-  });
-  const baseMul = 10 ** marketData.header.baseParams.decimals;
-  const quoteMul = 10 ** marketData.header.quoteParams.decimals;
-  const slippageDenom = 1 - slippage;
-  let numBaseLots = 0;
-  let minBaseLotsToFill = 0;
-  let numQuoteLots = 0;
-  let minQuoteLotsToFill = 0;
-
-  if (side === Side.Ask) {
-    numBaseLots =
-      (inAmount * baseMul) /
-      parseFloat(marketData.header.baseLotSize.toString());
-    minQuoteLotsToFill = Math.ceil(
-      ((expectedOutAmount * quoteMul) /
-        parseFloat(marketData.header.quoteLotSize.toString())) *
-        slippageDenom
-    );
-  } else {
-    numQuoteLots =
-      (inAmount * quoteMul) /
-      parseFloat(marketData.header.quoteLotSize.toString());
-    minBaseLotsToFill = Math.ceil(
-      ((expectedOutAmount * baseMul) /
-        parseFloat(marketData.header.baseLotSize.toString())) *
-        slippageDenom
-    );
-  }
-
-  const orderPacket: Partial<OrderPacket> = {
-    side,
-    priceInTicks: null,
-    numBaseLots,
-    minBaseLotsToFill,
-    numQuoteLots,
-    minQuoteLotsToFill,
-    selfTradeBehavior,
-    matchLimit,
-    clientOrderId,
-    useOnlyDepositedFunds,
-    lastValidSlot: null,
-    lastValidUnixTimestampInSeconds: null,
-  };
-
-  return orderPacket;
-}
-
-/**
- * Returns a Phoenix swap order packet
- *
- * @param marketData The `MarketData` for the swap market
- * @param side The side of the order
- * @param inAmount The amount of the input token
- * @param lastValidSlot The last valid slot for the order, if null, the order is valid until cancelled
- * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for the order, if null, the order is valid until cancelled
- * @param slippage The slippage tolerance in bps (optional, default 0.5%)
- * @param selfTradeBehavior The self trade behavior (optional, default Abort)
- * @param matchLimit The match limit (optional)
- * @param clientOrderId The client order ID (optional)
- * @param useOnlyDepositedFunds Whether to use only deposited funds (optional)
- */
-export function getMarketSwapOrderPacketWithTimeInForce({
-  marketData,
-  side,
-  inAmount,
-  lastValidSlot,
-  lastValidUnixTimestampInSeconds,
-  slippage = DEFAULT_SLIPPAGE_PERCENT,
-  selfTradeBehavior = SelfTradeBehavior.Abort,
-  matchLimit = DEFAULT_MATCH_LIMIT,
-  clientOrderId = 0,
-  useOnlyDepositedFunds = false,
-}: {
-  marketData: MarketData;
-  side: Side;
-  inAmount: number;
-  lastValidSlot: number | null;
-  lastValidUnixTimestampInSeconds: number | null;
-  slippage?: number;
-  selfTradeBehavior?: SelfTradeBehavior;
-  matchLimit?: number;
-  clientOrderId?: number;
-  useOnlyDepositedFunds?: boolean;
-}): Partial<OrderPacket> {
-  const orderPacket = getMarketSwapOrderPacket({
-    marketData,
-    side,
-    inAmount,
-    slippage,
-    selfTradeBehavior,
-    matchLimit,
-    clientOrderId,
-    useOnlyDepositedFunds,
-  });
-  orderPacket.lastValidSlot = lastValidSlot;
-  orderPacket.lastValidUnixTimestampInSeconds = lastValidUnixTimestampInSeconds;
-  return orderPacket;
 }
 
 /**
@@ -1142,89 +960,34 @@ export function getQuoteAmountFromBaseAmountBudgetAndBook({
 }
 
 /**
- * Returns an instruction to place a limit order on a market
- * Does not check for existence of associated token accounts or seat (no network calls)
- * Should be used to place limit orders after it's confirmed that the maker has ATAs and a seat on the market
- * @param market The market's address
- * @param marketData The market's data, containing base and quote mint information
- * @param trader The trader's address
- * @param orderPacket The order packet to place
- */
-export function getLimitOrderIx(
-  market: PublicKey,
-  marketData: MarketData,
-  trader: PublicKey,
-  orderPacket: OrderPacket
-): TransactionInstruction {
-  const seat = getSeatAddress(market, trader);
-  const logAuthority = getLogAuthority();
-
-  const baseAccount = PublicKey.findProgramAddressSync(
-    [
-      trader.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.baseParams.mintKey.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0];
-  const quoteAccount = PublicKey.findProgramAddressSync(
-    [
-      trader.toBuffer(),
-      TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.quoteParams.mintKey.toBuffer(),
-    ],
-    ASSOCIATED_TOKEN_PROGRAM_ID
-  )[0];
-
-  const limitOrderAccounts: PlaceLimitOrderInstructionAccounts = {
-    phoenixProgram: PROGRAM_ID,
-    logAuthority,
-    market,
-    trader,
-    seat,
-    baseAccount,
-    quoteAccount,
-    baseVault: marketData.header.baseParams.vaultKey,
-    quoteVault: marketData.header.quoteParams.vaultKey,
-  };
-
-  const args: PlaceLimitOrderInstructionArgs = {
-    orderPacket,
-  };
-
-  return createPlaceLimitOrderInstruction(limitOrderAccounts, args);
-}
-
-/**
  * Returns instructions for setting up a new maker on a market. Includes:
  * - create associated token accounts for base and quote tokens if needed
  * - create a claim seat instruction if needed, including performing a seat eviction if the market's trader state is full.
- * @param client An instance of the Client class
- * @param market The market's address
+ * @param connection An instance of the Connection class
+ * @param market The market object
  * @param marketData The market's data, containing base and quote mint information
  * @param trader The trader's address
  * @returns
  */
 export async function getMakerSetupInstructionsForMarket(
-  client: Client,
-  market: PublicKey,
-  marketData: MarketData,
+  connection: Connection,
+  market: Market,
   trader: PublicKey
 ): Promise<TransactionInstruction[]> {
   const baseAtaIxs = await getCreateTokenAccountInstructions(
-    client.connection,
+    connection,
     trader,
     trader,
-    marketData.header.baseParams.mintKey
+    market.data.header.baseParams.mintKey
   );
   const quoteAtaIxs = await getCreateTokenAccountInstructions(
-    client.connection,
+    connection,
     trader,
     trader,
-    marketData.header.quoteParams.mintKey
+    market.data.header.quoteParams.mintKey
   );
   const claimSeatIxs = await confirmOrCreateClaimSeatIxs(
-    client,
+    connection,
     market,
     trader
   );
@@ -1238,28 +1001,23 @@ export async function getMakerSetupInstructionsForMarket(
  * - checking for and claiming a seat, if trader does not have a seat on the market
  * - instruction for placing the limit order itself
  * Useful if unknown whether trader has the correct ATAs and seat initialized
- * @param client An instance of the Client class
- * @param market The market's address
- * @param marketData The market's data, containing base and quote mint information
+ * @param connection An instance of the Connection class
+ * @param market A market object
  * @param trader The trader's address
  * @param orderPacket The order packet to place
  * @returns
  */
 export async function getLimitOrderNewMakerIxs(
-  client: Client,
-  market: PublicKey,
-  marketData: MarketData,
+  connection: Connection,
+  market: Market,
   trader: PublicKey,
   orderPacket: OrderPacket
 ): Promise<TransactionInstruction[]> {
   const instructions: TransactionInstruction[] =
-    await getMakerSetupInstructionsForMarket(
-      client,
-      market,
-      marketData,
-      trader
-    );
-  instructions.push(getLimitOrderIx(market, marketData, trader, orderPacket));
+    await getMakerSetupInstructionsForMarket(connection, market, trader);
+  instructions.push(
+    market.createPlaceLimitOrderInstruction(orderPacket, trader)
+  );
 
   return instructions;
 }
@@ -1267,29 +1025,30 @@ export async function getLimitOrderNewMakerIxs(
 /**
  * Returns instructions for claiming a seat on a market and placing a limit order
  * Useful if the caller is uncertain whether the trader has been evicted from the market, but knows the trader has ATAs
- * @param client An instance of the Client class
- * @param market The market's address
+ * @param connection An instance of the Connection class
+ * @param market The market object
  * @param marketData The market's data, containing base and quote mint information
  * @param trader The trader's address
  * @param orderPacket The order packet to place
  * @returns
  */
 export async function getLimitOrderUnknownSeatIxs(
-  client: Client,
-  market: PublicKey,
-  marketData: MarketData,
+  connection: Connection,
+  market: Market,
   trader: PublicKey,
   orderPacket: OrderPacket
 ): Promise<TransactionInstruction[]> {
   const instructions: TransactionInstruction[] = [];
 
   const claimSeatIxs = await confirmOrCreateClaimSeatIxs(
-    client,
+    connection,
     market,
     trader
   );
   instructions.push(...claimSeatIxs);
-  instructions.push(getLimitOrderIx(market, marketData, trader, orderPacket));
+  instructions.push(
+    market.createPlaceLimitOrderInstruction(orderPacket, trader)
+  );
 
   return instructions;
 }

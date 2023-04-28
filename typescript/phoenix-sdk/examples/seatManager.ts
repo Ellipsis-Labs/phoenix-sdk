@@ -1,4 +1,10 @@
-import { Connection, PublicKey, Transaction, Keypair } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  Keypair,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
 import {
   getSeatManagerAddress,
   deserializeSeatManagerData,
@@ -88,10 +94,15 @@ export async function claimSeat() {
   // Create a claim seat instruction, attach to a Transaction, and send.
   const claimSeatIx = getClaimSeatIx(marketAddress, traderKeypair.publicKey);
   const tx = new Transaction().add(claimSeatIx);
-  const txId = await phoenix.connection.sendTransaction(tx, [traderKeypair], {
-    skipPreflight: true,
-  });
-  await phoenix.connection.confirmTransaction(txId, "confirmed");
+  const txId = await sendAndConfirmTransaction(
+    connection,
+    tx,
+    [traderKeypair],
+    {
+      skipPreflight: true,
+      commitment: "confirmed",
+    }
+  );
   console.log(
     `Claim seat tx Link: https://beta.solscan.io/tx/${txId}?cluster=devnet`
   );
@@ -150,9 +161,15 @@ export async function evictSeat() {
   );
 
   const tx = new Transaction().add(evictSeatIx);
-  const txId = await phoenix.connection.sendTransaction(tx, [signerKeypair], {
-    skipPreflight: true,
-  });
+  const txId = await sendAndConfirmTransaction(
+    connection,
+    tx,
+    [signerKeypair],
+    {
+      skipPreflight: true,
+      commitment: "confirmed",
+    }
+  );
   console.log(
     `Evict seat tx Link: https://beta.solscan.io/tx/${txId}?cluster=devnet`
   );

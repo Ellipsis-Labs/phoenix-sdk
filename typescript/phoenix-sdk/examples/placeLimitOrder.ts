@@ -1,4 +1,10 @@
-import { Connection, PublicKey, Transaction, Keypair } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+  Keypair,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
 import { airdropSplTokensForMarketIxs } from "../src/utils/genericTokenMint";
 
 import * as PhoenixSdk from "../src";
@@ -30,7 +36,8 @@ export async function placeLimitOrderExample() {
   const marketAddress = new PublicKey(
     "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N"
   );
-  const marketData = phoenixClient.markets.get(marketAddress.toBase58())?.data;
+  const market = phoenixClient.markets.get(marketAddress.toBase58());
+  const marketData = market?.data;
 
   if (marketData === undefined) {
     throw Error("Market not found");
@@ -41,21 +48,21 @@ export async function placeLimitOrderExample() {
   // - Create associated token accounts for base and quote tokens, if needed
   // - Claim a maker seat on the market, if needed
   const setupNewMakerIxs = await PhoenixSdk.getMakerSetupInstructionsForMarket(
-    phoenixClient,
-    marketAddress,
-    marketData,
+    connection,
+    market,
     traderKeypair.publicKey
   );
   const setupTx = new Transaction().add(...setupNewMakerIxs);
 
-  const setupTxId = await phoenixClient.connection.sendTransaction(
+  const setupTxId = await sendAndConfirmTransaction(
+    connection,
     setupTx,
     [traderKeypair],
     {
       skipPreflight: true,
+      commitment: "confirmed",
     }
   );
-  await phoenixClient.connection.confirmTransaction(setupTxId, "confirmed");
   console.log(
     `Setup Tx Link: https://beta.solscan.io/tx/${setupTxId}?cluster=devnet`
   );
@@ -69,14 +76,15 @@ export async function placeLimitOrderExample() {
   );
   const airdropSplTx = new Transaction().add(...airdropSplIxs);
 
-  const airdropTxId = await phoenixClient.connection.sendTransaction(
+  const airdropTxId = await sendAndConfirmTransaction(
+    connection,
     airdropSplTx,
     [traderKeypair],
     {
       skipPreflight: true,
+      commitment: "confirmed",
     }
   );
-  await phoenixClient.connection.confirmTransaction(airdropTxId, "confirmed");
   console.log(
     `Airdrop Tx Link: https://beta.solscan.io/tx/${airdropTxId}?cluster=devnet`
   );
@@ -98,17 +106,18 @@ export async function placeLimitOrderExample() {
 
     const tx = new Transaction().add(limitOrderIx);
 
-    const txId = await phoenixClient.connection.sendTransaction(
+    const txId = await sendAndConfirmTransaction(
+      connection,
       tx,
       [traderKeypair],
       {
         skipPreflight: true,
+        commitment: "confirmed",
       }
     );
 
     // Note: Your order may fail if you no longer have a seat on the market, which can happen if the market's trader state is full and you did not have open orders.
     // In that case, you can generate the instructions to create a seat with confirmOrCreateClaimSeatIxs or with getMakerSetupInstructionsForMarket as used the above.
-    await phoenixClient.connection.confirmTransaction(txId, "confirmed");
     console.log(
       `Order ${
         i + 1

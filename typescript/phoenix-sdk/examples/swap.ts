@@ -1,4 +1,10 @@
-import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  Keypair,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
 import base58 from "bs58";
 
 import * as Phoenix from "../src";
@@ -51,33 +57,16 @@ export async function swap() {
     "% slippage"
   );
 
+  // Generate an IOC order packet
   const orderPacket = market.getSwapOrderPacket({
     side,
     inAmount,
     slippage,
   });
-
-  const swapIx = client.createSwapInstruction(
-    orderPacket,
-    marketAddress.toBase58(),
-    trader.publicKey
-  );
-
-  const controlTx = new Transaction().add(swapIx);
-
-  const swapTx = Phoenix.getMarketSwapTransaction({
-    marketAddress,
-    marketData,
-    trader: trader.publicKey,
-    side,
-    inAmount,
-    slippage,
-  });
-
-  if (JSON.stringify(controlTx) !== JSON.stringify(swapTx))
-    throw Error(
-      "Manually created transaction does not match the one created by the SDK"
-    );
+  // Genearte a swap instruction from the order packet
+  const swapIx = market.createSwapInstruction(orderPacket, trader.publicKey);
+  // Create a transaction with the swap instruction
+  const swapTx = new Transaction().add(swapIx);
 
   const expectedOutAmount = client.getMarketExpectedOutAmount({
     marketAddress: marketAddress.toBase58(),
@@ -90,77 +79,17 @@ export async function swap() {
     side === Phoenix.Side.Ask ? "USDC" : "SOL"
   );
 
-  const txId = await connection.sendTransaction(swapTx, [trader], {
-    skipPreflight: true,
+  const txId = await sendAndConfirmTransaction(connection, swapTx, [trader], {
+    commitment: "confirmed",
   });
-  await connection.confirmTransaction(txId, "confirmed");
   console.log("Transaction ID:", txId);
-
-  let txResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
+  const txResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
     connection,
     txId
   );
-  let counter = 1;
-  while (!txResult.txReceived) {
-    txResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
-      connection,
-      txId
-    );
-    counter += 1;
-    if (counter == 10) {
-      throw Error("Failed to fetch transaction");
-    }
-  }
 
   if (txResult.txFailed) {
     console.log("Swap transaction failed");
-    return;
-  }
-
-  const expiredOrderPacket = market.getSwapOrderPacket({
-    side,
-    inAmount,
-    slippage,
-    lastValidUnixTimestampInSeconds: 10, // This time will be treated as expired
-    lastValidSlot: null,
-  });
-
-  const expiredSwapIx = client.createSwapInstruction(
-    expiredOrderPacket,
-    marketAddress.toBase58(),
-    trader.publicKey
-  );
-
-  const expiredSwapTx = new Transaction().add(expiredSwapIx);
-  const expiredTxId = await connection.sendTransaction(
-    expiredSwapTx,
-    [trader],
-    {
-      skipPreflight: true,
-    }
-  );
-  await connection.confirmTransaction(expiredTxId, "confirmed");
-  console.log("Transaction ID:", expiredTxId);
-
-  let expiredTxResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
-    connection,
-    expiredTxId
-  );
-  let expiredCounter = 1;
-  while (!expiredTxResult.txReceived) {
-    console.log(expiredTxResult);
-    expiredTxResult = await Phoenix.getPhoenixEventsFromTransactionSignature(
-      connection,
-      expiredTxId
-    );
-    expiredCounter += 1;
-    if (expiredCounter == 10) {
-      throw Error("Failed to fetch transaction");
-    }
-  }
-
-  if (expiredTxResult.txFailed) {
-    console.log("Expired transaction not supposed to fail");
     return;
   }
 
@@ -177,8 +106,7 @@ export async function swap() {
   if (side == Phoenix.Side.Bid) {
     console.log(
       "Filled",
-      Phoenix.toNum(summary.totalBaseLotsFilled) /
-        marketData.baseLotsPerBaseUnit,
+      market.baseLotsToRawBaseUnits(Phoenix.toNum(summary.totalBaseLotsFilled)),
       "SOL"
     );
   } else {
@@ -186,17 +114,14 @@ export async function swap() {
       "Sold",
       inAmount,
       "SOL for",
-      (Phoenix.toNum(summary.totalQuoteLotsFilled) *
-        Phoenix.toNum(marketData.header.quoteLotSize)) /
-        10 ** marketData.header.quoteParams.decimals,
+      market.quoteLotsToQuoteUnits(Phoenix.toNum(summary.totalQuoteLotsFilled)),
       "USDC"
     );
   }
 
-  const fees =
-    (Phoenix.toNum(summary.totalFeeInQuoteLots) *
-      Phoenix.toNum(marketData.header.quoteLotSize)) /
-    10 ** marketData.header.quoteParams.decimals;
+  const fees = market.quoteLotsToQuoteUnits(
+    Phoenix.toNum(summary.totalFeeInQuoteLots)
+  );
   console.log(`Paid $${fees} in fees`);
 }
 
