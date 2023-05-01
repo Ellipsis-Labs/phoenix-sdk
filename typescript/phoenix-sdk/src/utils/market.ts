@@ -584,6 +584,10 @@ export function getMarketL3Book(
           toNum(restingOrder.traderIndex)
         ),
         orderSequenceNumber: getUiOrderSequenceNumber(orderId),
+        lastValidSlot: toBN(restingOrder.lastValidSlot),
+        lastValidUnixTimestampInSeconds: toBN(
+          restingOrder.lastValidUnixTimestampInSeconds
+        ),
       };
       if (side === Side.Ask) {
         asks.push(order);
@@ -652,6 +656,10 @@ function getL3UiOrder(l3Order: L3Order, marketData: MarketData): L3UiOrder {
       marketData.baseLotsPerBaseUnit,
     makerPubkey: l3Order.makerPubkey,
     orderSequenceNumber: l3Order.orderSequenceNumber.toString(),
+    lastValidSlot: toNum(l3Order.lastValidSlot),
+    lastValidUnixTimestampInSeconds: toNum(
+      l3Order.lastValidUnixTimestampInSeconds
+    ),
   };
 }
 

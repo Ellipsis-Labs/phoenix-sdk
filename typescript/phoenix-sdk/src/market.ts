@@ -89,6 +89,8 @@ export type L3Order = {
   sizeInBaseLots: BN;
   makerPubkey: string;
   orderSequenceNumber: BN;
+  lastValidSlot: BN;
+  lastValidUnixTimestampInSeconds: BN;
 };
 
 export type L3UiOrder = {
@@ -97,6 +99,8 @@ export type L3UiOrder = {
   size: number;
   makerPubkey: string;
   orderSequenceNumber: string;
+  lastValidSlot: number;
+  lastValidUnixTimestampInSeconds: number;
 };
 
 export type L3Book = {
