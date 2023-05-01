@@ -965,7 +965,6 @@ export function getQuoteAmountFromBaseAmountBudgetAndBook({
  * - create a claim seat instruction if needed, including performing a seat eviction if the market's trader state is full.
  * @param connection An instance of the Connection class
  * @param market The market object
- * @param marketData The market's data, containing base and quote mint information
  * @param trader The trader's address
  * @returns
  */
@@ -1027,7 +1026,6 @@ export async function getLimitOrderNewMakerIxs(
  * Useful if the caller is uncertain whether the trader has been evicted from the market, but knows the trader has ATAs
  * @param connection An instance of the Connection class
  * @param market The market object
- * @param marketData The market's data, containing base and quote mint information
  * @param trader The trader's address
  * @param orderPacket The order packet to place
  * @returns
