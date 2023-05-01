@@ -14,7 +14,12 @@ import {
 import BN from "bn.js";
 import * as beet from "@metaplex-foundation/beet";
 
-import { marketHeaderBeet, OrderPacket, Side } from "../types";
+import {
+  CancelOrderParams,
+  marketHeaderBeet,
+  OrderPacket,
+  Side,
+} from "../types";
 import { sign, toBN, toNum } from "./numbers";
 import {
   orderIdBeet,
@@ -263,6 +268,32 @@ export function getUiOrderSequenceNumber(orderId: OrderId): BN {
   return twosComplement.isNeg()
     ? twosComplement.neg().sub(new BN(1))
     : twosComplement;
+}
+
+/**
+ * Returns the order sequence number used to build a cancel order instruction from an L3 order
+ * @param order
+ */
+export function getOrderSequenceNumberFromL3Order(order: L3Order): BN {
+  let orderSequenceNumber = order.orderSequenceNumber;
+  if (order.side === Side.Bid) {
+    orderSequenceNumber = orderSequenceNumber.add(toBN(1)).neg().toTwos(64);
+  }
+  return orderSequenceNumber;
+}
+
+/**
+ * Returns the cancel order params used to build a cancel order instruction from an L3 order
+ * @param order
+ */
+export function getCancelOrderParamsFromL3Order(
+  order: L3Order
+): CancelOrderParams {
+  return {
+    side: order.side,
+    orderSequenceNumber: getOrderSequenceNumberFromL3Order(order),
+    priceInTicks: order.priceInTicks,
+  };
 }
 
 /**
