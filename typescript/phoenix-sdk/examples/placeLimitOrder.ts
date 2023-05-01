@@ -37,11 +37,10 @@ export async function placeLimitOrderExample() {
     "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N"
   );
   const market = phoenixClient.markets.get(marketAddress.toBase58());
-  const marketData = market?.data;
-
-  if (marketData === undefined) {
+  if (market === undefined) {
     throw Error("Market not found");
   }
+  const marketData = market.data;
 
   // If you are a new maker, you will need to create associated token accounts for the base and quote tokens, and claim a maker seat on the market.
   // This function creates a bundle of new instructions that includes:

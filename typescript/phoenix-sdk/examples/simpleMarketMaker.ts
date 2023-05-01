@@ -67,7 +67,6 @@ export async function simpleMarketMaker(privateKeyPath: string) {
         commitment: "confirmed",
       }
     );
-    await client.connection.confirmTransaction(setupTxId, "confirmed");
     console.log(
       `Setup Tx Link: https://beta.solscan.io/tx/${setupTxId}?cluster=devnet`
     );

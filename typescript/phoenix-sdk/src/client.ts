@@ -1105,12 +1105,12 @@ export class Client {
     payer?: PublicKey,
     trader?: PublicKey
   ) {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
 
     if (!payer) {
       payer = this.trader.pubkey;
+    }
+    if (!trader) {
+      trader = payer;
     }
 
     const market = this.markets.get(marketAddress);

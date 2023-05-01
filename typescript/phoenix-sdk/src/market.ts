@@ -51,10 +51,7 @@ import {
   getRequiredInAmountRouter,
   getSeatAddress,
 } from "./index";
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
 export type OrderId = {
   priceInTicks: beet.bignum;
@@ -159,6 +156,8 @@ export interface MarketData {
 export class Market {
   address: PublicKey;
   data: MarketData;
+
+  // Optional fields containing the name of the market and the tokens used for the market
   name?: string;
   baseToken?: Token;
   quoteToken?: Token;
@@ -178,7 +177,6 @@ export class Market {
   }) {
     this.address = address;
     this.data = data;
-    // These fields are optional because they are not always available
     this.name = name;
     this.baseToken = baseToken;
     this.quoteToken = quoteToken;
@@ -294,20 +292,18 @@ export class Market {
   }
 
   /**
-   * Reloads market data from buffer
+   * Reloads market data from buffer (in place)
    *
    * @param connection The Solana `Connection` object
    *
-   * @returns The reloaded Market
    */
-  async reloadFromNetwork(connection: Connection): Promise<Market> {
+  async reloadFromNetwork(connection: Connection): Promise<void> {
     const marketData = deserializeMarketData(
       await connection
         .getAccountInfo(this.address, "confirmed")
         .then((accountInfo) => accountInfo?.data)
     );
     this.data = marketData;
-    return this;
   }
 
   /**
@@ -316,14 +312,11 @@ export class Market {
    * @param trader The `PublicKey` of the trader account
    */
   public getBaseAccountKey(trader: PublicKey): PublicKey {
-    return PublicKey.findProgramAddressSync(
-      [
-        trader.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        this.data.header.baseParams.mintKey.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
+    return getAssociatedTokenAddressSync(
+      this.data.header.baseParams.mintKey,
+      trader,
+      true
+    );
   }
 
   /**
@@ -332,14 +325,11 @@ export class Market {
    * @param trader The `PublicKey` of the trader account
    */
   public getQuoteAccountKey(trader: PublicKey): PublicKey {
-    return PublicKey.findProgramAddressSync(
-      [
-        trader.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        this.data.header.quoteParams.mintKey.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
+    return getAssociatedTokenAddressSync(
+      this.data.header.quoteParams.mintKey,
+      trader,
+      true
+    );
   }
 
   /**

@@ -39,8 +39,9 @@ export async function swap() {
   );
 
   const market = client.markets.get(marketAddress.toBase58());
-  const marketData = market?.data;
-  if (marketData === undefined) throw Error("Market not found");
+  if (market === undefined) {
+    throw Error("Market not found");
+  }
 
   const side = Math.random() > 0.5 ? Phoenix.Side.Ask : Phoenix.Side.Bid;
   const inAmount =
@@ -63,7 +64,7 @@ export async function swap() {
     inAmount,
     slippage,
   });
-  // Genearte a swap instruction from the order packet
+  // Generate a swap instruction from the order packet
   const swapIx = market.createSwapInstruction(orderPacket, trader.publicKey);
   // Create a transaction with the swap instruction
   const swapTx = new Transaction().add(swapIx);
@@ -122,7 +123,7 @@ export async function swap() {
   const fees = market.quoteLotsToQuoteUnits(
     Phoenix.toNum(summary.totalFeeInQuoteLots)
   );
-  console.log(`Paid $${fees} in fees`);
+  console.log(`Paid ${fees} in fees`);
 }
 
 (async function () {
