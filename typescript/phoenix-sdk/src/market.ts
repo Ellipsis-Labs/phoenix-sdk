@@ -113,9 +113,14 @@ export type L3UiBook = {
   asks: L3UiOrder[];
 };
 
+export type UiLadderLevel = {
+  price: number;
+  quantity: number;
+};
+
 export type UiLadder = {
-  bids: Array<[number, number]>;
-  asks: Array<[number, number]>;
+  bids: Array<UiLadderLevel>;
+  asks: Array<UiLadderLevel>;
 };
 
 export interface MarketData {

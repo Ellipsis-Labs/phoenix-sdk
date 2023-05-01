@@ -36,6 +36,7 @@ import {
   Market,
   OrderId,
   PROGRAM_ID,
+  UiLadderLevel,
 } from "..";
 import { Ladder, UiLadder, MarketData, TraderState } from "../market";
 import { getCreateTokenAccountInstructions } from "./token";
@@ -459,15 +460,17 @@ function levelToUiLevel(
   priceInTicks: BN,
   sizeInBaseLots: BN,
   quoteAtomsPerQuoteUnit: number
-): [number, number] {
-  return [
-    ((toNum(priceInTicks) / quoteAtomsPerQuoteUnit) *
-      marketData.quoteLotsPerBaseUnitPerTick *
-      toNum(marketData.header.quoteLotSize)) /
+): UiLadderLevel {
+  return {
+    price:
+      ((toNum(priceInTicks) / quoteAtomsPerQuoteUnit) *
+        marketData.quoteLotsPerBaseUnitPerTick *
+        toNum(marketData.header.quoteLotSize)) /
       marketData.header.rawBaseUnitsPerBaseUnit,
-    (toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit) *
+    quantity:
+      (toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit) *
       marketData.header.rawBaseUnitsPerBaseUnit,
-  ];
+  };
 }
 
 /**
@@ -530,13 +533,13 @@ export function printUiLadder(uiLadder: UiLadder) {
   };
   // Reverse the asks so the display order is descending in price
   console.log("\u001b[30mAsks\u001b[0m");
-  for (const [price, size] of asks.reverse()) {
-    printLine(price, size, "red");
+  for (const { price, quantity } of asks.reverse()) {
+    printLine(price, quantity, "red");
   }
 
   console.log("\u001b[30mBids\u001b[0m");
-  for (const [price, size] of bids) {
-    printLine(price, size, "green");
+  for (const { price, quantity } of bids) {
+    printLine(price, quantity, "green");
   }
 }
 
@@ -938,16 +941,16 @@ export function getBaseAmountFromQuoteAmountBudgetAndBook({
   sideOfBook,
   quoteAmountBudget,
 }: {
-  sideOfBook: [number, number][];
+  sideOfBook: UiLadderLevel[];
   quoteAmountBudget: number;
 }): number {
   // Number returned is raw base units
   let quoteAmountBudgetRemaining = quoteAmountBudget;
   let baseAmount = 0;
-  for (const [
-    priceInQuoteUnitsPerRawBaseUnit,
-    sizeInRawBaseUnits,
-  ] of sideOfBook) {
+  for (const {
+    price: priceInQuoteUnitsPerRawBaseUnit,
+    quantity: sizeInRawBaseUnits,
+  } of sideOfBook) {
     if (
       priceInQuoteUnitsPerRawBaseUnit * sizeInRawBaseUnits >=
       quoteAmountBudgetRemaining
@@ -976,15 +979,15 @@ export function getQuoteAmountFromBaseAmountBudgetAndBook({
   sideOfBook,
   baseAmountBudget,
 }: {
-  sideOfBook: [number, number][];
+  sideOfBook: UiLadderLevel[];
   baseAmountBudget: number;
 }): number {
   let baseAmountBudgetRemaining = baseAmountBudget;
   let quoteAmount = 0;
-  for (const [
-    priceInQuoteUnitsPerRawBaseUnit,
-    sizeInRawBaseUnits,
-  ] of sideOfBook) {
+  for (const {
+    price: priceInQuoteUnitsPerRawBaseUnit,
+    quantity: sizeInRawBaseUnits,
+  } of sideOfBook) {
     if (sizeInRawBaseUnits >= baseAmountBudgetRemaining) {
       quoteAmount +=
         baseAmountBudgetRemaining * priceInQuoteUnitsPerRawBaseUnit;
