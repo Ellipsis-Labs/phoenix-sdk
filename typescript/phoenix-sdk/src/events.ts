@@ -3,21 +3,23 @@ import {
   ParsedTransactionWithMeta,
   PartiallyDecodedInstruction,
   PublicKey,
+  TransactionSignature,
 } from "@solana/web3.js";
 import { BinaryReader } from "borsh";
 import base58 from "bs58";
 import * as beet from "@metaplex-foundation/beet";
 
-import { PROGRAM_ID } from "../index";
+import { PROGRAM_ID } from "./index";
 import {
   AuditLogHeader,
   PhoenixMarketEvent,
   phoenixMarketEventBeet,
-} from "../types";
-import { logInstructionDiscriminator } from "../instructions";
+} from "./types";
+import { logInstructionDiscriminator } from "./instructions";
 
 export type PhoenixTransaction = {
   instructions: Array<PhoenixEventsFromInstruction>;
+  signature?: TransactionSignature;
   txReceived: boolean;
   txFailed: boolean;
 };
@@ -123,7 +125,12 @@ export function getPhoenixEventsFromTransactionData(
       events: events,
     });
   }
-  return { instructions: instructions, txReceived: true, txFailed: false };
+  return {
+    instructions: instructions,
+    signature: txData.transaction.signatures[0],
+    txReceived: true,
+    txFailed: false,
+  };
 }
 
 /**
@@ -152,7 +159,7 @@ export async function getPhoenixEventsFromTransactionSignature(
  */
 export async function getEventsFromTransaction(
   connection: Connection,
-  signature: string
+  signature: TransactionSignature
 ): Promise<PhoenixTransaction> {
   const txData = await connection.getParsedTransaction(signature, {
     commitment: "confirmed",

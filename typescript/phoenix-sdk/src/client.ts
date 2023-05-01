@@ -3,20 +3,17 @@ import {
   Connection,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
+  TransactionInstruction,
 } from "@solana/web3.js";
-import { getClusterFromEndpoint, toNum } from "./utils";
+import { getClusterFromEndpoint } from "./utils";
 import { Token } from "./token";
 import { Market } from "./market";
 import { Trader } from "./trader";
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
-import {
   ClockData,
+  PostOnlyOrderTemplate,
   DEFAULT_L2_LADDER_DEPTH,
   Ladder,
-  PROGRAM_ID,
   Side,
   UiLadder,
   deserializeClockData,
@@ -28,6 +25,18 @@ import {
   L3Book,
   L3UiBook,
   getMarketL3UiBook,
+  CancelMultipleOrdersByIdInstructionArgs,
+  CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
+  CancelUpToInstructionArgs,
+  CancelUpToWithFreeFundsInstructionArgs,
+  DepositFundsInstructionArgs,
+  PlaceMultiplePostOnlyOrdersInstructionArgs,
+  ReduceOrderInstructionArgs,
+  ReduceOrderWithFreeFundsInstructionArgs,
+  WithdrawFundsInstructionArgs,
+  OrderPacket,
+  LimitOrderTemplate,
+  ImmediateOrCancelOrderTemplate,
 } from "./index";
 import { bignum } from "@metaplex-foundation/beet";
 
@@ -563,7 +572,7 @@ export class Client {
   }
 
   /**
-   * Get a trader's base token account Pubkey for a given market
+   * Get a trader's base ATA for a given market
    *
    * @param trader The `PublicKey` of the trader account
    * @param marketAddress The `PublicKey` of the market account, as a string
@@ -574,18 +583,11 @@ export class Client {
   ): PublicKey {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return PublicKey.findProgramAddressSync(
-      [
-        trader.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        market.data.header.baseParams.mintKey.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
+    return market.getBaseAccountKey(trader);
   }
 
   /**
-   * Get a trader's quote token account Pubkey for a given market
+   * Get a trader's quote ATA for a given market
    *
    * @param trader The `PublicKey` of the trader account
    * @param marketAddress The `PublicKey` of the market account, as a string
@@ -596,14 +598,29 @@ export class Client {
   ): PublicKey {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return PublicKey.findProgramAddressSync(
-      [
-        trader.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        market.data.header.quoteParams.mintKey.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )[0];
+    return market.getQuoteAccountKey(trader);
+  }
+
+  /**
+   * Get the quote vault address for a given market
+   *
+   * @param marketAddress The `PublicKey` of the market account, as a string
+   */
+  public getQuoteVaultKey(marketAddress: string): PublicKey {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.getQuoteVaultKey();
+  }
+
+  /**
+   * Get the base vault address for a given market
+   *
+   * @param marketAddress The `PublicKey` of the market account, as a string
+   */
+  public getBaseVaultKey(marketAddress: string): PublicKey {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.getBaseVaultKey();
   }
 
   /**
@@ -615,22 +632,12 @@ export class Client {
   public getSeatKey(trader: PublicKey, marketAddress: string): PublicKey {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    const marketPubkey = new PublicKey(marketAddress);
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("seat"), marketPubkey.toBuffer(), trader.toBuffer()],
-      PROGRAM_ID
-    )[0];
+    return market.getSeatAddress(trader);
   }
 
   /**
-   * Returns the Phoenix log authority Pubkey
-   */
-  public getLogAuthority(): PublicKey {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("log")],
-      PROGRAM_ID
-    )[0];
-  }
+   * Unit conversion functions
+   **/
 
   /**
    * Given a price in quote units per raw base unit, returns the price in ticks.
@@ -643,14 +650,7 @@ export class Client {
   public floatPriceToTicks(price: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-
-    return Math.round(
-      (price *
-        market.data.header.rawBaseUnitsPerBaseUnit *
-        10 ** market.quoteToken.data.decimals) /
-        (market.data.quoteLotsPerBaseUnitPerTick *
-          toNum(market.data.header.quoteLotSize))
-    );
+    return market.floatPriceToTicks(price);
   }
 
   /**
@@ -664,13 +664,7 @@ export class Client {
   public ticksToFloatPrice(ticks: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return (
-      (ticks *
-        market.data.quoteLotsPerBaseUnitPerTick *
-        toNum(market.data.header.quoteLotSize)) /
-      (10 ** market.quoteToken.data.decimals *
-        market.data.header.rawBaseUnitsPerBaseUnit)
-    );
+    return market.ticksToFloatPrice(ticks);
   }
 
   /**
@@ -685,8 +679,7 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    const baseUnits = rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
-    return Math.floor(baseUnits * market.data.baseLotsPerBaseUnit);
+    return market.rawBaseUnitsToBaseLotsRoundedDown(rawBaseUnits);
   }
 
   /**
@@ -701,8 +694,7 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    const baseUnits = rawBaseUnits / market.data.header.rawBaseUnitsPerBaseUnit;
-    return Math.ceil(baseUnits * market.data.baseLotsPerBaseUnit);
+    return market.rawBaseUnitsToBaseLotsRoundedUp(rawBaseUnits);
   }
 
   /**
@@ -714,7 +706,7 @@ export class Client {
   public baseAtomsToBaseLots(baseAtoms: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return Math.round(baseAtoms / toNum(market.data.header.baseLotSize));
+    return market.baseAtomsToBaseLots(baseAtoms);
   }
 
   /**
@@ -726,7 +718,7 @@ export class Client {
   public baseLotsToBaseAtoms(baseLots: number, marketAddress: string): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return baseLots * toNum(market.data.header.baseLotSize);
+    return market.baseLotsToBaseAtoms(baseLots);
   }
 
   /**
@@ -741,10 +733,7 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return Math.round(
-      (quoteUnits * 10 ** market.quoteToken.data.decimals) /
-        toNum(market.data.header.quoteLotSize)
-    );
+    return market.quoteUnitsToQuoteLots(quoteUnits);
   }
 
   /**
@@ -759,7 +748,7 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return Math.round(quoteAtoms / toNum(market.data.header.quoteLotSize));
+    return market.quoteAtomsToQuoteLots(quoteAtoms);
   }
 
   /**
@@ -774,7 +763,7 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return quoteLots * toNum(market.data.header.quoteLotSize);
+    return market.quoteLotsToQuoteAtoms(quoteLots);
   }
 
   /**
@@ -789,7 +778,7 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return baseAtoms / 10 ** market.baseToken.data.decimals;
+    return market.baseAtomsToRawBaseUnits(baseAtoms);
   }
 
   /**
@@ -804,6 +793,457 @@ export class Client {
   ): number {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return quoteAtoms / 10 ** market.quoteToken.data.decimals;
+    return market.quoteAtomsToQuoteUnits(quoteAtoms);
+  }
+
+  /**
+   * Instruction builders
+   **/
+
+  /**
+   * Creates a _CancelAllOrders_ instruction.
+   *
+   * @param marketAddress Market address string
+   * @param trader Trader public key (defaults to client's wallet public key)
+   *
+   * @category Instructions
+   */
+  public createCancelAllOrdersInstruction(
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createCancelAllOrdersInstruction(trader);
+  }
+
+  /**
+   * Creates a _CancelAllOrdersWithFreeFunds_ instruction.
+   *
+   * @param marketAddress Market address string
+   * @param trader Trader public key (defaults to client's wallet public key)
+   * @category Instructions
+   */
+  public createCancelAllOrdersWithFreeFundsInstruction(
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createCancelAllOrdersWithFreeFundsInstruction(trader);
+  }
+
+  /**
+   * Creates a _CancelMultipleOrdersById_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key (defaults to client's wallet public key)
+   *
+   * @category Instructions
+   * @category CancelMultipleOrdersById
+   */
+  public createCancelMultipleOrdersByIdInstruction(
+    args: CancelMultipleOrdersByIdInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createCancelMultipleOrdersByIdInstruction(args, trader);
+  }
+
+  /**
+   * Creates a _CancelMultipleOrdersByIdWithFreeFunds_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key (defaults to client's wallet public key)
+   *
+   * @category Instructions
+   */
+  public createCancelMultipleOrdersByIdWithFreeFundsInstruction(
+    args: CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createCancelMultipleOrdersByIdWithFreeFundsInstruction(
+      args,
+      trader
+    );
+  }
+
+  /**
+   * Creates a _CancelUpTo_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key (defaults to client's wallet public key)
+   *
+   * @category Instructions
+   */
+  public createCancelUpToInstruction(
+    args: CancelUpToInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createCancelUpToInstruction(args, trader);
+  }
+
+  /**
+   * Creates a _CancelUpToWithFreeFunds_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key (defaults to client's wallet public key)
+   *
+   * @category Instructions
+   */
+  public createCancelUpToWithFreeFundsInstruction(
+    args: CancelUpToWithFreeFundsInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createCancelUpToWithFreeFundsInstruction(args, trader);
+  }
+
+  /**
+   * Creates a _DepositFunds_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createDepositFundsInstruction(
+    args: DepositFundsInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createDepositFundsInstruction(args, trader);
+  }
+
+  /**
+   * Creates a _PlaceLimitOrder_ instruction.
+   *
+   * @param orderPacket to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createPlaceLimitOrderInstruction(
+    orderPacket: OrderPacket,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createPlaceLimitOrderInstruction(orderPacket, trader);
+  }
+
+  /**
+   * Creates a _PlaceLimitOrderWithFreeFunds_ instruction.
+   *
+   * @param orderPacket to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createPlaceLimitOrderWithFreeFundsInstruction(
+    orderPacket: OrderPacket,
+    marketAddress: string,
+    trader?: PublicKey
+  ) {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createPlaceLimitOrderWithFreeFundsInstruction(
+      orderPacket,
+      trader
+    );
+  }
+
+  /**
+   * Creates a _PlaceMultiplePostOnlyOrders_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createPlaceMultiplePostOnlyOrdersInstruction(
+    args: PlaceMultiplePostOnlyOrdersInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createPlaceMultiplePostOnlyOrdersInstruction(args, trader);
+  }
+
+  /**
+   * Creates a _PlaceMultiplePostOnlyOrdersWithFreeFunds_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createPlaceMultiplePostOnlyOrdersInstructionWithFreeFunds(
+    args: PlaceMultiplePostOnlyOrdersInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createPlaceMultiplePostOnlyOrdersInstructionWithFreeFunds(
+      args,
+      trader
+    );
+  }
+
+  /**
+   * Creates a _ReduceOrder_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createReduceOrderInstruction(
+    args: ReduceOrderInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ) {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createReduceOrderInstruction(args, trader);
+  }
+
+  /**
+   * Creates a _ReduceOrderWithFreeFunds_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createReduceOrderWithFreeFundsInstruction(
+    args: ReduceOrderWithFreeFundsInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ) {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createReduceOrderWithFreeFundsInstruction(args, trader);
+  }
+
+  /**
+   * Creates a _RequestSeat_ instruction.
+   *
+   * @param marketAddress Market address string
+   * @param payer Payer public key
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createRequestSeatInstruction(
+    marketAddress: string,
+    payer?: PublicKey,
+    trader?: PublicKey
+  ) {
+
+    if (!payer) {
+      payer = this.trader.pubkey;
+    }
+    if (!trader) {
+      trader = payer;
+    }
+
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createRequestSeatInstruction(payer, trader);
+  }
+
+  /**
+   * Creates a _Swap_ instruction.
+   *
+   * @param orderPacket to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createSwapInstruction(
+    orderPacket: OrderPacket,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createSwapInstruction(orderPacket, trader);
+  }
+
+  /**
+   * Creates a _SwapWithFreeFunds_ instruction.
+   *
+   * @param orderPacket to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createSwapWithFreeFundsInstruction(
+    orderPacket: OrderPacket,
+    marketAddress: string,
+    trader?: PublicKey
+  ) {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createSwapWithFreeFundsInstruction(orderPacket, trader);
+  }
+
+  /**
+   * Creates a _WithdrawFunds_ instruction.
+   *
+   * @param args to provide as instruction data to the program
+   * @param marketAddress Market address string
+   * @param trader Trader public key
+   *
+   * @category Instructions
+   */
+  public createWithdrawFundsInstruction(
+    args: WithdrawFundsInstructionArgs,
+    marketAddress: string,
+    trader?: PublicKey
+  ): TransactionInstruction {
+    if (!trader) {
+      trader = this.trader.pubkey;
+    }
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+    return market.createWithdrawFundsInstruction(args, trader);
+  }
+
+  /**
+   * Returns an instruction to place a limit order on a market, using a LimitOrderPacketTemplate, which takes in human-friendly units
+   * @param marketAddress The market's address
+   * @param trader The trader's address
+   * @param limitOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getLimitOrderInstructionfromTemplate(
+    marketAddress: string,
+    trader: PublicKey,
+    limitOrderTemplate: LimitOrderTemplate
+  ): TransactionInstruction {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+
+    return market.getLimitOrderInstructionfromTemplate(
+      trader,
+      limitOrderTemplate
+    );
+  }
+
+  /**
+   * Returns an instruction to place a post only on a market, using a PostOnlyOrderPacketTemplate, which takes in human-friendly units.
+   * @param marketAddress The market's address
+   * @param trader The trader's address
+   * @param postOnlyOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getPostOnlyOrderInstructionfromTemplate(
+    marketAddress: string,
+    trader: PublicKey,
+    postOnlyOrderTemplate: PostOnlyOrderTemplate
+  ): TransactionInstruction {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+
+    return market.getPostOnlyOrderInstructionfromTemplate(
+      trader,
+      postOnlyOrderTemplate
+    );
+  }
+
+  /**
+   * Returns an instruction to place an immediate or cancel on a market, using a ImmediateOrCancelPacketTemplate, which takes in human-friendly units.
+   * @param marketAddress The market's address
+   * @param trader The trader's address
+   * @param immediateOrCancelOrderTemplate The order packet template to place
+   * @returns
+   */
+  public getImmediateOrCancelOrderIxfromTemplate(
+    marketAddress: string,
+    trader: PublicKey,
+    immediateOrCancelOrderTemplate: ImmediateOrCancelOrderTemplate
+  ): TransactionInstruction {
+    const market = this.markets.get(marketAddress);
+    if (!market) throw new Error("Market not found: " + marketAddress);
+
+    return market.getImmediateOrCancelOrderInstructionfromTemplate(
+      trader,
+      immediateOrCancelOrderTemplate
+    );
   }
 }

@@ -1,4 +1,10 @@
-import { Connection, PublicKey, Keypair, Transaction } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  Keypair,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
 import * as PhoenixSdk from "../src";
 import fs from "fs";
 import { airdropSplTokensForMarketIxs } from "../src/utils/genericTokenMint";
@@ -38,7 +44,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   }
 
   // Request a SOL airdrop to send the transaction in this example. Only needed, and will only work, on devnet.
-  await client.connection.requestAirdrop(trader.publicKey, 1_000_000_000);
+  // await client.connection.requestAirdrop(trader.publicKey, 1_000_000_000);
   console.log("Trader: ", trader.publicKey.toBase58());
 
   // If the trader is a new maker (has not placed limit orders previously), you will need to create associated token accounts for the base and quote tokens, and claim a maker seat on the market.
@@ -46,21 +52,21 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   // - Create associated token accounts for base and quote tokens, if needed
   // - Claim a maker seat on the market, if needed
   const setupNewMakerIxs = await PhoenixSdk.getMakerSetupInstructionsForMarket(
-    client,
-    marketPubkey,
-    marketData,
+    connection,
+    market,
     trader.publicKey
   );
   if (setupNewMakerIxs.length !== 0) {
     const setupTx = new Transaction().add(...setupNewMakerIxs);
-    const setupTxId = await client.connection.sendTransaction(
+    const setupTxId = await sendAndConfirmTransaction(
+      connection,
       setupTx,
       [trader],
       {
         skipPreflight: true,
+        commitment: "confirmed",
       }
     );
-    await client.connection.confirmTransaction(setupTxId, "confirmed");
     console.log(
       `Setup Tx Link: https://beta.solscan.io/tx/${setupTxId}?cluster=devnet`
     );
@@ -76,14 +82,15 @@ export async function simpleMarketMaker(privateKeyPath: string) {
     trader.publicKey
   );
   const airdropSplTx = new Transaction().add(...airdropSplIxs);
-  const airdropTxId = await client.connection.sendTransaction(
+  const airdropTxId = await sendAndConfirmTransaction(
+    connection,
     airdropSplTx,
     [trader],
     {
       skipPreflight: true,
+      commitment: "confirmed",
     }
   );
-  await client.connection.confirmTransaction(airdropTxId, "confirmed");
   console.log(
     `Airdrop Tx Link: https://beta.solscan.io/tx/${airdropTxId}?cluster=devnet`
   );
@@ -94,8 +101,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   /* eslint-disable no-constant-condition */
   while (true) {
     // Before quoting, we cancel all outstanding orders
-    const cancelAll = PhoenixSdk.createCancelAllOrdersInstructionWithClient(
-      client,
+    const cancelAll = client.createCancelAllOrdersInstruction(
       marketPubkey.toString(),
       trader.publicKey
     );
@@ -104,11 +110,13 @@ export async function simpleMarketMaker(privateKeyPath: string) {
     // seperately since getting the price could take an non-deterministic amount of time
     try {
       const cancelTransaction = new Transaction().add(cancelAll);
-      const txid = await client.connection.sendTransaction(
+      const txid = await sendAndConfirmTransaction(
+        connection,
         cancelTransaction,
         [trader],
         {
           skipPreflight: true,
+          commitment: "confirmed",
         }
       );
 
@@ -148,10 +156,8 @@ export async function simpleMarketMaker(privateKeyPath: string) {
       lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
     };
     // Get the limit order instruction from the created template
-    const bidLimitOrderIx = PhoenixSdk.getLimitOrderIxfromTemplate(
-      client,
-      marketPubkey,
-      marketData,
+    const bidLimitOrderIx = client.getLimitOrderInstructionfromTemplate(
+      marketPubkey.toBase58(),
       trader.publicKey,
       bidOrderTemplate
     );
@@ -166,10 +172,8 @@ export async function simpleMarketMaker(privateKeyPath: string) {
       lastValidSlot: undefined,
       lastValidUnixTimestampInSeconds: currentTime + ORDER_LIFETIME_IN_SECONDS,
     };
-    const askLimitOrderIx = PhoenixSdk.getLimitOrderIxfromTemplate(
-      client,
-      marketPubkey,
-      marketData,
+    const askLimitOrderIx = client.getLimitOrderInstructionfromTemplate(
+      marketPubkey.toBase58(),
       trader.publicKey,
       askOrderTemplate
     );
@@ -184,8 +188,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
         baseLotsToWithdraw: null,
       };
 
-      const placeWithdraw = PhoenixSdk.createWithdrawFundsInstructionWithClient(
-        client,
+      const placeWithdraw = client.createWithdrawFundsInstruction(
         {
           withdrawFundsParams: withdrawParams,
         },
@@ -199,11 +202,13 @@ export async function simpleMarketMaker(privateKeyPath: string) {
     try {
       const placeQuotesTx = new Transaction().add(...instructions);
 
-      const placeQuotesTxId = await client.connection.sendTransaction(
+      const placeQuotesTxId = await sendAndConfirmTransaction(
+        connection,
         placeQuotesTx,
         [trader],
         {
           skipPreflight: true,
+          commitment: "confirmed",
         }
       );
 

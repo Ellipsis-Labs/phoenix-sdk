@@ -1,4 +1,5 @@
-import { SelfTradeBehavior, Side } from "./types";
+import { OrderPacket, SelfTradeBehavior, Side } from "./types";
+import * as beet from "@metaplex-foundation/beet";
 
 /// PostOnlyOrderTemplate is a helper type for creating a post-only order, which will never be matched against existing orders.
 /// The template allows you to specify the price and size in commonly understood units:
@@ -121,4 +122,152 @@ export class ImmediateOrCancelOrderTemplate {
 
   /// If this is set, the order will be invalid after the specified unix timestamp.
   lastValidUnixTimestampInSeconds?: number;
+}
+
+/**
+ * Returns a post only order packet.
+ * @param side The side of the order
+ * @param priceInTicks The price of the order in ticks
+ * @param numBaseLots The number of base lots to trade
+ * @param clientOrderId The client order id
+ * @param rejectPostOnly Whether a post only order should be rejcted if it crosses. Default is true.
+ * @param useOnlyDepositedFunds Whether to use only deposited funds
+ * @param lastValidSlot The last valid slot for a time in force order
+ * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for a time in force order
+ */
+export function getPostOnlyOrderPacket({
+  side,
+  priceInTicks,
+  numBaseLots,
+  rejectPostOnly = true,
+  clientOrderId = 0,
+  useOnlyDepositedFunds = false,
+  lastValidSlot,
+  lastValidUnixTimestampInSeconds,
+}: {
+  side: Side;
+  priceInTicks: number;
+  numBaseLots: number;
+  rejectPostOnly?: boolean;
+  clientOrderId?: number;
+  useOnlyDepositedFunds?: boolean;
+  lastValidSlot?: beet.COption<beet.bignum>;
+  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>;
+}): OrderPacket {
+  return {
+    __kind: "PostOnly",
+    side,
+    priceInTicks,
+    numBaseLots,
+    clientOrderId: clientOrderId ?? 0,
+    rejectPostOnly: rejectPostOnly ?? true,
+    useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
+    lastValidSlot,
+    lastValidUnixTimestampInSeconds,
+  };
+}
+
+/**
+ * Returns a limit order packet
+ * @param side The side of the order
+ * @param priceInTicks The price of the order in ticks
+ * @param numBaseLots The number of base lots to trade
+ * @param selfTradeBehavior The self trade behavior
+ * @param clientOrderId The client order id
+ * @param useOnlyDepositedFunds Whether to use only deposited funds
+ * @param lastValidSlot The last valid slot for a time in force order
+ * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for a time in force order
+ */
+export function getLimitOrderPacket({
+  side,
+  priceInTicks = null,
+  numBaseLots,
+  selfTradeBehavior = SelfTradeBehavior.CancelProvide,
+  matchLimit,
+  clientOrderId = 0,
+  useOnlyDepositedFunds = false,
+  lastValidSlot,
+  lastValidUnixTimestampInSeconds,
+}: {
+  side: Side;
+  priceInTicks: number;
+  numBaseLots: number;
+  selfTradeBehavior?: SelfTradeBehavior;
+  matchLimit?: beet.COption<beet.bignum>;
+  clientOrderId?: number;
+  useOnlyDepositedFunds?: boolean;
+  lastValidSlot?: beet.COption<beet.bignum>;
+  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>;
+}): OrderPacket {
+  return {
+    __kind: "Limit",
+    side,
+    priceInTicks,
+    numBaseLots,
+    selfTradeBehavior: selfTradeBehavior ?? SelfTradeBehavior.CancelProvide,
+    matchLimit,
+    clientOrderId: clientOrderId ?? 0,
+    useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
+    lastValidSlot,
+    lastValidUnixTimestampInSeconds,
+  };
+}
+
+/**
+ * Returns an immediate-or-cancel order packet.
+ * @param side The side of the order
+ * @param priceInTicks The price of the order in ticks
+ * @param numBaseLots The number of base lots to trade
+ * @param numQuoteLots The number of quote lots to trade
+ * @param minBaseLotsToFill The minimum number of base lots to fill
+ * @param minQuoteLotsToFill The minimum number of quote lots to fill
+ * @param selfTradeBehavior The self trade behavior
+ * @param matchLimit The match limit
+ * @param clientOrderId The client order id
+ * @param useOnlyDepositedFunds Whether to use only deposited funds
+ * @param lastValidSlot The last valid slot for a time in force order
+ * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for a time in force order
+ */
+export function getImmediateOrCancelOrderPacket({
+  side,
+  priceInTicks = null,
+  numBaseLots,
+  numQuoteLots,
+  minBaseLotsToFill = 0,
+  minQuoteLotsToFill = 0,
+  selfTradeBehavior = SelfTradeBehavior.CancelProvide,
+  matchLimit,
+  clientOrderId = 0,
+  useOnlyDepositedFunds = false,
+  lastValidSlot,
+  lastValidUnixTimestampInSeconds,
+}: {
+  side: Side;
+  priceInTicks?: number;
+  numBaseLots: number;
+  numQuoteLots: number;
+  minBaseLotsToFill?: number;
+  minQuoteLotsToFill?: number;
+  selfTradeBehavior?: SelfTradeBehavior;
+  matchLimit?: beet.COption<beet.bignum>;
+  clientOrderId?: number;
+  useOnlyDepositedFunds?: boolean;
+  lastValidSlot?: beet.COption<beet.bignum>;
+  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>;
+}): OrderPacket {
+  return {
+    __kind: "ImmediateOrCancel",
+    side,
+    priceInTicks,
+    numBaseLots,
+    numQuoteLots,
+    minBaseLotsToFill,
+    minQuoteLotsToFill,
+    selfTradeBehavior,
+    matchLimit,
+    clientOrderId,
+    useOnlyDepositedFunds,
+    lastValidSlot,
+    lastValidUnixTimestampInSeconds,
+  };
 }
