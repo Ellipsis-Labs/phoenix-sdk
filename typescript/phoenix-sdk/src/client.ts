@@ -17,8 +17,6 @@ import {
   Side,
   UiLadder,
   deserializeClockData,
-  getMarketLadder,
-  getMarketUiLadder,
   printUiLadder,
   getMarketL3Book,
   DEFAULT_L3_BOOK_DEPTH,
@@ -419,12 +417,7 @@ export class Client {
   ): Ladder {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return getMarketLadder(
-      market.data,
-      this.clock.slot,
-      this.clock.unixTimestamp,
-      levels
-    );
+    return market.getLadder(this.clock.slot, this.clock.unixTimestamp, levels);
   }
 
   /**
@@ -438,8 +431,7 @@ export class Client {
   ): UiLadder {
     const market = this.markets.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
-    return getMarketUiLadder(
-      market.data,
+    return market.getUiLadder(
       levels,
       this.clock.slot,
       this.clock.unixTimestamp
@@ -1105,7 +1097,6 @@ export class Client {
     payer?: PublicKey,
     trader?: PublicKey
   ) {
-
     if (!payer) {
       payer = this.trader.pubkey;
     }

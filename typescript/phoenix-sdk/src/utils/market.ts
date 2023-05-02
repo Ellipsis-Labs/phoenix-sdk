@@ -32,7 +32,6 @@ import {
   L3Order,
   L3UiBook,
   L3UiOrder,
-  LadderLevel,
   Market,
   OrderId,
   PROGRAM_ID,
@@ -368,83 +367,18 @@ function deserializeRedBlackTreeNodes<Key, Value>(
  * Returns an L2 ladder of bids and asks for given `MarketData`
  * @description Bids are ordered in descending order by price, and asks are ordered in ascending order by price
  *
- * @param marketData The `MarketData` to get the ladder from
+ * @param market The `Market` to get the ladder from
  * @param slot The current slot
  * @param unixTimestamp The current Unix timestamp, in seconds
  * @param levels The number of book levels to return, -1 to return the entire book
  */
 export function getMarketLadder(
-  marketData: MarketData,
+  market: Market,
   slot: beet.bignum,
   unixTimestamp: beet.bignum,
   levels: number = DEFAULT_L2_LADDER_DEPTH
 ): Ladder {
-  const bids: Array<LadderLevel> = [];
-  const asks: Array<LadderLevel> = [];
-  for (const [orderId, restingOrder] of marketData.bids) {
-    if (restingOrder.lastValidSlot != 0 && restingOrder.lastValidSlot < slot) {
-      continue;
-    }
-    if (
-      restingOrder.lastValidUnixTimestampInSeconds != 0 &&
-      restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
-    ) {
-      continue;
-    }
-    const priceInTicks = toBN(orderId.priceInTicks);
-    const sizeInBaseLots = toBN(restingOrder.numBaseLots);
-    if (bids.length === 0) {
-      bids.push({ priceInTicks, sizeInBaseLots });
-    } else {
-      const prev = bids[bids.length - 1];
-      if (!prev) {
-        throw Error;
-      }
-      if (priceInTicks.eq(prev.priceInTicks)) {
-        prev.sizeInBaseLots = prev.sizeInBaseLots.add(sizeInBaseLots);
-      } else {
-        if (bids.length === levels) {
-          break;
-        }
-        bids.push({ priceInTicks, sizeInBaseLots });
-      }
-    }
-  }
-
-  for (const [orderId, restingOrder] of marketData.asks) {
-    if (restingOrder.lastValidSlot != 0 && restingOrder.lastValidSlot < slot) {
-      continue;
-    }
-    if (
-      restingOrder.lastValidUnixTimestampInSeconds != 0 &&
-      restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
-    ) {
-      continue;
-    }
-    const priceInTicks = toBN(orderId.priceInTicks);
-    const sizeInBaseLots = toBN(restingOrder.numBaseLots);
-    if (asks.length === 0) {
-      asks.push({ priceInTicks, sizeInBaseLots });
-    } else {
-      const prev = asks[asks.length - 1];
-      if (!prev) {
-        throw Error;
-      }
-      if (priceInTicks.eq(prev.priceInTicks)) {
-        prev.sizeInBaseLots = prev.sizeInBaseLots.add(sizeInBaseLots);
-      } else {
-        if (asks.length === levels) {
-          break;
-        }
-        asks.push({ priceInTicks, sizeInBaseLots });
-      }
-    }
-  }
-
-  return {
-    asks,
-    bids,
-  };
+  return market.getLadder(slot, unixTimestamp, levels);
 }
 
 /**
@@ -455,58 +389,27 @@ export function getMarketLadder(
  * @param sizeInBaseLots The size of the level in base lots
  * @param quoteAtomsPerQuoteUnit The number of quote atoms per quote unit
  */
-function levelToUiLevel(
-  marketData: MarketData,
-  priceInTicks: BN,
-  sizeInBaseLots: BN,
-  quoteAtomsPerQuoteUnit: number
+export function levelToUiLevel(
+  market: Market,
+  priceInTicks: number,
+  sizeInBaseLots: number
 ): UiLadderLevel {
-  return {
-    price:
-      ((toNum(priceInTicks) / quoteAtomsPerQuoteUnit) *
-        marketData.quoteLotsPerBaseUnitPerTick *
-        toNum(marketData.header.quoteLotSize)) /
-      marketData.header.rawBaseUnitsPerBaseUnit,
-    quantity:
-      (toNum(sizeInBaseLots) / marketData.baseLotsPerBaseUnit) *
-      marketData.header.rawBaseUnitsPerBaseUnit,
-  };
+  return market.levelToUiLevel(priceInTicks, sizeInBaseLots);
 }
 
 /**
  * Returns the ladder of bids and asks as JS numbers for given `MarketData`
  *
- * @param marketData The `MarketData` to get the ladder from
+ * @param maata The `Market` to get the ladder from
  * @param levels The number of book levels to return
  */
 export function getMarketUiLadder(
-  marketData: MarketData,
+  market: Market,
   levels: number = DEFAULT_L2_LADDER_DEPTH,
   slot: beet.bignum = 0,
   unixTimestamp: beet.bignum = 0
 ): UiLadder {
-  const ladder = getMarketLadder(marketData, slot, unixTimestamp, levels);
-
-  const quoteAtomsPerQuoteUnit =
-    10 ** toNum(marketData.header.quoteParams.decimals);
-  return {
-    bids: ladder.bids.map(({ priceInTicks, sizeInBaseLots }) =>
-      levelToUiLevel(
-        marketData,
-        priceInTicks,
-        sizeInBaseLots,
-        quoteAtomsPerQuoteUnit
-      )
-    ),
-    asks: ladder.asks.map(({ priceInTicks, sizeInBaseLots }) =>
-      levelToUiLevel(
-        marketData,
-        priceInTicks,
-        sizeInBaseLots,
-        quoteAtomsPerQuoteUnit
-      )
-    ),
-  };
+  return market.getUiLadder(levels, slot, unixTimestamp);
 }
 
 /**
