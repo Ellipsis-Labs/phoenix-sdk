@@ -50,6 +50,8 @@ import {
   getPostOnlyOrderPacket,
   getRequiredInAmountRouter,
   getSeatAddress,
+  DEFAULT_L2_LADDER_DEPTH,
+  toBN,
 } from "./index";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
@@ -113,9 +115,14 @@ export type L3UiBook = {
   asks: L3UiOrder[];
 };
 
+export type UiLadderLevel = {
+  price: number;
+  quantity: number;
+};
+
 export type UiLadder = {
-  bids: Array<[number, number]>;
-  asks: Array<[number, number]>;
+  bids: Array<UiLadderLevel>;
+  asks: Array<UiLadderLevel>;
 };
 
 export interface MarketData {
@@ -360,6 +367,132 @@ export class Market {
   }
 
   /**
+   * Returns the ladder of bids and asks as JS numbers for given `MarketData`
+   *
+   * @param levels The number of book levels to return
+   */
+  public getUiLadder(
+    levels: number = DEFAULT_L2_LADDER_DEPTH,
+    slot: beet.bignum = 0,
+    unixTimestamp: beet.bignum = 0
+  ): UiLadder {
+    const ladder = this.getLadder(slot, unixTimestamp, levels);
+
+    return {
+      bids: ladder.bids.map(({ priceInTicks, sizeInBaseLots }) =>
+        this.levelToUiLevel(toNum(priceInTicks), toNum(sizeInBaseLots))
+      ),
+      asks: ladder.asks.map(({ priceInTicks, sizeInBaseLots }) =>
+        this.levelToUiLevel(toNum(priceInTicks), toNum(sizeInBaseLots))
+      ),
+    };
+  }
+
+  /**
+   * Returns an L2 ladder of bids and asks for given `MarketData`
+   * @description Bids are ordered in descending order by price, and asks are ordered in ascending order by price
+   *
+   * @param marketData The `MarketData` to get the ladder from
+   * @param slot The current slot
+   * @param unixTimestamp The current Unix timestamp, in seconds
+   * @param levels The number of book levels to return, -1 to return the entire book
+   */
+  public getLadder(
+    slot: beet.bignum,
+    unixTimestamp: beet.bignum,
+    levels: number = DEFAULT_L2_LADDER_DEPTH
+  ): Ladder {
+    const bids: Array<LadderLevel> = [];
+    const asks: Array<LadderLevel> = [];
+    for (const [orderId, restingOrder] of this.data.bids) {
+      if (
+        restingOrder.lastValidSlot != 0 &&
+        restingOrder.lastValidSlot < slot
+      ) {
+        continue;
+      }
+      if (
+        restingOrder.lastValidUnixTimestampInSeconds != 0 &&
+        restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
+      ) {
+        continue;
+      }
+      const priceInTicks = toBN(orderId.priceInTicks);
+      const sizeInBaseLots = toBN(restingOrder.numBaseLots);
+      if (bids.length === 0) {
+        bids.push({ priceInTicks, sizeInBaseLots });
+      } else {
+        const prev = bids[bids.length - 1];
+        if (!prev) {
+          throw Error;
+        }
+        if (priceInTicks.eq(prev.priceInTicks)) {
+          prev.sizeInBaseLots = prev.sizeInBaseLots.add(sizeInBaseLots);
+        } else {
+          if (bids.length === levels) {
+            break;
+          }
+          bids.push({ priceInTicks, sizeInBaseLots });
+        }
+      }
+    }
+
+    for (const [orderId, restingOrder] of this.data.asks) {
+      if (
+        restingOrder.lastValidSlot != 0 &&
+        restingOrder.lastValidSlot < slot
+      ) {
+        continue;
+      }
+      if (
+        restingOrder.lastValidUnixTimestampInSeconds != 0 &&
+        restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
+      ) {
+        continue;
+      }
+      const priceInTicks = toBN(orderId.priceInTicks);
+      const sizeInBaseLots = toBN(restingOrder.numBaseLots);
+      if (asks.length === 0) {
+        asks.push({ priceInTicks, sizeInBaseLots });
+      } else {
+        const prev = asks[asks.length - 1];
+        if (!prev) {
+          throw Error;
+        }
+        if (priceInTicks.eq(prev.priceInTicks)) {
+          prev.sizeInBaseLots = prev.sizeInBaseLots.add(sizeInBaseLots);
+        } else {
+          if (asks.length === levels) {
+            break;
+          }
+          asks.push({ priceInTicks, sizeInBaseLots });
+        }
+      }
+    }
+
+    return {
+      asks,
+      bids,
+    };
+  }
+
+  /**
+   * Converts a ladder level from BN to JS number representation
+   *
+   * @param priceInTicks The price of the level in ticks
+   * @param sizeInBaseLots The size of the level in base lots
+   */
+  public levelToUiLevel(
+    priceInTicks: number,
+    sizeInBaseLots: number
+  ): UiLadderLevel {
+    return {
+      price: this.ticksToFloatPrice(priceInTicks),
+      quantity: this.baseLotsToRawBaseUnits(sizeInBaseLots),
+    };
+  }
+
+  /**
    * Returns the expected amount out for a given swap order
    *
    * @param side The side of the order (Bid or Ask)
@@ -380,8 +513,7 @@ export class Market {
   }): number {
     const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
     const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
-    const uiLadder = getMarketUiLadder(
-      this.data,
+    const uiLadder = this.getUiLadder(
       Math.max(numBids, numAsks),
       slot,
       unixTimestamp
@@ -417,7 +549,7 @@ export class Market {
     const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
     const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
     const uiLadder = getMarketUiLadder(
-      this.data,
+      this,
       Math.max(numBids, numAsks),
       slot,
       unixTimestamp
@@ -1039,7 +1171,7 @@ export class Market {
     lastValidSlot?: number;
     lastValidUnixTimestampInSeconds?: number;
   }): OrderPacket {
-    const uiLadder = getMarketUiLadder(this.data, Number.MAX_SAFE_INTEGER);
+    const uiLadder = getMarketUiLadder(this, Number.MAX_SAFE_INTEGER);
     const expectedOutAmount = getExpectedOutAmountRouter({
       uiLadder,
       takerFeeBps: this.data.takerFeeBps,
