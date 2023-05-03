@@ -203,7 +203,7 @@ export async function confirmOrCreateClaimSeatIxs(
  * @param market The market object
  * @param trader The trader's address
  */
-export async function createClaimSeatIdempotentInstructions(
+export async function createClaimSeatInstructions(
   connection: Connection,
   market: Market,
   trader: PublicKey
