@@ -197,8 +197,30 @@ export async function confirmOrCreateClaimSeatIxs(
 }
 
 /**
+ * Checks if the given trader has a seat on the given market
+ * If not, return claim seat instructions
+ * @param connection An instance of the Connection class
+ * @param market The market object
+ * @param trader The trader's address
+ */
+export async function createClaimSeatIdempotentInstructions(
+  connection: Connection,
+  market: Market,
+  trader: PublicKey
+): Promise<TransactionInstruction[]> {
+  const instructions: TransactionInstruction[] = [];
+  const traderToEvict = await findTraderToEvict(connection, market);
+  if (traderToEvict) {
+    instructions.push(getEvictSeatIx(market, traderToEvict, trader));
+  }
+  instructions.push(getClaimSeatIx(market.address, trader));
+  return instructions;
+}
+
+/**
  * Find a trader to evict from the given market.
  * If the market's trader state is not at capacity or if every trader has locked base or quote lots, then return undefined.
+ * If the seats are full, this function will return the first trader that has no base or quote lots locked.
  * @param connection An instance of the Connection class
  * @param market The market object
  * @returns
