@@ -6,7 +6,6 @@ import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
 import * as beetSolana from "@metaplex-foundation/beet-solana";
 import { getLogAuthority, getSeatAddress, Market, PROGRAM_ID } from "..";
-import { MarketData } from "../market";
 
 import {
   createEvictSeatInstruction,
