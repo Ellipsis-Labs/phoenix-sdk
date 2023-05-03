@@ -105,31 +105,29 @@ export function getClaimSeatIx(
  * Returns an instruction to evict a seat on a market, via the Phoenix Seat Manager
  * Evict seat is only allowed if the trader state is full for a given market, unless performed by the seat manager authority
  *
- * @param market The market's address
- * @param marketData The market's data, containing base and quote mint information
+ * @param market The market object
  * @param trader The address of the trader to be evicted
  * @param signer The address of the signer of the transaction. Does not need to be the trader if the market's trader state is full.
  * @param baseTokenAccountBackup The to-be-evicted trader's base token account backup, in the event the associated token account of the trader is no longer owned by the trader
  * @param quoteTokenAccountBackup The to-be-evicted trader's quote token account backup, in the event the associated token account of the trader is no longer owned by the trader
  */
 export function getEvictSeatIx(
-  market: PublicKey,
-  marketData: MarketData,
+  market: Market,
   trader: PublicKey,
   signer: PublicKey,
   baseTokenAccountBackup?: PublicKey,
   quoteTokenAccountBackup?: PublicKey
 ): TransactionInstruction {
-  const seatManager = getSeatManagerAddress(market);
-  const seatDepositCollector = getSeatDepositCollectorAddress(market);
-  const seat = getSeatAddress(market, trader);
+  const seatManager = getSeatManagerAddress(market.address);
+  const seatDepositCollector = getSeatDepositCollectorAddress(market.address);
+  const seat = getSeatAddress(market.address, trader);
   const logAuthority = getLogAuthority();
 
   const baseAccount = PublicKey.findProgramAddressSync(
     [
       trader.toBuffer(),
       TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.baseParams.mintKey.toBuffer(),
+      market.data.header.baseParams.mintKey.toBuffer(),
     ],
     ASSOCIATED_TOKEN_PROGRAM_ID
   )[0];
@@ -137,7 +135,7 @@ export function getEvictSeatIx(
     [
       trader.toBuffer(),
       TOKEN_PROGRAM_ID.toBuffer(),
-      marketData.header.quoteParams.mintKey.toBuffer(),
+      market.data.header.quoteParams.mintKey.toBuffer(),
     ],
     ASSOCIATED_TOKEN_PROGRAM_ID
   )[0];
@@ -145,13 +143,13 @@ export function getEvictSeatIx(
   const evictSeatAccounts = {
     phoenixProgram: PROGRAM_ID,
     logAuthority,
-    market,
+    market: market.address,
     seatManager,
     seatDepositCollector,
-    baseMint: marketData.header.baseParams.mintKey,
-    quoteMint: marketData.header.quoteParams.mintKey,
-    baseVault: marketData.header.baseParams.vaultKey,
-    quoteVault: marketData.header.quoteParams.vaultKey,
+    baseMint: market.data.header.baseParams.mintKey,
+    quoteMint: market.data.header.quoteParams.mintKey,
+    baseVault: market.data.header.baseParams.vaultKey,
+    quoteVault: market.data.header.quoteParams.vaultKey,
     associatedTokenAccountProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
     signer,
     trader,
@@ -185,9 +183,7 @@ export async function confirmOrCreateClaimSeatIxs(
   if (seatAccountInfo === null || seatAccountInfo.data.length == 0) {
     const traderToEvict = await findTraderToEvict(connection, market);
     if (traderToEvict) {
-      instructions.push(
-        getEvictSeatIx(market.address, market.data, traderToEvict, trader)
-      );
+      instructions.push(getEvictSeatIx(market, traderToEvict, trader));
     }
     instructions.push(getClaimSeatIx(market.address, trader));
   }
