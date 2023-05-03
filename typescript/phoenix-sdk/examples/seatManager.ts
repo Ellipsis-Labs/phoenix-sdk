@@ -147,15 +147,12 @@ export async function evictSeat() {
 
   // Here, we simulate a trader to evict.
   const traderKeypair = new Keypair();
-  const marketData = phoenix.markets.get(marketAddress.toBase58())?.data;
-  if (!marketData)
-    throw new Error(
-      "Market data not found for market: " + marketAddress?.toBase58()
-    );
+  const market = phoenix.markets.get(marketAddress.toBase58());
+  if (!market)
+    throw new Error("Market not found: " + marketAddress?.toBase58());
 
   const evictSeatIx = getEvictSeatIx(
-    marketAddress,
-    marketData,
+    market,
     traderKeypair.publicKey,
     signerKeypair.publicKey
   );
