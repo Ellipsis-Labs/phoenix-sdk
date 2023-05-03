@@ -178,7 +178,13 @@ export async function confirmOrCreateClaimSeatIxs(
 
   const instructions: TransactionInstruction[] = [];
 
-  const seatAccountInfo = await connection.getAccountInfo(seat, "confirmed");
+  let seatAccountInfo;
+  try {
+    seatAccountInfo = await connection.getAccountInfo(seat, "confirmed");
+  } catch {
+    seatAccountInfo = null;
+  }
+
   if (seatAccountInfo === null || seatAccountInfo.data.length == 0) {
     const traderToEvict = await findTraderToEvict(connection, market);
     if (traderToEvict) {
