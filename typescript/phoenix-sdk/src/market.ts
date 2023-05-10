@@ -564,10 +564,11 @@ export class Market {
   }
 
   getPriceDecimalPlaces(): number {
-    let target =
+    let target = Math.floor(
       (Math.pow(10, this.data.header.quoteParams.decimals) *
         this.data.header.rawBaseUnitsPerBaseUnit) /
-      toNum(this.data.header.tickSizeInQuoteAtomsPerBaseUnit);
+        toNum(this.data.header.tickSizeInQuoteAtomsPerBaseUnit)
+    );
 
     if (target === 0) {
       return 0;
