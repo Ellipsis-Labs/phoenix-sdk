@@ -128,8 +128,10 @@ impl MarketMetadata {
                 "Invalid base lot size (in base atoms per base lot)"
             ));
         }
-        let num_base_lots_per_base_unit = (base_atoms_per_raw_base_unit / base_atoms_per_base_lot)
-            * raw_base_units_per_base_unit as u64;
+
+        let num_base_lots_per_base_unit = (base_atoms_per_raw_base_unit
+            * raw_base_units_per_base_unit as u64)
+            / base_atoms_per_base_lot;
 
         Ok(MarketMetadata {
             base_mint,
