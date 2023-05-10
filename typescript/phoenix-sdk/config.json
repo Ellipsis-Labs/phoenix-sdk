@@ -63,22 +63,9 @@
         "symbol": "mSOL",
         "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png"
-      },
-      {
-        "name": "BASE",
-        "symbol": "BASE",
-        "mint": "7Z6Kczxo8ViRpfnsVvVaATB5fQ8bN2CQpxP8DHfd1vz5",
-        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
-      },
-      {
-        "name": "QUOTE",
-        "symbol": "QUOTE",
-        "mint": "5zUmtDCDeR17UYjvKKqvYp3S9pqcZA69cDoYPtojseJ4",
-        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       }
     ],
     "markets": [
-      "14CAwu3LiBBk5fcHGdTsFyVxDwvpgFiSfDwgPJxECcE5",
       "4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg",
       "FZRgpfpvicJ3p23DfmZuvUgcQZBHJsWScTf2N2jK8dy6"
     ]
