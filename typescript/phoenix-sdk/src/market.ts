@@ -585,12 +585,12 @@ export class Market {
       exp5 += 1;
     }
     const precision = Math.max(exp2, exp5);
-    return (
-      Math.max(precision, 3) +
-      Math.floor(
-        Math.log10(Math.max(this.data.header.rawBaseUnitsPerBaseUnit, 1))
-      )
-    );
+    if (precision === 0) {
+      // In the off chance that the target does not have 2 or 5 as a prime factor,
+      // we'll just return a precision of 3 decimals.
+      return 3;
+    }
+    return precision;
   }
 
   /**
