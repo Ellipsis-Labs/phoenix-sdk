@@ -1426,7 +1426,9 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 
 [[package]]
 name = "ellipsis-client"
-version = "0.2.1"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f13b3e24cd9f9468802b0fabc9e0c06d38360aa6e8f4851597ae8dfa59d941b"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -2858,7 +2860,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2888,7 +2890,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk-core"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",
