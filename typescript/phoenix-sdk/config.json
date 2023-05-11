@@ -60,6 +60,12 @@
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
       },
       {
+        "name": "Bonk",
+        "symbol": "Bonk",
+        "mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/6dhTynDkYsVM7cbF7TKfC9DWB636TcEM935fq7JzL2ES/logo.png"
+      },
+      {
         "name": "Marinade staked SOL",
         "symbol": "mSOL",
         "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
@@ -68,6 +74,7 @@
     ],
     "markets": [
       "4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg",
+      "GBMoNx84HsFdVK63t8BZuDgyZhSBaeKWB4pHHpoeRM9z",
       "FZRgpfpvicJ3p23DfmZuvUgcQZBHJsWScTf2N2jK8dy6"
     ]
   },
