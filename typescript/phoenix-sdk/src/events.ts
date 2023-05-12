@@ -48,6 +48,48 @@ export function readPublicKey(reader: BinaryReader): PublicKey {
   return new PublicKey(reader.readFixedArray(32));
 }
 
+export function getPhoenixEventsFromLogData(
+  data: Uint8Array
+): PhoenixEventsFromInstruction {
+  // Decode the header by hand
+  const reader = new BinaryReader(Buffer.from(data));
+  const byte = reader.readU8();
+  // A byte of 1 identifies a header event
+  if (byte != 1) {
+    throw new Error("early Unexpected event");
+  }
+  const header = {
+    instruction: reader.readU8(),
+    sequenceNumber: reader.readU64(),
+    timestamp: reader.readU64(),
+    slot: reader.readU64(),
+    market: readPublicKey(reader),
+    signer: readPublicKey(reader),
+    totalEvents: reader.readU16(),
+  };
+
+  // Borsh serializes the length of the vector as a u32
+  const lengthBuffer = new ArrayBuffer(4);
+  const view = new DataView(lengthBuffer);
+  // The size of the vector in the header event is a u16
+  view.setUint16(0, header.totalEvents, true);
+
+  // By coercing the buffer to have the same byte serialization as a
+  // Borsh-encoded vector, we can leverage the Borsh deserializer to decode
+  // the events
+  const events = decodePhoenixEvents(
+    Buffer.concat([
+      Buffer.from(lengthBuffer),
+      Buffer.from(data.slice(reader.offset)),
+    ])
+  );
+
+  return {
+    header: header,
+    events: events,
+  };
+}
+
 /**
  * Returns a list of Phoenix events for a given transaction object
  *
@@ -87,43 +129,7 @@ export function getPhoenixEventsFromTransactionData(
   const instructions = new Array<PhoenixEventsFromInstruction>();
 
   for (const data of logData) {
-    // Decode the header by hand
-    const reader = new BinaryReader(Buffer.from(data));
-    const byte = reader.readU8();
-    // A byte of 1 identifies a header event
-    if (byte != 1) {
-      throw new Error("early Unexpected event");
-    }
-    const header = {
-      instruction: reader.readU8(),
-      sequenceNumber: reader.readU64(),
-      timestamp: reader.readU64(),
-      slot: reader.readU64(),
-      market: readPublicKey(reader),
-      signer: readPublicKey(reader),
-      totalEvents: reader.readU16(),
-    };
-
-    // Borsh serializes the length of the vector as a u32
-    const lengthBuffer = new ArrayBuffer(4);
-    const view = new DataView(lengthBuffer);
-    // The size of the vector in the header event is a u16
-    view.setUint16(0, header.totalEvents, true);
-
-    // By coercing the buffer to have the same byte serialization as a
-    // Borsh-encoded vector, we can leverage the Borsh deserializer to decode
-    // the events
-    const events = decodePhoenixEvents(
-      Buffer.concat([
-        Buffer.from(lengthBuffer),
-        Buffer.from(data.slice(reader.offset)),
-      ])
-    );
-
-    instructions.push({
-      header: header,
-      events: events,
-    });
+    instructions.push(getPhoenixEventsFromLogData(data));
   }
   return {
     instructions: instructions,
