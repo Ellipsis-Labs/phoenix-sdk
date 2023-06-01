@@ -19,5 +19,12 @@
     "quote_ticker": "USDC",
     "base_pubkey": "8LN9tTVkGLqXRT2SxLUjN8YRHiKzYGLq1wGV1FL7E23P",
     "quote_pubkey": "DK1gsSV2EubSE5S5FdXHpGzw2cAJNVzxeXRmAfxAMpU5"
+  },
+  {
+    "market": "HBEs1zhmqaKTRdx25W2uFMVV5YxojWDutR2fWBe3idYy",
+    "base_ticker": "Bonk",
+    "quote_ticker": "SOL",
+    "base_pubkey": "8LN9tTVkGLqXRT2SxLUjN8YRHiKzYGLq1wGV1FL7E23P",
+    "quote_pubkey": "B1sL3zxwyVnDGzRWCAsBkjL23wyu8HgwQP4XxgnHiSrv"
   }
 ]
