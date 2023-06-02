@@ -19,5 +19,12 @@
     "quote_ticker": "SOL",
     "base_pubkey": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
     "quote_pubkey": "So11111111111111111111111111111111111111112"
+  },
+  {
+    "market": "FicF181nDsEcasznMTPp9aLa5Rbpdtd11GtSEa1UUWzx",
+    "base_ticker": "Bonk",
+    "quote_ticker": "SOL",
+    "base_pubkey": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+    "quote_pubkey": "So11111111111111111111111111111111111111112"
   }
 ]
