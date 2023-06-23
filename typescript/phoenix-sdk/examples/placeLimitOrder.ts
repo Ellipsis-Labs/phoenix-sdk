@@ -19,11 +19,7 @@ export async function placeLimitOrderExample() {
   // Use your keypair in the place of the below traderKeypair example to instantiate the Client.
   const traderKeypair = new Keypair();
   console.log("Trader pubkey: ", traderKeypair.publicKey.toBase58());
-  const phoenixClient = await PhoenixSdk.Client.create(
-    connection,
-    endpoint,
-    traderKeypair.publicKey
-  );
+  const phoenixClient = await PhoenixSdk.Client.create(connection);
 
   // Request a SOL airdrop to send the transaction in this example. Only needed, and will only work, on devnet.
   // This method has a high rate of failure. Use your own devnet RPC endpoint for more consistent results.
@@ -36,7 +32,7 @@ export async function placeLimitOrderExample() {
   const marketAddress = new PublicKey(
     "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N"
   );
-  const market = phoenixClient.markets.get(marketAddress.toBase58());
+  const market = phoenixClient.marketStates.get(marketAddress.toBase58());
   if (market === undefined) {
     throw Error("Market not found");
   }

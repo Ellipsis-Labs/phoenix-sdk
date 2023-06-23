@@ -7,7 +7,7 @@ export * from "./instructions";
 export * from "./token";
 export * from "./events";
 export * from "./market";
-export * from "./trader";
+export * from "./marketMetadata";
 export * from "./client";
 export * from "./orderPacket";
 

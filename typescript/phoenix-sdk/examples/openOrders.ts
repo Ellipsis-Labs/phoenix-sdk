@@ -31,12 +31,14 @@ const displayOpenOrder = (
 };
 
 export async function watch() {
-  const connection = new Connection("http://127.0.0.1:8899");
-  const phoenix = await Phoenix.Client.create(connection, "localhost");
+  const connection = new Connection("https://api.mainnet-beta.solana.com");
+  const phoenix = await Phoenix.Client.create(connection);
 
-  const market = Array.from(phoenix.markets.values()).find(
+  const marketConfig = Array.from(phoenix.marketConfigs.values()).find(
     (market) => market.name === "SOL/USDC"
   );
+  if (!marketConfig) throw new Error("Market not found");
+  const market = phoenix.marketStates.get(marketConfig.market.toBase58());
   if (!market) throw new Error("Market not found");
 
   // Locate the first trader with locked orders

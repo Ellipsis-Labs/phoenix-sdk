@@ -5,10 +5,8 @@ import {
   SYSVAR_CLOCK_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { getClusterFromEndpoint } from "./utils";
-import { Token } from "./token";
-import { Market } from "./market";
-import { Trader } from "./trader";
+import { getClusterFromConnection } from "./utils";
+import { MarketState } from "./market";
 import {
   ClockData,
   PostOnlyOrderTemplate,
@@ -37,6 +35,14 @@ import {
   ImmediateOrCancelOrderTemplate,
 } from "./index";
 import { bignum } from "@metaplex-foundation/beet";
+import { MarketMetadata } from "./marketMetadata";
+
+export type MarketConfig = {
+  name: string;
+  market: PublicKey;
+  baseToken: TokenConfig;
+  quoteToken: TokenConfig;
+};
 
 export type TokenConfig = {
   name: string;
@@ -47,67 +53,33 @@ export type TokenConfig = {
 
 export class Client {
   connection: Connection;
-  trader: Trader;
-  tokenConfig: Array<TokenConfig>;
-  tokens: Array<Token>;
-  markets: Map<string, Market>;
+  tokenConfigs: Map<string, TokenConfig>;
+  marketStates: Map<string, MarketState>;
+  marketMetadatas: Map<string, MarketMetadata>;
+  marketConfigs: Map<string, MarketConfig>;
   clock: ClockData;
 
   private constructor({
     connection,
-    tokens,
-    tokenConfig,
-    markets,
+    tokenConfigs,
+    marketStates,
+    marketMetadatas,
+    marketConfigs,
     clock,
-    trader,
   }: {
     connection: Connection;
-    tokens: Array<Token>;
-    tokenConfig: Array<TokenConfig>;
-    markets: Map<string, Market>;
+    tokenConfigs: Map<string, TokenConfig>;
+    marketStates: Map<string, MarketState>;
+    marketMetadatas: Map<string, MarketMetadata>;
+    marketConfigs: Map<string, MarketConfig>;
     clock: ClockData;
-    trader?: Trader;
   }) {
     this.connection = connection;
-    this.tokens = tokens;
-    this.tokenConfig = tokenConfig;
-    this.markets = markets;
+    this.tokenConfigs = tokenConfigs;
+    this.marketStates = marketStates;
+    this.marketMetadatas = marketMetadatas;
+    this.marketConfigs = marketConfigs;
     this.clock = clock;
-    if (trader) {
-      this.trader = trader;
-    }
-  }
-
-  static loadMarketsAndTokens(
-    marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]>,
-    tokenConfig: Array<TokenConfig>
-  ): [Map<string, Market>, Token[]] {
-    const tokens: Array<Token> = [];
-    const markets = new Map();
-    // For every market:
-    marketKeysAndData.map(([marketAddress, marketAccount]) => {
-      // Load the market
-      const market = Market.load({
-        address: marketAddress,
-        buffer: marketAccount.data,
-        tokenList: tokenConfig,
-      });
-
-      markets.set(marketAddress.toString(), market);
-
-      // Set the tokens from the market (avoiding duplicates)
-      for (const token of [market.baseToken, market.quoteToken]) {
-        const mint = token.data.mintKey.toBase58();
-        if (
-          tokens.find((t) => {
-            return t.data.mintKey.toBase58() === mint;
-          })
-        )
-          continue;
-        tokens.push(token);
-      }
-    });
-    return [markets, tokens];
   }
 
   /**
@@ -115,70 +87,89 @@ export class Client {
    *
    * @param connection The Solana `Connection` to use for the client
    * @param endpoint Solana cluster to use - "mainnet", "devnet", or "localnet"
-   * @param trader The `PublicKey` of the trader account to use for the client (optional)
+   * @param skipInitialFetch If true, skips the initial load of markets and tokens
    */
   static async create(
     connection: Connection,
-    endpoint: string,
-    trader?: PublicKey
+    skipInitialFetch = false
   ): Promise<Client> {
-    const cluster = getClusterFromEndpoint(endpoint);
+    const cluster = await getClusterFromConnection(connection);
+
     const configUrl =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
-    const marketConfigs = await fetch(configUrl).then((response) => {
+    const rawMarketConfigs = await fetch(configUrl).then((response) => {
       return response.json();
     });
+    const tokenConfigs = new Map<string, TokenConfig>();
+    rawMarketConfigs[cluster].tokens.forEach((tokenConfig) => {
+      tokenConfigs.set(tokenConfig.mint, tokenConfig);
+    });
 
-    const marketAddresses: PublicKey[] = marketConfigs[cluster].markets.map(
-      (marketConfig) => {
-        return new PublicKey(marketConfig.market);
+    const marketConfigs = new Map<string, MarketConfig>();
+    const marketAddresses = [];
+    rawMarketConfigs[cluster].markets.forEach((marketConfig) => {
+      const baseToken = tokenConfigs.get(marketConfig.baseMint);
+      const quoteToken = tokenConfigs.get(marketConfig.quoteMint);
+      const marketAddress = new PublicKey(marketConfig.market);
+      if (baseToken !== undefined && quoteToken !== undefined) {
+        marketConfigs.set(marketConfig.market, {
+          market: marketAddress,
+          name: `${baseToken.symbol}/${quoteToken.symbol}`,
+          baseToken,
+          quoteToken,
+        });
+        marketAddresses.push(marketAddress);
       }
-    );
+    });
 
-    const tokenConfig = marketConfigs[cluster].tokens;
-
+    const marketStates = new Map<string, MarketState>();
+    const marketMetadatas = new Map<string, MarketMetadata>();
+    const accountList = [];
+    if (!skipInitialFetch) {
+      accountList.push(...marketAddresses);
+    }
+    accountList.push(SYSVAR_CLOCK_PUBKEY);
     const accounts = await connection.getMultipleAccountsInfo(
-      [...marketAddresses, SYSVAR_CLOCK_PUBKEY],
+      accountList,
       "confirmed"
     );
-
     const clockBuffer = accounts.pop()?.data;
     if (clockBuffer === undefined) {
       throw new Error("Unable to get clock");
     }
 
     const clock = deserializeClockData(clockBuffer);
-    const marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]> =
-      marketAddresses.map((marketAddress, index) => {
-        return [marketAddress, accounts[index] as AccountInfo<Buffer>];
-      });
 
-    const [markets, tokens] = Client.loadMarketsAndTokens(
-      marketKeysAndData,
-      tokenConfig
-    );
+    if (!skipInitialFetch) {
+      const marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]> =
+        marketAddresses.map((marketAddress, index) => {
+          return [marketAddress, accounts[index] as AccountInfo<Buffer>];
+        });
+      marketKeysAndData.forEach(([marketAddress, marketAccount]) => {
+        const marketState = MarketState.load({
+          address: marketAddress,
+          buffer: marketAccount.data,
+        });
+        marketStates.set(marketAddress.toString(), marketState);
+        const marketMetadata = MarketMetadata.fromMarketState(marketState);
+        marketMetadatas.set(marketAddress.toString(), marketMetadata);
+      });
+    }
 
     return new Client({
       connection,
-      tokens,
-      markets,
-      tokenConfig,
-      trader: trader
-        ? await Trader.create({
-            connection,
-            pubkey: trader,
-            tokens,
-          })
-        : undefined,
+      tokenConfigs,
       clock,
+      marketStates,
+      marketMetadatas,
+      marketConfigs,
     });
   }
 
   static async createWithoutConfig(
     connection: Connection,
-    marketAddresses: PublicKey[],
-    trader?: PublicKey
+    marketAddresses: PublicKey[]
   ): Promise<Client> {
     const accounts = await connection.getMultipleAccountsInfo(
       [...marketAddresses, SYSVAR_CLOCK_PUBKEY],
@@ -195,46 +186,63 @@ export class Client {
       throw Error("Unable to get all market accounts");
     }
 
+    const marketStates = new Map<string, MarketState>();
+    const marketMetadatas = new Map<string, MarketMetadata>();
     const marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
         return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
-
-    const [markets, tokens] = Client.loadMarketsAndTokens(
-      marketKeysAndData,
-      []
-    );
+    marketKeysAndData.forEach(([marketAddress, marketAccount]) => {
+      const marketState = MarketState.load({
+        address: marketAddress,
+        buffer: marketAccount.data,
+      });
+      marketStates.set(marketAddress.toString(), marketState);
+      const marketMetadata = MarketMetadata.fromMarketState(marketState);
+      marketMetadatas.set(marketAddress.toString(), marketMetadata);
+    });
 
     return new Client({
       connection,
-      tokens,
-      markets,
-      tokenConfig: [],
-      trader: trader
-        ? await Trader.create({
-            connection,
-            pubkey: trader,
-            tokens,
-          })
-        : undefined,
+      marketConfigs: new Map(),
+      marketStates,
+      marketMetadatas,
+      tokenConfigs: new Map(),
       clock,
     });
   }
 
   static async createWithMarketAddresses(
     connection: Connection,
-    endpoint: string,
-    marketAddresses: PublicKey[],
-    trader?: PublicKey
+    marketAddresses: PublicKey[]
   ): Promise<Client> {
-    const cluster = getClusterFromEndpoint(endpoint);
+    const cluster = await getClusterFromConnection(connection);
     const configUrl =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
-    const marketConfigs = await fetch(configUrl).then((response) => {
+    const rawMarketConfigs = await fetch(configUrl).then((response) => {
       return response.json();
     });
-    const tokenConfig = marketConfigs[cluster].tokens;
+    const tokenConfigs = new Map<string, TokenConfig>();
+    rawMarketConfigs[cluster].tokens.forEach((tokenConfig) => {
+      tokenConfigs.set(tokenConfig.mint, tokenConfig);
+    });
+
+    const marketConfigs = new Map<string, MarketConfig>();
+    rawMarketConfigs[cluster].markets.forEach((marketConfig) => {
+      const baseToken = tokenConfigs.get(marketConfig.baseMint);
+      const quoteToken = tokenConfigs.get(marketConfig.quoteMint);
+      const marketAddress = new PublicKey(marketConfig.market);
+      if (baseToken !== undefined && quoteToken !== undefined) {
+        marketConfigs.set(marketConfig.market, {
+          market: marketAddress,
+          name: `${baseToken.symbol}/${quoteToken.symbol}`,
+          baseToken,
+          quoteToken,
+        });
+      }
+    });
+
     const accounts = await connection.getMultipleAccountsInfo(
       [...marketAddresses, SYSVAR_CLOCK_PUBKEY],
       "confirmed"
@@ -246,28 +254,28 @@ export class Client {
     }
     const clock = deserializeClockData(clockBuffer);
 
+    const marketStates = new Map<string, MarketState>();
+    const marketMetadatas = new Map<string, MarketMetadata>();
     const marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]> =
       marketAddresses.map((marketAddress, index) => {
         return [marketAddress, accounts[index] as AccountInfo<Buffer>];
       });
-
-    const [markets, tokens] = Client.loadMarketsAndTokens(
-      marketKeysAndData,
-      tokenConfig
-    );
+    marketKeysAndData.forEach(([marketAddress, marketAccount]) => {
+      const marketState = MarketState.load({
+        address: marketAddress,
+        buffer: marketAccount.data,
+      });
+      marketStates.set(marketAddress.toString(), marketState);
+      const marketMetadata = MarketMetadata.fromMarketState(marketState);
+      marketMetadatas.set(marketAddress.toString(), marketMetadata);
+    });
 
     return new Client({
       connection,
-      tokens,
-      markets,
-      tokenConfig,
-      trader: trader
-        ? await Trader.create({
-            connection,
-            pubkey: trader,
-            tokens,
-          })
-        : undefined,
+      tokenConfigs,
+      marketStates,
+      marketConfigs,
+      marketMetadatas,
       clock,
     });
   }
@@ -279,7 +287,7 @@ export class Client {
    *
    */
   public async addMarket(marketAddress: string, forceReload = false) {
-    const existingMarket = this.markets.get(marketAddress);
+    const existingMarket = this.marketStates.get(marketAddress);
 
     // If the market already exists, return
     if (existingMarket !== undefined) {
@@ -304,17 +312,14 @@ export class Client {
       throw new Error("Unable to get market account data");
     }
 
-    const market = await Market.load({
+    const market = MarketState.load({
       address: marketKey,
       buffer,
-      tokenList: this.tokenConfig,
     });
-    for (const token of [market.baseToken, market.quoteToken]) {
-      const mint = token.data.mintKey.toBase58();
-      if (this.tokens.find((t) => t.data.mintKey.toBase58() === mint)) continue;
-      this.tokens.push(token);
-    }
-    this.markets.set(marketAddress, market);
+    this.marketStates.set(marketAddress, market);
+    const marketMetadata = MarketMetadata.fromMarketState(market);
+    this.marketMetadatas.set(marketAddress, marketMetadata);
+
     const clockBuffer = accounts[1]?.data;
     if (clockBuffer === undefined) {
       throw new Error("Unable to get clock");
@@ -326,7 +331,7 @@ export class Client {
    * Refreshes the market data for all markets and the clock
    */
   public async refreshAllMarkets() {
-    const marketKeys = Array.from(this.markets.keys()).map((market) => {
+    const marketKeys = Array.from(this.marketStates.keys()).map((market) => {
       return new PublicKey(market);
     });
     const accounts = await this.connection.getMultipleAccountsInfo(
@@ -341,7 +346,7 @@ export class Client {
     this.reloadClockFromBuffer(clockBuffer);
 
     for (const [i, marketKey] of marketKeys.entries()) {
-      const existingMarket = this.markets.get(marketKey.toString());
+      const existingMarket = this.marketStates.get(marketKey.toString());
       if (existingMarket === undefined) {
         throw new Error("Market does not exist: " + marketKey.toBase58());
       }
@@ -362,9 +367,9 @@ export class Client {
    */
   public async refreshMarket(
     marketAddress: string | PublicKey
-  ): Promise<Market> {
+  ): Promise<MarketState> {
     const marketKey = new PublicKey(marketAddress);
-    const existingMarket = this.markets.get(marketKey.toString());
+    const existingMarket = this.marketStates.get(marketKey.toString());
     if (existingMarket === undefined) {
       throw new Error("Market does not exist: " + marketKey.toBase58());
     }
@@ -415,7 +420,7 @@ export class Client {
     marketAddress: string,
     levels: number = DEFAULT_L2_LADDER_DEPTH
   ): Ladder {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketStates.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.getLadder(this.clock.slot, this.clock.unixTimestamp, levels);
   }
@@ -429,7 +434,7 @@ export class Client {
     marketAddress: string,
     levels: number = DEFAULT_L2_LADDER_DEPTH
   ): UiLadder {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketStates.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.getUiLadder(
       levels,
@@ -448,7 +453,7 @@ export class Client {
     marketAddress: string,
     ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
   ): L3Book {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketStates.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return getMarketL3Book(
       market.data,
@@ -473,7 +478,7 @@ export class Client {
     startingUnixTimestampInSeconds: bignum,
     ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
   ): L3Book {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketStates.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return getMarketL3Book(
       market.data,
@@ -493,7 +498,7 @@ export class Client {
     marketAddress: string,
     ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
   ): L3UiBook {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketStates.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return getMarketL3UiBook(
       market.data,
@@ -519,7 +524,7 @@ export class Client {
     startingUnixTimestampInSeconds: bignum,
     ordersPerSide: number = DEFAULT_L3_BOOK_DEPTH
   ): L3UiBook {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketStates.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return getMarketL3UiBook(
       market.data,
@@ -553,7 +558,7 @@ export class Client {
     side: Side;
     inAmount: number;
   }): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketStates.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.getExpectedOutAmount({
       side,
@@ -573,7 +578,7 @@ export class Client {
     trader: PublicKey,
     marketAddress: string
   ): PublicKey {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.getBaseAccountKey(trader);
   }
@@ -588,7 +593,7 @@ export class Client {
     trader: PublicKey,
     marketAddress: string
   ): PublicKey {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.getQuoteAccountKey(trader);
   }
@@ -599,7 +604,7 @@ export class Client {
    * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public getQuoteVaultKey(marketAddress: string): PublicKey {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.getQuoteVaultKey();
   }
@@ -610,7 +615,7 @@ export class Client {
    * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public getBaseVaultKey(marketAddress: string): PublicKey {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.getBaseVaultKey();
   }
@@ -622,7 +627,7 @@ export class Client {
    * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public getSeatKey(trader: PublicKey, marketAddress: string): PublicKey {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.getSeatAddress(trader);
   }
@@ -640,7 +645,7 @@ export class Client {
    * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public floatPriceToTicks(price: number, marketAddress: string): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.floatPriceToTicks(price);
   }
@@ -654,7 +659,7 @@ export class Client {
    * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public ticksToFloatPrice(ticks: number, marketAddress: string): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.ticksToFloatPrice(ticks);
   }
@@ -669,7 +674,7 @@ export class Client {
     rawBaseUnits: number,
     marketAddress: string
   ): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.rawBaseUnitsToBaseLotsRoundedDown(rawBaseUnits);
   }
@@ -684,7 +689,7 @@ export class Client {
     rawBaseUnits: number,
     marketAddress: string
   ): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.rawBaseUnitsToBaseLotsRoundedUp(rawBaseUnits);
   }
@@ -696,7 +701,7 @@ export class Client {
    * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public baseAtomsToBaseLots(baseAtoms: number, marketAddress: string): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.baseAtomsToBaseLots(baseAtoms);
   }
@@ -708,7 +713,7 @@ export class Client {
    * @param marketAddress The `PublicKey` of the market account, as a string
    */
   public baseLotsToBaseAtoms(baseLots: number, marketAddress: string): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.baseLotsToBaseAtoms(baseLots);
   }
@@ -723,7 +728,7 @@ export class Client {
     quoteUnits: number,
     marketAddress: string
   ): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.quoteUnitsToQuoteLots(quoteUnits);
   }
@@ -738,7 +743,7 @@ export class Client {
     quoteAtoms: number,
     marketAddress: string
   ): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.quoteAtomsToQuoteLots(quoteAtoms);
   }
@@ -753,7 +758,7 @@ export class Client {
     quoteLots: number,
     marketAddress: string
   ): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.quoteLotsToQuoteAtoms(quoteLots);
   }
@@ -768,7 +773,7 @@ export class Client {
     baseAtoms: number,
     marketAddress: string
   ): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.baseAtomsToRawBaseUnits(baseAtoms);
   }
@@ -783,7 +788,7 @@ export class Client {
     quoteAtoms: number,
     marketAddress: string
   ): number {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.quoteAtomsToQuoteUnits(quoteAtoms);
   }
@@ -802,12 +807,9 @@ export class Client {
    */
   public createCancelAllOrdersInstruction(
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createCancelAllOrdersInstruction(trader);
   }
@@ -823,10 +825,7 @@ export class Client {
     marketAddress: string,
     trader?: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createCancelAllOrdersWithFreeFundsInstruction(trader);
   }
@@ -836,7 +835,7 @@ export class Client {
    *
    * @param args to provide as instruction data to the program
    * @param marketAddress Market address string
-   * @param trader Trader public key (defaults to client's wallet public key)
+   * @param trader Trader public key
    *
    * @category Instructions
    * @category CancelMultipleOrdersById
@@ -844,12 +843,9 @@ export class Client {
   public createCancelMultipleOrdersByIdInstruction(
     args: CancelMultipleOrdersByIdInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createCancelMultipleOrdersByIdInstruction(args, trader);
   }
@@ -859,19 +855,16 @@ export class Client {
    *
    * @param args to provide as instruction data to the program
    * @param marketAddress Market address string
-   * @param trader Trader public key (defaults to client's wallet public key)
+   * @param trader Trader public key
    *
    * @category Instructions
    */
   public createCancelMultipleOrdersByIdWithFreeFundsInstruction(
     args: CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createCancelMultipleOrdersByIdWithFreeFundsInstruction(
       args,
@@ -891,12 +884,9 @@ export class Client {
   public createCancelUpToInstruction(
     args: CancelUpToInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createCancelUpToInstruction(args, trader);
   }
@@ -906,19 +896,16 @@ export class Client {
    *
    * @param args to provide as instruction data to the program
    * @param marketAddress Market address string
-   * @param trader Trader public key (defaults to client's wallet public key)
+   * @param trader Trader public key
    *
    * @category Instructions
    */
   public createCancelUpToWithFreeFundsInstruction(
     args: CancelUpToWithFreeFundsInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createCancelUpToWithFreeFundsInstruction(args, trader);
   }
@@ -935,12 +922,9 @@ export class Client {
   public createDepositFundsInstruction(
     args: DepositFundsInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createDepositFundsInstruction(args, trader);
   }
@@ -957,12 +941,9 @@ export class Client {
   public createPlaceLimitOrderInstruction(
     orderPacket: OrderPacket,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createPlaceLimitOrderInstruction(orderPacket, trader);
   }
@@ -979,12 +960,9 @@ export class Client {
   public createPlaceLimitOrderWithFreeFundsInstruction(
     orderPacket: OrderPacket,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ) {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createPlaceLimitOrderWithFreeFundsInstruction(
       orderPacket,
@@ -1004,12 +982,9 @@ export class Client {
   public createPlaceMultiplePostOnlyOrdersInstruction(
     args: PlaceMultiplePostOnlyOrdersInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createPlaceMultiplePostOnlyOrdersInstruction(args, trader);
   }
@@ -1026,12 +1001,9 @@ export class Client {
   public createPlaceMultiplePostOnlyOrdersInstructionWithFreeFunds(
     args: PlaceMultiplePostOnlyOrdersInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createPlaceMultiplePostOnlyOrdersInstructionWithFreeFunds(
       args,
@@ -1053,10 +1025,7 @@ export class Client {
     marketAddress: string,
     trader?: PublicKey
   ) {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createReduceOrderInstruction(args, trader);
   }
@@ -1075,10 +1044,7 @@ export class Client {
     marketAddress: string,
     trader?: PublicKey
   ) {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createReduceOrderWithFreeFundsInstruction(args, trader);
   }
@@ -1094,17 +1060,14 @@ export class Client {
    */
   public createRequestSeatInstruction(
     marketAddress: string,
-    payer?: PublicKey,
+    payer: PublicKey,
     trader?: PublicKey
   ) {
-    if (!payer) {
-      payer = this.trader.pubkey;
-    }
     if (!trader) {
       trader = payer;
     }
 
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createRequestSeatInstruction(payer, trader);
   }
@@ -1121,12 +1084,9 @@ export class Client {
   public createSwapInstruction(
     orderPacket: OrderPacket,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createSwapInstruction(orderPacket, trader);
   }
@@ -1143,12 +1103,9 @@ export class Client {
   public createSwapWithFreeFundsInstruction(
     orderPacket: OrderPacket,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ) {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createSwapWithFreeFundsInstruction(orderPacket, trader);
   }
@@ -1167,10 +1124,7 @@ export class Client {
     marketAddress: string,
     trader?: PublicKey
   ): TransactionInstruction {
-    if (!trader) {
-      trader = this.trader.pubkey;
-    }
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
     return market.createWithdrawFundsInstruction(args, trader);
   }
@@ -1187,7 +1141,7 @@ export class Client {
     trader: PublicKey,
     limitOrderTemplate: LimitOrderTemplate
   ): TransactionInstruction {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
 
     return market.getLimitOrderInstructionfromTemplate(
@@ -1208,7 +1162,7 @@ export class Client {
     trader: PublicKey,
     postOnlyOrderTemplate: PostOnlyOrderTemplate
   ): TransactionInstruction {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
 
     return market.getPostOnlyOrderInstructionfromTemplate(
@@ -1229,7 +1183,7 @@ export class Client {
     trader: PublicKey,
     immediateOrCancelOrderTemplate: ImmediateOrCancelOrderTemplate
   ): TransactionInstruction {
-    const market = this.markets.get(marketAddress);
+    const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
 
     return market.getImmediateOrCancelOrderInstructionfromTemplate(

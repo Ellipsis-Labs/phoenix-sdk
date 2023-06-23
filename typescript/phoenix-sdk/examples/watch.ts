@@ -6,16 +6,18 @@ import * as Phoenix from "../src";
 // This example will print the order book every time it changes
 
 export async function watch() {
-  const connection = new Connection("http://127.0.0.1:8899");
-  const phoenix = await Phoenix.Client.create(connection, "localhost");
+  const connection = new Connection("https://api.mainnet-beta.solana.com");
+  const phoenix = await Phoenix.Client.create(connection);
 
-  console.log(phoenix.markets);
-  const market = Array.from(phoenix.markets.values()).find(
+  console.log(phoenix.marketConfigs);
+  console.log(phoenix.marketStates);
+  const marketConfig = Array.from(phoenix.marketConfigs.values()).find(
     (market) => market.name === "SOL/USDC"
   );
-  if (!market) throw new Error("Market not found");
 
-  const marketAddress = market.address.toBase58();
+  if (!marketConfig) throw new Error("Market not found");
+
+  const marketAddress = marketConfig.market.toBase58();
 
   let lastLadder: Phoenix.UiLadder | null = null;
   let updates = 0;

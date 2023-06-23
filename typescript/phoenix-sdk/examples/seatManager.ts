@@ -29,7 +29,7 @@ const devnetSeatManagerAuthority = new PublicKey(
 export async function getSeatManager() {
   const endpoint = "https://api.devnet.solana.com";
   const connection = new Connection(endpoint);
-  const phoenix = await Phoenix.Client.create(connection, endpoint);
+  const phoenix = await Phoenix.Client.create(connection);
 
   // This is a SOL / USDC market on devnet.
   const marketAddress = new PublicKey(
@@ -74,11 +74,7 @@ export async function claimSeat() {
 
   // Use your keypair in the place of the below traderKeypair example to instantiate the Client.
   const traderKeypair = new Keypair();
-  const phoenix = await Phoenix.Client.create(
-    connection,
-    endpoint,
-    traderKeypair.publicKey
-  );
+  const phoenix = await Phoenix.Client.create(connection);
   console.log("Trader pubkey: ", traderKeypair.publicKey.toBase58());
   // Request a SOL airdrop to send the transaction in this example. Only needed, and will only work, on devnet.
   await phoenix.connection.requestAirdrop(
@@ -109,7 +105,7 @@ export async function claimSeat() {
 
   // This refreshes the market state from the blockchain, so we can check that claiming the seat succeeded.
   await phoenix.refreshMarket(marketAddress);
-  const marketData = phoenix.markets.get(marketAddress.toBase58())?.data;
+  const marketData = phoenix.marketStates.get(marketAddress.toBase58())?.data;
   const traderIndex = marketData?.traderPubkeyToTraderIndex.get(
     traderKeypair.publicKey.toBase58()
   );
@@ -128,11 +124,7 @@ export async function evictSeat() {
 
   // Use your keypair in the place of the below signerKeypair example to instantiate the Client.
   const signerKeypair = new Keypair();
-  const phoenix = await Phoenix.Client.create(
-    connection,
-    endpoint,
-    signerKeypair.publicKey
-  );
+  const phoenix = await Phoenix.Client.create(connection);
   console.log("Signer pubkey: ", signerKeypair.publicKey.toBase58());
   // Request a SOL airdrop to send the transaction in this example. Only needed, and will only work, on devnet.
   await phoenix.connection.requestAirdrop(
@@ -147,7 +139,7 @@ export async function evictSeat() {
 
   // Here, we simulate a trader to evict.
   const traderKeypair = new Keypair();
-  const market = phoenix.markets.get(marketAddress.toBase58());
+  const market = phoenix.marketStates.get(marketAddress.toBase58());
   if (!market)
     throw new Error("Market not found: " + marketAddress?.toBase58());
 

@@ -32,13 +32,11 @@ export async function swap() {
     );
   }
 
-  const client = await Phoenix.Client.createWithMarketAddresses(
-    connection,
-    "devnet",
-    [marketAddress]
-  );
+  const client = await Phoenix.Client.createWithMarketAddresses(connection, [
+    marketAddress,
+  ]);
 
-  const market = client.markets.get(marketAddress.toBase58());
+  const market = client.marketStates.get(marketAddress.toBase58());
   if (market === undefined) {
     throw Error("Market not found");
   }

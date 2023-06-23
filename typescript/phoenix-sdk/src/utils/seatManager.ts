@@ -5,7 +5,7 @@ import {
 import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
 import * as beetSolana from "@metaplex-foundation/beet-solana";
-import { getLogAuthority, getSeatAddress, Market, PROGRAM_ID } from "..";
+import { getLogAuthority, getSeatAddress, MarketState, PROGRAM_ID } from "..";
 
 import {
   createEvictSeatInstruction,
@@ -111,7 +111,7 @@ export function getClaimSeatIx(
  * @param quoteTokenAccountBackup The to-be-evicted trader's quote token account backup, in the event the associated token account of the trader is no longer owned by the trader
  */
 export function getEvictSeatIx(
-  market: Market,
+  market: MarketState,
   trader: PublicKey,
   signer: PublicKey,
   baseTokenAccountBackup?: PublicKey,
@@ -171,7 +171,7 @@ export function getEvictSeatIx(
  */
 export async function confirmOrCreateClaimSeatIxs(
   connection: Connection,
-  market: Market,
+  market: MarketState,
   trader: PublicKey
 ): Promise<TransactionInstruction[]> {
   const seat = market.getSeatAddress(trader);
@@ -205,7 +205,7 @@ export async function confirmOrCreateClaimSeatIxs(
  */
 export async function createClaimSeatInstructions(
   connection: Connection,
-  market: Market,
+  market: MarketState,
   trader: PublicKey
 ): Promise<TransactionInstruction[]> {
   const instructions: TransactionInstruction[] = [];
@@ -227,7 +227,7 @@ export async function createClaimSeatInstructions(
  */
 export async function findTraderToEvict(
   connection: Connection,
-  market: Market
+  market: MarketState
 ): Promise<PublicKey | void> {
   const traders = market.data.traders;
 

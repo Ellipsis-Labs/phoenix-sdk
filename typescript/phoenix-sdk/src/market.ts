@@ -9,7 +9,6 @@ import {
   getMarketUiLadder,
   toNum,
 } from "./utils";
-import { Token } from "./token";
 import {
   CancelMultipleOrdersByIdInstructionArgs,
   CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
@@ -137,7 +136,7 @@ export interface MarketData {
   quoteLotsPerBaseUnitPerTick: number;
 
   // The next order sequence number of the market
-  sequenceNumber: number;
+  orderSequenceNumber: number;
 
   // Taker fee in basis points
   takerFeeBps: number;
@@ -164,33 +163,13 @@ export interface MarketData {
   traderIndexToTraderPubkey: Map<number, string>;
 }
 
-export class Market {
+export class MarketState {
   address: PublicKey;
   data: MarketData;
 
-  // Optional fields containing the name of the market and the tokens used for the market
-  name?: string;
-  baseToken?: Token;
-  quoteToken?: Token;
-
-  constructor({
-    name,
-    address,
-    baseToken,
-    quoteToken,
-    data,
-  }: {
-    address: PublicKey;
-    data: MarketData;
-    name?: string;
-    baseToken?: Token;
-    quoteToken?: Token;
-  }) {
+  constructor({ address, data }: { address: PublicKey; data: MarketData }) {
     this.address = address;
     this.data = data;
-    this.name = name;
-    this.baseToken = baseToken;
-    this.quoteToken = quoteToken;
   }
 
   /**
@@ -203,63 +182,16 @@ export class Market {
   static load({
     address,
     buffer,
-    tokenList,
   }: {
     address: PublicKey;
     buffer: Buffer;
-    tokenList: TokenConfig[];
-  }): Market {
+  }): MarketState {
     const marketData = deserializeMarketData(buffer);
-
-    const baseTokenConfig = tokenList.find(
-      (token) => token.mint === marketData.header.baseParams.mintKey.toBase58()
-    );
-    const quoteTokenConfig = tokenList.find(
-      (token) => token.mint === marketData.header.quoteParams.mintKey.toBase58()
-    );
-
-    const baseKey = marketData.header.baseParams.mintKey.toBase58();
-    const baseKeyNameBackup = baseKey.slice(0, 8) + "..." + baseKey.slice(-8);
-    const quoteKey = marketData.header.baseParams.mintKey.toBase58();
-    const quoteKeyNameBackup =
-      quoteKey.slice(0, 8) + "..." + quoteKey.slice(-8);
-
-    const baseToken = new Token({
-      name:
-        baseTokenConfig !== undefined
-          ? baseTokenConfig.name
-          : baseKeyNameBackup,
-      symbol: baseTokenConfig !== undefined ? baseTokenConfig.symbol : baseKey,
-      logoUri:
-        baseTokenConfig !== undefined ? baseTokenConfig.logoUri : "Unknown",
-      data: {
-        ...marketData.header.baseParams,
-      },
-    });
-
-    const quoteToken = new Token({
-      name:
-        quoteTokenConfig !== undefined
-          ? quoteTokenConfig.name
-          : quoteKeyNameBackup,
-      symbol:
-        quoteTokenConfig !== undefined ? quoteTokenConfig.symbol : quoteKey,
-      logoUri:
-        quoteTokenConfig !== undefined ? quoteTokenConfig.logoUri : "Unknown",
-      data: {
-        ...marketData.header.quoteParams,
-      },
-    });
-
     // Create the market object
-    const market = new Market({
-      name: `${baseToken.symbol}/${quoteToken.symbol}`,
+    const market = new MarketState({
       address,
-      baseToken,
-      quoteToken,
       data: marketData,
     });
-
     return market;
   }
 
@@ -278,14 +210,14 @@ export class Market {
     connection: Connection;
     address: PublicKey;
     tokenList?: TokenConfig[];
-  }): Promise<Market> {
+  }): Promise<MarketState> {
     const buffer = await connection
       .getAccountInfo(address, "confirmed")
       .then((accountInfo) => accountInfo?.data);
     if (tokenList) {
-      return Market.load({ address, buffer, tokenList });
+      return MarketState.load({ address, buffer });
     } else {
-      return new Market({ address, data: deserializeMarketData(buffer) });
+      return new MarketState({ address, data: deserializeMarketData(buffer) });
     }
   }
 
@@ -296,7 +228,7 @@ export class Market {
    *
    * @returns The reloaded Market
    */
-  reload(buffer: Buffer): Market {
+  reload(buffer: Buffer): MarketState {
     const marketData = deserializeMarketData(buffer);
     this.data = marketData;
     return this;
@@ -315,6 +247,10 @@ export class Market {
         .then((accountInfo) => accountInfo?.data)
     );
     this.data = marketData;
+  }
+
+  public getMarketSequenceNumber(): number {
+    return toNum(this.data.header.marketSequenceNumber);
   }
 
   /**
