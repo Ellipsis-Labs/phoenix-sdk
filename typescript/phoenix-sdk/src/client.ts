@@ -296,6 +296,10 @@ export class Client {
       } else {
         console.log("Market already exists: ", marketAddress);
       }
+      if (!this.marketConfigs.has(marketAddress) || forceReload) {
+        const marketMetadata = MarketMetadata.fromMarketState(existingMarket);
+        this.marketMetadatas.set(marketAddress, marketMetadata);
+      }
       return;
     }
 
@@ -317,8 +321,10 @@ export class Client {
       buffer,
     });
     this.marketStates.set(marketAddress, market);
-    const marketMetadata = MarketMetadata.fromMarketState(market);
-    this.marketMetadatas.set(marketAddress, marketMetadata);
+    if (!this.marketConfigs.has(marketAddress) || forceReload) {
+      const marketMetadata = MarketMetadata.fromMarketState(market);
+      this.marketMetadatas.set(marketAddress, marketMetadata);
+    }
 
     const clockBuffer = accounts[1]?.data;
     if (clockBuffer === undefined) {
