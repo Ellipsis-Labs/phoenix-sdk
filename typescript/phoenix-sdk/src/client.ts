@@ -124,15 +124,15 @@ export class Client {
   ): Promise<Client> {
     const cluster = getClusterFromEndpoint(endpoint);
     const configUrl =
-      "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
+      "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
     const marketConfigs = await fetch(configUrl).then((response) => {
       return response.json();
     });
 
     const marketAddresses: PublicKey[] = marketConfigs[cluster].markets.map(
-      (marketAddress: string) => {
-        return new PublicKey(marketAddress);
+      (marketConfig) => {
+        return new PublicKey(marketConfig.market);
       }
     );
 
@@ -229,7 +229,7 @@ export class Client {
   ): Promise<Client> {
     const cluster = getClusterFromEndpoint(endpoint);
     const configUrl =
-      "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
+      "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
     const marketConfigs = await fetch(configUrl).then((response) => {
       return response.json();
