@@ -1,0 +1,120 @@
+{
+  "devnet": {
+    "tokens": [
+      {
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "mint": "DK1gsSV2EubSE5S5FdXHpGzw2cAJNVzxeXRmAfxAMpU5",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png"
+      },
+      {
+        "name": "Solana",
+        "symbol": "SOL",
+        "mint": "B1sL3zxwyVnDGzRWCAsBkjL23wyu8HgwQP4XxgnHiSrv",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+      },
+      {
+        "name": "Bonk",
+        "symbol": "Bonk",
+        "mint": "8LN9tTVkGLqXRT2SxLUjN8YRHiKzYGLq1wGV1FL7E23P",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/6dhTynDkYsVM7cbF7TKfC9DWB636TcEM935fq7JzL2ES/logo.png"
+      },
+      {
+        "name": "Marinade Staked SOL",
+        "symbol": "mSOL",
+        "mint": "7KowotNADmz2krLdRQKBWygyG4Rsvtne4EG7WU7MBQd8",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png"
+      },
+      {
+        "name": "Wrapped SOL",
+        "symbol": "wSOL",
+        "mint": "So11111111111111111111111111111111111111112",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+      },
+      {
+        "name": "Drift USDC",
+        "symbol": "USDC-Drift",
+        "mint": "8zGuJQqwhZafTah7Uc7Z4tXRnguqkn5KLFAP8oV6PHe2",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png"
+      }
+    ],
+    "markets": [
+      {
+        "market": "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N",
+        "baseMint": "B1sL3zxwyVnDGzRWCAsBkjL23wyu8HgwQP4XxgnHiSrv",
+        "quoteMint": "DK1gsSV2EubSE5S5FdXHpGzw2cAJNVzxeXRmAfxAMpU5"
+      },
+      {
+        "market": "626t4FAUCVWMSvZsjzyPDJjPAKvdrafJB2pAcC6Ags2m",
+        "baseMint": "7KowotNADmz2krLdRQKBWygyG4Rsvtne4EG7WU7MBQd8",
+        "quoteMint": "B1sL3zxwyVnDGzRWCAsBkjL23wyu8HgwQP4XxgnHiSrv"
+      },
+      {
+        "market": "78ehDnHgbkFxqXZwdFxa8HK7saX58GymeX2wNGdkqYLp",
+        "baseMint": "So11111111111111111111111111111111111111112",
+        "quoteMint": "8zGuJQqwhZafTah7Uc7Z4tXRnguqkn5KLFAP8oV6PHe2"
+      },
+      {
+        "market": "H3sb3W8VfKswTJsQM3MC7Ax1NzUcVYuuS3TnKpZiKV2L",
+        "baseMint": "8LN9tTVkGLqXRT2SxLUjN8YRHiKzYGLq1wGV1FL7E23P",
+        "quoteMint": "DK1gsSV2EubSE5S5FdXHpGzw2cAJNVzxeXRmAfxAMpU5"
+      },
+      {
+        "market": "HBEs1zhmqaKTRdx25W2uFMVV5YxojWDutR2fWBe3idYy",
+        "baseMint": "8LN9tTVkGLqXRT2SxLUjN8YRHiKzYGLq1wGV1FL7E23P",
+        "quoteMint": "B1sL3zxwyVnDGzRWCAsBkjL23wyu8HgwQP4XxgnHiSrv"
+      }
+    ]
+  },
+  "mainnet-beta": {
+    "tokens": [
+      {
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png"
+      },
+      {
+        "name": "Wrapped SOL",
+        "symbol": "SOL",
+        "mint": "So11111111111111111111111111111111111111112",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png"
+      },
+      {
+        "name": "Bonk",
+        "symbol": "Bonk",
+        "mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/6dhTynDkYsVM7cbF7TKfC9DWB636TcEM935fq7JzL2ES/logo.png"
+      },
+      {
+        "name": "Marinade staked SOL",
+        "symbol": "mSOL",
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So/logo.png"
+      }
+    ],
+
+    "markets": [
+      {
+        "market": "4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg",
+        "baseMint": "So11111111111111111111111111111111111111112",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "GBMoNx84HsFdVK63t8BZuDgyZhSBaeKWB4pHHpoeRM9z",
+        "baseMint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "FZRgpfpvicJ3p23DfmZuvUgcQZBHJsWScTf2N2jK8dy6",
+        "baseMint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "quoteMint": "So11111111111111111111111111111111111111112"
+      },
+      {
+        "market": "FicF181nDsEcasznMTPp9aLa5Rbpdtd11GtSEa1UUWzx",
+        "baseMint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+        "quoteMint": "So11111111111111111111111111111111111111112"
+      }
+    ]
+  }
+}
