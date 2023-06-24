@@ -37,6 +37,9 @@ import {
 import { bignum } from "@metaplex-foundation/beet";
 import { MarketMetadata } from "./marketMetadata";
 
+const DEFAULT_CONFIG_URL =
+  "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
+
 export type MarketConfig = {
   name: string;
   marketId: string;
@@ -103,12 +106,10 @@ export class Client {
    */
   static async create(
     connection: Connection,
-    skipInitialFetch = false
+    skipInitialFetch = false,
+    configUrl = DEFAULT_CONFIG_URL
   ): Promise<Client> {
     const cluster = await getClusterFromConnection(connection);
-
-    const configUrl =
-      "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
     const rawMarketConfigs: RawMarketConfig = await fetch(configUrl).then(
       (response) => {
@@ -228,11 +229,10 @@ export class Client {
 
   static async createWithMarketAddresses(
     connection: Connection,
-    marketAddresses: PublicKey[]
+    marketAddresses: PublicKey[],
+    configUrl = DEFAULT_CONFIG_URL
   ): Promise<Client> {
     const cluster = await getClusterFromConnection(connection);
-    const configUrl =
-      "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
     const rawMarketConfigs: RawMarketConfig = await fetch(configUrl).then(
       (response) => {
