@@ -829,7 +829,7 @@ export class Client {
    */
   public createCancelAllOrdersWithFreeFundsInstruction(
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -1029,7 +1029,7 @@ export class Client {
   public createReduceOrderInstruction(
     args: ReduceOrderInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ) {
     const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -1048,7 +1048,7 @@ export class Client {
   public createReduceOrderWithFreeFundsInstruction(
     args: ReduceOrderWithFreeFundsInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ) {
     const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
@@ -1067,7 +1067,7 @@ export class Client {
   public createRequestSeatInstruction(
     marketAddress: string,
     payer: PublicKey,
-    trader?: PublicKey
+    trader: PublicKey
   ) {
     if (!trader) {
       trader = payer;
@@ -1128,7 +1128,7 @@ export class Client {
   public createWithdrawFundsInstruction(
     args: WithdrawFundsInstructionArgs,
     marketAddress: string,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     const market = this.marketMetadatas.get(marketAddress);
     if (!market) throw new Error("Market not found: " + marketAddress);
