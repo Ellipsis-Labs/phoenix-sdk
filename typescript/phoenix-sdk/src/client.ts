@@ -5,7 +5,7 @@ import {
   SYSVAR_CLOCK_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { getClusterFromConnection } from "./utils";
+import { Cluster, getClusterFromConnection } from "./utils";
 import { MarketState } from "./market";
 import {
   ClockData,
@@ -51,6 +51,19 @@ export type TokenConfig = {
   logoUri: string;
 };
 
+type BaseMarketConfig = {
+  market: string;
+  baseMint: string;
+  quoteMint: string;
+};
+
+export type RawMarketConfig = Record<
+  Cluster,
+  {
+    tokens: TokenConfig[];
+    markets: BaseMarketConfig[];
+  }
+>;
 export class Client {
   connection: Connection;
   tokenConfigs: Map<string, TokenConfig>;
@@ -98,16 +111,18 @@ export class Client {
     const configUrl =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
-    const rawMarketConfigs = await fetch(configUrl).then((response) => {
-      return response.json();
-    });
+    const rawMarketConfigs: RawMarketConfig = await fetch(configUrl).then(
+      (response) => {
+        return response.json();
+      }
+    );
     const tokenConfigs = new Map<string, TokenConfig>();
     rawMarketConfigs[cluster].tokens.forEach((tokenConfig) => {
       tokenConfigs.set(tokenConfig.mint, tokenConfig);
     });
 
     const marketConfigs = new Map<string, MarketConfig>();
-    const marketAddresses = [];
+    const marketAddresses: PublicKey[] = [];
     rawMarketConfigs[cluster].markets.forEach((marketConfig) => {
       const baseToken = tokenConfigs.get(marketConfig.baseMint);
       const quoteToken = tokenConfigs.get(marketConfig.quoteMint);
@@ -220,9 +235,11 @@ export class Client {
     const configUrl =
       "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
-    const rawMarketConfigs = await fetch(configUrl).then((response) => {
-      return response.json();
-    });
+    const rawMarketConfigs: RawMarketConfig = await fetch(configUrl).then(
+      (response) => {
+        return response.json();
+      }
+    );
     const tokenConfigs = new Map<string, TokenConfig>();
     rawMarketConfigs[cluster].tokens.forEach((tokenConfig) => {
       tokenConfigs.set(tokenConfig.mint, tokenConfig);

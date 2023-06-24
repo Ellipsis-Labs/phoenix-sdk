@@ -232,9 +232,15 @@ export async function findTraderToEvict(
   const traders = market.data.traders;
 
   const seatManagerAddress = getSeatManagerAddress(market.address);
-  const seatManagerStruct: SeatManagerData = deserializeSeatManagerData(
-    (await connection.getAccountInfo(seatManagerAddress, "confirmed")).data
-  );
+  const buffer = (
+    await connection.getAccountInfo(seatManagerAddress, "confirmed")
+  )?.data;
+  if (!buffer) {
+    throw new Error(
+      `Failed to load seat manager account ${seatManagerAddress}`
+    );
+  }
+  const seatManagerStruct: SeatManagerData = deserializeSeatManagerData(buffer);
 
   if (traders.size >= Number(market.data.header.marketSizeParams.numSeats)) {
     for (const [traderToEvict, traderState] of traders) {

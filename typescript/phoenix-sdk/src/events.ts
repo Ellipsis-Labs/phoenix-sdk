@@ -153,6 +153,9 @@ export async function getPhoenixEventsFromTransactionSignature(
     commitment: "confirmed",
     maxSupportedTransactionVersion: 1,
   });
+  if (txData === null) {
+    throw new Error(`Transaction ${signature} not found`);
+  }
   return getPhoenixEventsFromTransactionData(txData);
 }
 
@@ -171,5 +174,8 @@ export async function getEventsFromTransaction(
     commitment: "confirmed",
     maxSupportedTransactionVersion: 1,
   });
+  if (txData === null) {
+    throw new Error(`Transaction ${signature} not found`);
+  }
   return getPhoenixEventsFromTransactionData(txData);
 }

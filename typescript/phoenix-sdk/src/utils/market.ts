@@ -422,8 +422,8 @@ export function printUiLadder(uiLadder: UiLadder) {
   const asks = uiLadder.asks;
 
   const maxBaseSize = Math.max(
-    ...bids.map((b) => b[1]),
-    ...asks.map((a) => a[1])
+    ...bids.map((b) => b.quantity),
+    ...asks.map((a) => a.quantity)
   );
   const maxBaseSizeLength = maxBaseSize.toString().length;
 

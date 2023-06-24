@@ -88,7 +88,7 @@ export type L3Order = {
   priceInTicks: BN;
   side: Side;
   sizeInBaseLots: BN;
-  makerPubkey: string;
+  makerPubkey?: string;
   orderSequenceNumber: BN;
   lastValidSlot: BN;
   lastValidUnixTimestampInSeconds: BN;
@@ -98,7 +98,7 @@ export type L3UiOrder = {
   price: number;
   side: Side;
   size: number;
-  makerPubkey: string;
+  makerPubkey?: string;
   orderSequenceNumber: string;
   lastValidSlot: number;
   lastValidUnixTimestampInSeconds: number;
@@ -214,6 +214,9 @@ export class MarketState {
     const buffer = await connection
       .getAccountInfo(address, "confirmed")
       .then((accountInfo) => accountInfo?.data);
+    if (buffer === undefined) {
+      throw new Error(`Failed to load ${address}`);
+    }
     if (tokenList) {
       return MarketState.load({ address, buffer });
     } else {
@@ -241,11 +244,13 @@ export class MarketState {
    *
    */
   async reloadFromNetwork(connection: Connection): Promise<void> {
-    const marketData = deserializeMarketData(
-      await connection
-        .getAccountInfo(this.address, "confirmed")
-        .then((accountInfo) => accountInfo?.data)
-    );
+    const buffer = await connection
+      .getAccountInfo(this.address, "confirmed")
+      .then((accountInfo) => accountInfo?.data);
+    if (!buffer) {
+      throw new Error(`Failed to reload ${this.address}`);
+    }
+    const marketData = deserializeMarketData(buffer);
     this.data = marketData;
   }
 
@@ -799,7 +804,7 @@ export class MarketState {
    */
   public createCancelUpToWithFreeFundsInstruction(
     args: CancelUpToWithFreeFundsInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createCancelUpToWithFreeFundsInstruction(
       {
@@ -822,7 +827,7 @@ export class MarketState {
    */
   public createDepositFundsInstruction(
     args: DepositFundsInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createDepositFundsInstruction(
       {
@@ -850,7 +855,7 @@ export class MarketState {
    */
   public createPlaceLimitOrderInstruction(
     orderPacket: OrderPacket,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createPlaceLimitOrderInstruction(
       {
@@ -880,7 +885,7 @@ export class MarketState {
    */
   public createPlaceLimitOrderWithFreeFundsInstruction(
     orderPacket: OrderPacket,
-    trader?: PublicKey
+    trader: PublicKey
   ) {
     return createPlaceLimitOrderWithFreeFundsInstruction(
       {
@@ -904,7 +909,7 @@ export class MarketState {
    */
   public createPlaceMultiplePostOnlyOrdersInstruction(
     args: PlaceMultiplePostOnlyOrdersInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createPlaceMultiplePostOnlyOrdersInstruction(
       {
@@ -932,7 +937,7 @@ export class MarketState {
    */
   public createPlaceMultiplePostOnlyOrdersInstructionWithFreeFunds(
     args: PlaceMultiplePostOnlyOrdersInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createPlaceMultiplePostOnlyOrdersWithFreeFundsInstruction(
       {
@@ -1075,7 +1080,7 @@ export class MarketState {
    */
   public createWithdrawFundsInstruction(
     args: WithdrawFundsInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createWithdrawFundsInstruction(
       {
@@ -1110,9 +1115,15 @@ export class MarketState {
     matchLimit?: number;
     clientOrderId?: number;
     useOnlyDepositedFunds?: boolean;
-    lastValidSlot?: number;
-    lastValidUnixTimestampInSeconds?: number;
+    lastValidSlot?: number | null;
+    lastValidUnixTimestampInSeconds?: number | null;
   }): OrderPacket {
+    if (lastValidSlot === undefined) {
+      lastValidSlot = null;
+    }
+    if (lastValidUnixTimestampInSeconds === undefined) {
+      lastValidUnixTimestampInSeconds = null;
+    }
     const uiLadder = getMarketUiLadder(this, Number.MAX_SAFE_INTEGER);
     const expectedOutAmount = getExpectedOutAmountRouter({
       uiLadder,
@@ -1149,6 +1160,7 @@ export class MarketState {
     }
     return getImmediateOrCancelOrderPacket({
       side,
+      priceInTicks: null,
       numBaseLots,
       numQuoteLots,
       minBaseLotsToFill,
@@ -1184,12 +1196,20 @@ export class MarketState {
       priceInTicks,
       numBaseLots,
       selfTradeBehavior: limitOrderTemplate.selfTradeBehavior,
-      matchLimit: limitOrderTemplate.matchLimit,
+      matchLimit:
+        limitOrderTemplate.matchLimit === undefined
+          ? null
+          : limitOrderTemplate.matchLimit,
       clientOrderId: limitOrderTemplate.clientOrderId,
       useOnlyDepositedFunds: limitOrderTemplate.useOnlyDepositedFunds,
-      lastValidSlot: limitOrderTemplate.lastValidSlot,
+      lastValidSlot:
+        limitOrderTemplate.lastValidSlot === undefined
+          ? null
+          : limitOrderTemplate.lastValidSlot,
       lastValidUnixTimestampInSeconds:
-        limitOrderTemplate.lastValidUnixTimestampInSeconds,
+        limitOrderTemplate.lastValidUnixTimestampInSeconds === undefined
+          ? null
+          : limitOrderTemplate.lastValidUnixTimestampInSeconds,
     });
     return this.createPlaceLimitOrderInstruction(orderPacket, trader);
   }
@@ -1218,9 +1238,14 @@ export class MarketState {
       clientOrderId: postOnlyOrderTemplate.clientOrderId,
       rejectPostOnly: postOnlyOrderTemplate.rejectPostOnly,
       useOnlyDepositedFunds: postOnlyOrderTemplate.useOnlyDepositedFunds,
-      lastValidSlot: postOnlyOrderTemplate.lastValidSlot,
+      lastValidSlot:
+        postOnlyOrderTemplate.lastValidSlot === undefined
+          ? null
+          : postOnlyOrderTemplate.lastValidSlot,
       lastValidUnixTimestampInSeconds:
-        postOnlyOrderTemplate.lastValidUnixTimestampInSeconds,
+        postOnlyOrderTemplate.lastValidUnixTimestampInSeconds === undefined
+          ? null
+          : postOnlyOrderTemplate.lastValidUnixTimestampInSeconds,
     });
     return this.createPlaceLimitOrderInstruction(orderPacket, trader);
   }
@@ -1259,13 +1284,22 @@ export class MarketState {
       minBaseLotsToFill,
       minQuoteLotsToFill,
       selfTradeBehavior: immediateOrCancelOrderTemplate.selfTradeBehavior,
-      matchLimit: immediateOrCancelOrderTemplate.matchLimit,
+      matchLimit:
+        immediateOrCancelOrderTemplate.matchLimit === undefined
+          ? null
+          : immediateOrCancelOrderTemplate.matchLimit,
       clientOrderId: immediateOrCancelOrderTemplate.clientOrderId,
       useOnlyDepositedFunds:
         immediateOrCancelOrderTemplate.useOnlyDepositedFunds,
-      lastValidSlot: immediateOrCancelOrderTemplate.lastValidSlot,
+      lastValidSlot:
+        immediateOrCancelOrderTemplate.lastValidSlot === undefined
+          ? null
+          : immediateOrCancelOrderTemplate.lastValidSlot,
       lastValidUnixTimestampInSeconds:
-        immediateOrCancelOrderTemplate.lastValidUnixTimestampInSeconds,
+        immediateOrCancelOrderTemplate.lastValidUnixTimestampInSeconds ===
+        undefined
+          ? null
+          : immediateOrCancelOrderTemplate.lastValidUnixTimestampInSeconds,
     });
     return this.createSwapInstruction(orderPacket, trader);
   }
