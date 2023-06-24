@@ -6,7 +6,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { Cluster, getClusterFromConnection } from "./utils";
-import { MarketState } from "./market";
+import { MarketData, MarketState } from "./market";
 import {
   ClockData,
   PostOnlyOrderTemplate,
@@ -335,7 +335,7 @@ export class Client {
       } else {
         console.log("Market already exists: ", marketAddress);
       }
-      if (!this.marketConfigs.has(marketAddress) || forceReload) {
+      if (!this.marketMetadatas.has(marketAddress) || forceReload) {
         const marketMetadata =
           MarketMetadata.fromMarketState(existingMarketState);
         this.marketMetadatas.set(marketAddress, marketMetadata);
@@ -361,7 +361,7 @@ export class Client {
       buffer,
     });
     this.marketStates.set(marketAddress, marketState);
-    if (!this.marketConfigs.has(marketAddress) || forceReload) {
+    if (!this.marketMetadatas.has(marketAddress) || forceReload) {
       const marketMetadata = MarketMetadata.fromMarketState(marketState);
       this.marketMetadatas.set(marketAddress, marketMetadata);
     }
