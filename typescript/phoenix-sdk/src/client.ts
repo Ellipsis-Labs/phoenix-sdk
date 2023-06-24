@@ -98,24 +98,12 @@ export class Client {
     this.clock = clock;
   }
 
-  /**
-   * Creates a new `PhoenixClient`
-   *
-   * @param connection The Solana `Connection` to use for the client
-   * @param skipInitialFetch If true, skips the initial load of markets and tokens
-   */
-  static async create(
+  static async createFromConfig(
     connection: Connection,
-    skipInitialFetch = false,
-    configUrl = DEFAULT_CONFIG_URL
+    rawMarketConfigs: RawMarketConfig,
+    skipInitialFetch = false
   ): Promise<Client> {
     const cluster = await getClusterFromConnection(connection);
-
-    const rawMarketConfigs: RawMarketConfig = await fetch(configUrl).then(
-      (response) => {
-        return response.json();
-      }
-    );
     const tokenConfigs = new Map<string, TokenConfig>();
     rawMarketConfigs[cluster].tokens.forEach((tokenConfig) => {
       tokenConfigs.set(tokenConfig.mint, tokenConfig);
@@ -135,6 +123,8 @@ export class Client {
           quoteToken,
         });
         marketAddresses.push(new PublicKey(marketAddress));
+      } else {
+        throw new Error("Received invalid market config");
       }
     });
 
@@ -180,6 +170,29 @@ export class Client {
       marketMetadatas,
       marketConfigs,
     });
+  }
+
+  /**
+   * Creates a new `PhoenixClient`
+   *
+   * @param connection The Solana `Connection` to use for the client
+   * @param skipInitialFetch If true, skips the initial load of markets and tokens
+   */
+  static async create(
+    connection: Connection,
+    skipInitialFetch = false,
+    configUrl = DEFAULT_CONFIG_URL
+  ): Promise<Client> {
+    const rawMarketConfigs: RawMarketConfig = await fetch(configUrl).then(
+      (response) => {
+        return response.json();
+      }
+    );
+    return await Client.createFromConfig(
+      connection,
+      rawMarketConfigs,
+      skipInitialFetch
+    );
   }
 
   static async createWithoutConfig(
@@ -256,6 +269,8 @@ export class Client {
           baseToken,
           quoteToken,
         });
+      } else {
+        throw new Error("Received invalid market config");
       }
     });
 
