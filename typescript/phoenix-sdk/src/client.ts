@@ -69,6 +69,7 @@ export type RawMarketConfig = Record<
 >;
 export class Client {
   connection: Connection;
+  cluster: Cluster;
   tokenConfigs: Map<string, TokenConfig>;
   marketStates: Map<string, MarketState>;
   marketMetadatas: Map<string, MarketMetadata>;
@@ -77,6 +78,7 @@ export class Client {
 
   private constructor({
     connection,
+    cluster,
     tokenConfigs,
     marketStates,
     marketMetadatas,
@@ -84,6 +86,7 @@ export class Client {
     clock,
   }: {
     connection: Connection;
+    cluster: Cluster;
     tokenConfigs: Map<string, TokenConfig>;
     marketStates: Map<string, MarketState>;
     marketMetadatas: Map<string, MarketMetadata>;
@@ -91,6 +94,7 @@ export class Client {
     clock: ClockData;
   }) {
     this.connection = connection;
+    this.cluster = cluster;
     this.tokenConfigs = tokenConfigs;
     this.marketStates = marketStates;
     this.marketMetadatas = marketMetadatas;
@@ -164,6 +168,7 @@ export class Client {
 
     return new Client({
       connection,
+      cluster,
       tokenConfigs,
       clock,
       marketStates,
@@ -199,6 +204,7 @@ export class Client {
     connection: Connection,
     marketAddresses: PublicKey[]
   ): Promise<Client> {
+    const cluster = await getClusterFromConnection(connection);
     const accounts = await connection.getMultipleAccountsInfo(
       [...marketAddresses, SYSVAR_CLOCK_PUBKEY],
       "confirmed"
@@ -232,6 +238,7 @@ export class Client {
 
     return new Client({
       connection,
+      cluster,
       marketConfigs: new Map(),
       marketStates,
       marketMetadatas,
@@ -303,6 +310,7 @@ export class Client {
 
     return new Client({
       connection,
+      cluster,
       tokenConfigs,
       marketStates,
       marketConfigs,
