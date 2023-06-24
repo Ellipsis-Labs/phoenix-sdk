@@ -6,7 +6,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { Cluster, getClusterFromConnection } from "./utils";
-import { MarketData, MarketState } from "./market";
+import { MarketState } from "./market";
 import {
   ClockData,
   PostOnlyOrderTemplate,

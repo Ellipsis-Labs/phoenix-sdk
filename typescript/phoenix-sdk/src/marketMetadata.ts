@@ -54,6 +54,8 @@ export class MarketMetadata {
   // Tick size of the market, in quote lots per base unit
   // Note that the header contains tick size in quote atoms per base unit
   quoteLotsPerBaseUnitPerTick: number;
+  priceDecimalPlaces: number;
+  takerFeeBps: number;
 
   constructor({
     address,
@@ -66,6 +68,8 @@ export class MarketMetadata {
     rawBaseUnitsPerBaseUnit,
     baseLotsPerBaseUnit,
     quoteLotsPerBaseUnitPerTick,
+    priceDecimalPlaces,
+    takerFeeBps,
   }: {
     address: PublicKey;
     marketSizeParams: MarketSizeParams;
@@ -77,6 +81,8 @@ export class MarketMetadata {
     rawBaseUnitsPerBaseUnit: number;
     baseLotsPerBaseUnit: number;
     quoteLotsPerBaseUnitPerTick: number;
+    priceDecimalPlaces: number;
+    takerFeeBps: number;
   }) {
     this.address = address;
     this.marketSizeParams = marketSizeParams;
@@ -88,6 +94,8 @@ export class MarketMetadata {
     this.tickSizeInQuoteAtomsPerBaseUnit = tickSizeInQuoteAtomsPerBaseUnit;
     this.baseLotsPerBaseUnit = baseLotsPerBaseUnit;
     this.quoteLotsPerBaseUnitPerTick = quoteLotsPerBaseUnitPerTick;
+    this.priceDecimalPlaces = priceDecimalPlaces;
+    this.takerFeeBps = takerFeeBps;
   }
 
   static fromMarketState(marketState: MarketState): MarketMetadata {
@@ -104,6 +112,8 @@ export class MarketMetadata {
       rawBaseUnitsPerBaseUnit: marketState.data.header.rawBaseUnitsPerBaseUnit,
       baseLotsPerBaseUnit: marketState.data.baseLotsPerBaseUnit,
       quoteLotsPerBaseUnitPerTick: marketState.data.quoteLotsPerBaseUnitPerTick,
+      priceDecimalPlaces: marketState.getPriceDecimalPlaces(),
+      takerFeeBps: marketState.data.takerFeeBps,
     });
   }
 
@@ -281,35 +291,6 @@ export class MarketMetadata {
    */
   public quoteAtomsToQuoteUnits(quoteAtoms: number): number {
     return quoteAtoms / 10 ** this.quoteParams.decimals;
-  }
-
-  public getPriceDecimalPlaces(): number {
-    let target = Math.floor(
-      (Math.pow(10, this.quoteParams.decimals) * this.rawBaseUnitsPerBaseUnit) /
-        toNum(this.tickSizeInQuoteAtomsPerBaseUnit)
-    );
-
-    if (target === 0) {
-      return 0;
-    }
-
-    let exp2 = 0;
-    while (target % 2 === 0) {
-      target /= 2;
-      exp2 += 1;
-    }
-    let exp5 = 0;
-    while (target % 5 === 0) {
-      target /= 5;
-      exp5 += 1;
-    }
-    const precision = Math.max(exp2, exp5);
-    if (precision === 0) {
-      // In the off chance that the target does not have 2 or 5 as a prime factor,
-      // we'll just return a precision of 3 decimals.
-      return 3;
-    }
-    return precision;
   }
 
   /**
