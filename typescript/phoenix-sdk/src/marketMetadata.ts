@@ -415,7 +415,7 @@ export class MarketMetadata {
    */
   public createCancelUpToWithFreeFundsInstruction(
     args: CancelUpToWithFreeFundsInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createCancelUpToWithFreeFundsInstruction(
       {
@@ -438,7 +438,7 @@ export class MarketMetadata {
    */
   public createDepositFundsInstruction(
     args: DepositFundsInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createDepositFundsInstruction(
       {
@@ -466,7 +466,7 @@ export class MarketMetadata {
    */
   public createPlaceLimitOrderInstruction(
     orderPacket: OrderPacket,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createPlaceLimitOrderInstruction(
       {
@@ -496,7 +496,7 @@ export class MarketMetadata {
    */
   public createPlaceLimitOrderWithFreeFundsInstruction(
     orderPacket: OrderPacket,
-    trader?: PublicKey
+    trader: PublicKey
   ) {
     return createPlaceLimitOrderWithFreeFundsInstruction(
       {
@@ -520,7 +520,7 @@ export class MarketMetadata {
    */
   public createPlaceMultiplePostOnlyOrdersInstruction(
     args: PlaceMultiplePostOnlyOrdersInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createPlaceMultiplePostOnlyOrdersInstruction(
       {
@@ -548,7 +548,7 @@ export class MarketMetadata {
    */
   public createPlaceMultiplePostOnlyOrdersInstructionWithFreeFunds(
     args: PlaceMultiplePostOnlyOrdersInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createPlaceMultiplePostOnlyOrdersWithFreeFundsInstruction(
       {
@@ -691,7 +691,7 @@ export class MarketMetadata {
    */
   public createWithdrawFundsInstruction(
     args: WithdrawFundsInstructionArgs,
-    trader?: PublicKey
+    trader: PublicKey
   ): TransactionInstruction {
     return createWithdrawFundsInstruction(
       {
