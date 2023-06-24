@@ -17,7 +17,7 @@ export async function watch() {
 
   if (!marketConfig) throw new Error("Market not found");
 
-  const marketAddress = marketConfig.market.toBase58();
+  const marketAddress = marketConfig.marketId;
 
   let lastLadder: Phoenix.UiLadder | null = null;
   let updates = 0;

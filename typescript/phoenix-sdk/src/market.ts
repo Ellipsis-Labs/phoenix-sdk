@@ -188,11 +188,11 @@ export class MarketState {
   }): MarketState {
     const marketData = deserializeMarketData(buffer);
     // Create the market object
-    const market = new MarketState({
+    const marketState = new MarketState({
       address,
       data: marketData,
     });
-    return market;
+    return marketState;
   }
 
   /**

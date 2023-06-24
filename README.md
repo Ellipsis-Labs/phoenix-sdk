@@ -2,7 +2,7 @@
 
 An SDK for interacting with the Phoenix program.
 
-**We currently support Rust and TypeScript, with Python on the way.*
+\*_We currently support Rust and TypeScript, with Python on the way._
 
 ## Rust
 
@@ -33,10 +33,17 @@ async function simpleSwap() {
 
   // Create a Phoenix client and select a market
   const phoenix = await Phoenix.Client.create(connection);
-  const market = phoenix.markets.find((market) => market.name === "SOL/USDC");
+  const marketConfig = phoenix.marketConfigs.find((market) => market.name === "SOL/USDC");
+  if (!marketConfig) {
+    throw new Error("Market config not found");
+  }
+  const marketState = phoenix.marketStates.get(marketConfig.marketId);
+  if (!marketState) {
+    throw new Error("Market state not found");
+  }
 
   // Submit a market order buying 100 USDC worth of SOL
-  const tx = market.getSwapTransaction({
+  const tx = marketState.getSwapTransaction({
     side: Phoenix.Side.Bid,
     inAmount: 100,
     trader: trader.publicKey,
@@ -46,4 +53,3 @@ async function simpleSwap() {
   console.log("Transaction ID: ", txId);
 }
 ```
-

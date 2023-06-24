@@ -38,12 +38,12 @@ export async function watch() {
     (market) => market.name === "SOL/USDC"
   );
   if (!marketConfig) throw new Error("Market not found");
-  const market = phoenix.marketStates.get(marketConfig.market.toBase58());
-  if (!market) throw new Error("Market not found");
+  const marketState = phoenix.marketStates.get(marketConfig.marketId);
+  if (!marketState) throw new Error("Market not found");
 
   // Locate the first trader with locked orders
   let traderKey;
-  for (const [trader, traderState] of market.data.traders) {
+  for (const [trader, traderState] of marketState.data.traders) {
     if (traderState.baseLotsLocked != 0 || traderState.quoteLotsLocked != 0) {
       traderKey = trader;
       break;
@@ -54,8 +54,8 @@ export async function watch() {
     throw new Error("No locked orders found");
   }
 
-  const marketAddress = market.address.toBase58();
-  const traderIndex = market.data.traderPubkeyToTraderIndex.get(traderKey);
+  const marketAddress = marketState.address.toBase58();
+  const traderIndex = marketState.data.traderPubkeyToTraderIndex.get(traderKey);
   if (traderIndex === undefined) {
     throw new Error(`Trader index not found for ${traderKey}`);
   }
@@ -66,7 +66,7 @@ export async function watch() {
     console.log("Open Orders for trader: " + traderKey + "\n");
     const slot = phoenix.clock.slot;
     const time = phoenix.clock.unixTimestamp;
-    for (const [orderId, order] of market.data.asks) {
+    for (const [orderId, order] of marketState.data.asks) {
       if (Phoenix.toNum(order.traderIndex) === traderIndex) {
         displayOpenOrder(
           order,
@@ -89,7 +89,7 @@ export async function watch() {
       }
     }
 
-    for (const [orderId, order] of market.data.bids) {
+    for (const [orderId, order] of marketState.data.bids) {
       if (Phoenix.toNum(order.traderIndex) === traderIndex) {
         displayOpenOrder(
           order,

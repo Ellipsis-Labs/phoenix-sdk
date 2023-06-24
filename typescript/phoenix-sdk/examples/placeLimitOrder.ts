@@ -32,11 +32,11 @@ export async function placeLimitOrderExample() {
   const marketAddress = new PublicKey(
     "CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N"
   );
-  const market = phoenixClient.marketStates.get(marketAddress.toBase58());
-  if (market === undefined) {
+  const marketState = phoenixClient.marketStates.get(marketAddress.toBase58());
+  if (marketState === undefined) {
     throw Error("Market not found");
   }
-  const marketData = market.data;
+  const marketData = marketState.data;
 
   // If you are a new maker, you will need to create associated token accounts for the base and quote tokens, and claim a maker seat on the market.
   // This function creates a bundle of new instructions that includes:
@@ -44,7 +44,7 @@ export async function placeLimitOrderExample() {
   // - Claim a maker seat on the market, if needed
   const setupNewMakerIxs = await PhoenixSdk.getMakerSetupInstructionsForMarket(
     connection,
-    market,
+    marketState,
     traderKeypair.publicKey
   );
   const setupTx = new Transaction().add(...setupNewMakerIxs);
