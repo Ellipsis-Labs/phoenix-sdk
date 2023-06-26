@@ -31,14 +31,10 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   const privateKey = JSON.parse(fs.readFileSync(privateKeyPath, "utf-8"));
   const trader = Keypair.fromSeed(Uint8Array.from(privateKey.slice(0, 32)));
   // Create a Phoenix Client
-  const client = await PhoenixSdk.Client.create(
-    connection,
-    endpoint,
-    trader.publicKey
-  );
+  const client = await PhoenixSdk.Client.create(connection);
   // Get the market metadata for the market you wish to trade on
-  const market = client.markets.get(marketPubkey.toString());
-  const marketData = market?.data;
+  const marketState = client.marketStates.get(marketPubkey.toString());
+  const marketData = marketState?.data;
   if (!marketData) {
     throw new Error("Market data not found");
   }
@@ -53,7 +49,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   // - Claim a maker seat on the market, if needed
   const setupNewMakerIxs = await PhoenixSdk.getMakerSetupInstructionsForMarket(
     connection,
-    market,
+    marketState,
     trader.publicKey
   );
   if (setupNewMakerIxs.length !== 0) {
@@ -214,9 +210,9 @@ export async function simpleMarketMaker(privateKeyPath: string) {
 
       console.log(
         "Place quotes",
-        bidPrice.toFixed(market.getPriceDecimalPlaces()),
+        bidPrice.toFixed(marketState.getPriceDecimalPlaces()),
         "@",
-        askPrice.toFixed(market.getPriceDecimalPlaces())
+        askPrice.toFixed(marketState.getPriceDecimalPlaces())
       );
       console.log(
         `Tx link: https://beta.solscan.io/tx/${placeQuotesTxId}?cluster=devnet`

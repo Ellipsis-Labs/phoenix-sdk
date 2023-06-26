@@ -6,7 +6,7 @@ import * as Phoenix from "../src";
 // Ex: ts-node examples/deserializeClock.ts
 export async function deserializeClock() {
   const connection = new Connection("https://api.mainnet-beta.solana.com");
-  const phoenix = await Phoenix.Client.create(connection, "mainnet");
+  const phoenix = await Phoenix.Client.create(connection);
   const clock = phoenix.clock;
   console.log("slot:", new BN(clock.slot).toNumber());
   console.log("epoch start time:", new BN(clock.epochStartTime).toNumber());

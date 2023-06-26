@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "strict": true,
     "declaration": true,
     "types": ["mocha"],
     "paths": {

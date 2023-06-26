@@ -5,7 +5,7 @@ import {
 import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
 import * as beetSolana from "@metaplex-foundation/beet-solana";
-import { getLogAuthority, getSeatAddress, Market, PROGRAM_ID } from "..";
+import { getLogAuthority, getSeatAddress, MarketState, PROGRAM_ID } from "..";
 
 import {
   createEvictSeatInstruction,
@@ -104,29 +104,31 @@ export function getClaimSeatIx(
  * Returns an instruction to evict a seat on a market, via the Phoenix Seat Manager
  * Evict seat is only allowed if the trader state is full for a given market, unless performed by the seat manager authority
  *
- * @param market The market object
+ * @param marketState The market object
  * @param trader The address of the trader to be evicted
  * @param signer The address of the signer of the transaction. Does not need to be the trader if the market's trader state is full.
  * @param baseTokenAccountBackup The to-be-evicted trader's base token account backup, in the event the associated token account of the trader is no longer owned by the trader
  * @param quoteTokenAccountBackup The to-be-evicted trader's quote token account backup, in the event the associated token account of the trader is no longer owned by the trader
  */
 export function getEvictSeatIx(
-  market: Market,
+  marketState: MarketState,
   trader: PublicKey,
   signer: PublicKey,
   baseTokenAccountBackup?: PublicKey,
   quoteTokenAccountBackup?: PublicKey
 ): TransactionInstruction {
-  const seatManager = getSeatManagerAddress(market.address);
-  const seatDepositCollector = getSeatDepositCollectorAddress(market.address);
-  const seat = getSeatAddress(market.address, trader);
+  const seatManager = getSeatManagerAddress(marketState.address);
+  const seatDepositCollector = getSeatDepositCollectorAddress(
+    marketState.address
+  );
+  const seat = getSeatAddress(marketState.address, trader);
   const logAuthority = getLogAuthority();
 
   const baseAccount = PublicKey.findProgramAddressSync(
     [
       trader.toBuffer(),
       TOKEN_PROGRAM_ID.toBuffer(),
-      market.data.header.baseParams.mintKey.toBuffer(),
+      marketState.data.header.baseParams.mintKey.toBuffer(),
     ],
     ASSOCIATED_TOKEN_PROGRAM_ID
   )[0];
@@ -134,7 +136,7 @@ export function getEvictSeatIx(
     [
       trader.toBuffer(),
       TOKEN_PROGRAM_ID.toBuffer(),
-      market.data.header.quoteParams.mintKey.toBuffer(),
+      marketState.data.header.quoteParams.mintKey.toBuffer(),
     ],
     ASSOCIATED_TOKEN_PROGRAM_ID
   )[0];
@@ -142,13 +144,13 @@ export function getEvictSeatIx(
   const evictSeatAccounts = {
     phoenixProgram: PROGRAM_ID,
     logAuthority,
-    market: market.address,
+    market: marketState.address,
     seatManager,
     seatDepositCollector,
-    baseMint: market.data.header.baseParams.mintKey,
-    quoteMint: market.data.header.quoteParams.mintKey,
-    baseVault: market.data.header.baseParams.vaultKey,
-    quoteVault: market.data.header.quoteParams.vaultKey,
+    baseMint: marketState.data.header.baseParams.mintKey,
+    quoteMint: marketState.data.header.quoteParams.mintKey,
+    baseVault: marketState.data.header.baseParams.vaultKey,
+    quoteVault: marketState.data.header.quoteParams.vaultKey,
     associatedTokenAccountProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
     signer,
     trader,
@@ -166,15 +168,15 @@ export function getEvictSeatIx(
  * Checks if the given trader has a seat on the given market
  * If not, return claim seat instructions
  * @param connection An instance of the Connection class
- * @param market The market object
+ * @param marketState The market object
  * @param trader The trader's address
  */
 export async function confirmOrCreateClaimSeatIxs(
   connection: Connection,
-  market: Market,
+  marketState: MarketState,
   trader: PublicKey
 ): Promise<TransactionInstruction[]> {
-  const seat = market.getSeatAddress(trader);
+  const seat = marketState.getSeatAddress(trader);
 
   const instructions: TransactionInstruction[] = [];
 
@@ -186,11 +188,11 @@ export async function confirmOrCreateClaimSeatIxs(
   }
 
   if (seatAccountInfo === null || seatAccountInfo.data.length == 0) {
-    const traderToEvict = await findTraderToEvict(connection, market);
+    const traderToEvict = await findTraderToEvict(connection, marketState);
     if (traderToEvict) {
-      instructions.push(getEvictSeatIx(market, traderToEvict, trader));
+      instructions.push(getEvictSeatIx(marketState, traderToEvict, trader));
     }
-    instructions.push(getClaimSeatIx(market.address, trader));
+    instructions.push(getClaimSeatIx(marketState.address, trader));
   }
 
   return instructions;
@@ -200,20 +202,20 @@ export async function confirmOrCreateClaimSeatIxs(
  * Checks if the given trader has a seat on the given market
  * If not, return claim seat instructions
  * @param connection An instance of the Connection class
- * @param market The market object
+ * @param marketState The market object
  * @param trader The trader's address
  */
 export async function createClaimSeatInstructions(
   connection: Connection,
-  market: Market,
+  marketState: MarketState,
   trader: PublicKey
 ): Promise<TransactionInstruction[]> {
   const instructions: TransactionInstruction[] = [];
-  const traderToEvict = await findTraderToEvict(connection, market);
+  const traderToEvict = await findTraderToEvict(connection, marketState);
   if (traderToEvict) {
-    instructions.push(getEvictSeatIx(market, traderToEvict, trader));
+    instructions.push(getEvictSeatIx(marketState, traderToEvict, trader));
   }
-  instructions.push(getClaimSeatIx(market.address, trader));
+  instructions.push(getClaimSeatIx(marketState.address, trader));
   return instructions;
 }
 
@@ -222,21 +224,29 @@ export async function createClaimSeatInstructions(
  * If the market's trader state is not at capacity or if every trader has locked base or quote lots, then return undefined.
  * If the seats are full, this function will return the first trader that has no base or quote lots locked.
  * @param connection An instance of the Connection class
- * @param market The market object
+ * @param marketState The market object
  * @returns
  */
 export async function findTraderToEvict(
   connection: Connection,
-  market: Market
+  marketState: MarketState
 ): Promise<PublicKey | void> {
-  const traders = market.data.traders;
+  const traders = marketState.data.traders;
 
-  const seatManagerAddress = getSeatManagerAddress(market.address);
-  const seatManagerStruct: SeatManagerData = deserializeSeatManagerData(
-    (await connection.getAccountInfo(seatManagerAddress, "confirmed")).data
-  );
+  const seatManagerAddress = getSeatManagerAddress(marketState.address);
+  const buffer = (
+    await connection.getAccountInfo(seatManagerAddress, "confirmed")
+  )?.data;
+  if (!buffer) {
+    throw new Error(
+      `Failed to load seat manager account ${seatManagerAddress}`
+    );
+  }
+  const seatManagerStruct: SeatManagerData = deserializeSeatManagerData(buffer);
 
-  if (traders.size >= Number(market.data.header.marketSizeParams.numSeats)) {
+  if (
+    traders.size >= Number(marketState.data.header.marketSizeParams.numSeats)
+  ) {
     for (const [traderToEvict, traderState] of traders) {
       if (traderState.baseLotsLocked == 0 && traderState.quoteLotsLocked == 0) {
         // A DMM cannot be evicted directly. They must first be removed as a DMM. Skip DMMs in this search.

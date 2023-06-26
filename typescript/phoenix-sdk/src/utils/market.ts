@@ -32,7 +32,7 @@ import {
   L3Order,
   L3UiBook,
   L3UiOrder,
-  Market,
+  MarketState,
   OrderId,
   PROGRAM_ID,
   UiLadderLevel,
@@ -177,7 +177,7 @@ export function deserializeMarketData(data: Buffer): MarketData {
     header,
     baseLotsPerBaseUnit,
     quoteLotsPerBaseUnitPerTick,
-    sequenceNumber,
+    orderSequenceNumber: sequenceNumber,
     takerFeeBps,
     collectedQuoteLotFees,
     unclaimedQuoteLotFees,
@@ -373,7 +373,7 @@ function deserializeRedBlackTreeNodes<Key, Value>(
  * @param levels The number of book levels to return, -1 to return the entire book
  */
 export function getMarketLadder(
-  market: Market,
+  market: MarketState,
   slot: beet.bignum,
   unixTimestamp: beet.bignum,
   levels: number = DEFAULT_L2_LADDER_DEPTH
@@ -390,7 +390,7 @@ export function getMarketLadder(
  * @param quoteAtomsPerQuoteUnit The number of quote atoms per quote unit
  */
 export function levelToUiLevel(
-  market: Market,
+  market: MarketState,
   priceInTicks: number,
   sizeInBaseLots: number
 ): UiLadderLevel {
@@ -404,7 +404,7 @@ export function levelToUiLevel(
  * @param levels The number of book levels to return
  */
 export function getMarketUiLadder(
-  market: Market,
+  market: MarketState,
   levels: number = DEFAULT_L2_LADDER_DEPTH,
   slot: beet.bignum = 0,
   unixTimestamp: beet.bignum = 0
@@ -422,8 +422,8 @@ export function printUiLadder(uiLadder: UiLadder) {
   const asks = uiLadder.asks;
 
   const maxBaseSize = Math.max(
-    ...bids.map((b) => b[1]),
-    ...asks.map((a) => a[1])
+    ...bids.map((b) => b.quantity),
+    ...asks.map((a) => a.quantity)
   );
   const maxBaseSizeLength = maxBaseSize.toString().length;
 
@@ -482,13 +482,21 @@ export function getMarketL3Book(
       const priceInTicks = toBN(orderId.priceInTicks);
       const numBaseLots = toBN(restingOrder.numBaseLots);
 
+      const makerPubkey = marketData.traderIndexToTraderPubkey.get(
+        toNum(restingOrder.traderIndex)
+      );
+
+      if (!makerPubkey) {
+        throw new Error(
+          `Invalid trader index: ${restingOrder.traderIndex.toString()}`
+        );
+      }
+
       const order: L3Order = {
         priceInTicks,
         sizeInBaseLots: numBaseLots,
         side,
-        makerPubkey: marketData.traderIndexToTraderPubkey.get(
-          toNum(restingOrder.traderIndex)
-        ),
+        makerPubkey,
         orderSequenceNumber: getUiOrderSequenceNumber(orderId),
         lastValidSlot: toBN(restingOrder.lastValidSlot),
         lastValidUnixTimestampInSeconds: toBN(
@@ -589,7 +597,7 @@ export function getMarketSwapTransaction({
   clientOrderId = 0,
   idempotent = false,
 }: {
-  market: Market;
+  market: MarketState;
   trader: PublicKey;
   side: Side;
   inAmount: number;
@@ -915,7 +923,7 @@ export function getQuoteAmountFromBaseAmountBudgetAndBook({
  */
 export async function getMakerSetupInstructionsForMarket(
   connection: Connection,
-  market: Market,
+  market: MarketState,
   trader: PublicKey
 ): Promise<TransactionInstruction[]> {
   const baseAtaIxs = await getCreateTokenAccountInstructions(
@@ -953,7 +961,7 @@ export async function getMakerSetupInstructionsForMarket(
  */
 export async function getLimitOrderNewMakerIxs(
   connection: Connection,
-  market: Market,
+  market: MarketState,
   trader: PublicKey,
   orderPacket: OrderPacket
 ): Promise<TransactionInstruction[]> {
@@ -977,7 +985,7 @@ export async function getLimitOrderNewMakerIxs(
  */
 export async function getLimitOrderUnknownSeatIxs(
   connection: Connection,
-  market: Market,
+  market: MarketState,
   trader: PublicKey,
   orderPacket: OrderPacket
 ): Promise<TransactionInstruction[]> {

@@ -1,11 +1,10 @@
 import { OrderPacket, SelfTradeBehavior, Side } from "./types";
-import * as beet from "@metaplex-foundation/beet";
 
 /// PostOnlyOrderTemplate is a helper type for creating a post-only order, which will never be matched against existing orders.
 /// The template allows you to specify the price and size in commonly understood units:
 /// price is the floating point price (units of USDC per unit of SOL for the SOL/USDC market), and size is in whole base units (units of SOL for the SOL/USDC market).
 /// The SDK can then convert this to a post-only order instruction, ready to be sent.
-export class PostOnlyOrderTemplate {
+export interface PostOnlyOrderTemplate {
   // The side for the order, a Side::Bid or a Side::Ask.
   side: Side;
 
@@ -31,13 +30,13 @@ export class PostOnlyOrderTemplate {
   lastValidSlot?: number;
 
   /// If this is set, the order will be invalid after the specified unix timestamp.
-  lastValidUnixTimestampInSeconds: number;
+  lastValidUnixTimestampInSeconds?: number;
 }
 /// LimitOrderTemplate is a helper type for creating a limit order.
 /// The template allows you to specify the price and size in commonly understood units:
 /// price is the floating point price (units of USDC per unit of SOL for the SOL/USDC market), and size is in whole base units (units of SOL for the SOL/USDC market).
 /// The SDK can then convert this to a limit order instruction, ready to be sent.
-export class LimitOrderTemplate {
+export interface LimitOrderTemplate {
   // The side for the order, a Side::Bid or a Side::Ask.
   side: Side;
 
@@ -79,7 +78,7 @@ export class LimitOrderTemplate {
 /// Fill or Kill (FOK) orders are a subset of Immediate or Cancel (IOC) orders where either
 /// the `sizeInBaseUnits` is equal to the `minBaseUnitsToFill` of the order, or the `sizeInQuoteUnits` is
 /// equal to the `minQuoteUnitsToFill` of the order.
-export class ImmediateOrCancelOrderTemplate {
+export interface ImmediateOrCancelOrderTemplate {
   // The side for the order, a Side::Bid or a Side::Ask.
   side: Side;
 
@@ -151,8 +150,8 @@ export function getPostOnlyOrderPacket({
   rejectPostOnly?: boolean;
   clientOrderId?: number;
   useOnlyDepositedFunds?: boolean;
-  lastValidSlot?: beet.COption<beet.bignum>;
-  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>;
+  lastValidSlot?: number;
+  lastValidUnixTimestampInSeconds?: number;
 }): OrderPacket {
   return {
     __kind: "PostOnly",
@@ -162,8 +161,8 @@ export function getPostOnlyOrderPacket({
     clientOrderId: clientOrderId ?? 0,
     rejectPostOnly: rejectPostOnly ?? true,
     useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
-    lastValidSlot,
-    lastValidUnixTimestampInSeconds,
+    lastValidSlot: lastValidSlot ?? null,
+    lastValidUnixTimestampInSeconds: lastValidUnixTimestampInSeconds ?? null,
   };
 }
 
@@ -180,7 +179,7 @@ export function getPostOnlyOrderPacket({
  */
 export function getLimitOrderPacket({
   side,
-  priceInTicks = null,
+  priceInTicks,
   numBaseLots,
   selfTradeBehavior = SelfTradeBehavior.CancelProvide,
   matchLimit,
@@ -193,11 +192,11 @@ export function getLimitOrderPacket({
   priceInTicks: number;
   numBaseLots: number;
   selfTradeBehavior?: SelfTradeBehavior;
-  matchLimit?: beet.COption<beet.bignum>;
+  matchLimit?: number;
   clientOrderId?: number;
   useOnlyDepositedFunds?: boolean;
-  lastValidSlot?: beet.COption<beet.bignum>;
-  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>;
+  lastValidSlot?: number;
+  lastValidUnixTimestampInSeconds?: number;
 }): OrderPacket {
   return {
     __kind: "Limit",
@@ -205,11 +204,11 @@ export function getLimitOrderPacket({
     priceInTicks,
     numBaseLots,
     selfTradeBehavior: selfTradeBehavior ?? SelfTradeBehavior.CancelProvide,
-    matchLimit,
+    matchLimit: matchLimit ?? null,
     clientOrderId: clientOrderId ?? 0,
     useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
-    lastValidSlot,
-    lastValidUnixTimestampInSeconds,
+    lastValidSlot: lastValidSlot ?? null,
+    lastValidUnixTimestampInSeconds: lastValidUnixTimestampInSeconds ?? null,
   };
 }
 
@@ -230,7 +229,7 @@ export function getLimitOrderPacket({
  */
 export function getImmediateOrCancelOrderPacket({
   side,
-  priceInTicks = null,
+  priceInTicks,
   numBaseLots,
   numQuoteLots,
   minBaseLotsToFill = 0,
@@ -249,25 +248,25 @@ export function getImmediateOrCancelOrderPacket({
   minBaseLotsToFill?: number;
   minQuoteLotsToFill?: number;
   selfTradeBehavior?: SelfTradeBehavior;
-  matchLimit?: beet.COption<beet.bignum>;
+  matchLimit?: number;
   clientOrderId?: number;
   useOnlyDepositedFunds?: boolean;
-  lastValidSlot?: beet.COption<beet.bignum>;
-  lastValidUnixTimestampInSeconds?: beet.COption<beet.bignum>;
+  lastValidSlot?: number;
+  lastValidUnixTimestampInSeconds?: number;
 }): OrderPacket {
   return {
     __kind: "ImmediateOrCancel",
     side,
-    priceInTicks,
+    priceInTicks: priceInTicks ?? null,
     numBaseLots,
     numQuoteLots,
     minBaseLotsToFill,
     minQuoteLotsToFill,
     selfTradeBehavior,
-    matchLimit,
+    matchLimit: matchLimit ?? null,
     clientOrderId,
     useOnlyDepositedFunds,
-    lastValidSlot,
-    lastValidUnixTimestampInSeconds,
+    lastValidSlot: lastValidSlot ?? null,
+    lastValidUnixTimestampInSeconds: lastValidUnixTimestampInSeconds ?? null,
   };
 }

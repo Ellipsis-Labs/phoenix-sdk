@@ -1,20 +1,13 @@
-import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
-import * as beet from "@metaplex-foundation/beet";
-import BN from "bn.js";
-
-import { MarketHeader, OrderPacket, SelfTradeBehavior, Side } from "./types";
-import {
-  DEFAULT_SLIPPAGE_PERCENT,
-  deserializeMarketData,
-  getMarketUiLadder,
-  toNum,
-} from "./utils";
+import { MarketState } from "./market";
+import { MarketSizeParams, OrderPacket, TokenParams } from "./types";
+import { getSeatAddress, toNum } from "./utils";
+import { PublicKey, TransactionInstruction } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 import {
   CancelMultipleOrdersByIdInstructionArgs,
   CancelMultipleOrdersByIdWithFreeFundsInstructionArgs,
   CancelUpToInstructionArgs,
   CancelUpToWithFreeFundsInstructionArgs,
-  DEFAULT_MATCH_LIMIT,
   DepositFundsInstructionArgs,
   LimitOrderTemplate,
   PROGRAM_ID,
@@ -23,7 +16,6 @@ import {
   ImmediateOrCancelOrderTemplate,
   ReduceOrderInstructionArgs,
   ReduceOrderWithFreeFundsInstructionArgs,
-  TokenConfig,
   WithdrawFundsInstructionArgs,
   createCancelAllOrdersInstruction,
   createCancelAllOrdersWithFreeFundsInstruction,
@@ -42,91 +34,23 @@ import {
   createSwapInstruction,
   createSwapWithFreeFundsInstruction,
   createWithdrawFundsInstruction,
-  getExpectedOutAmountRouter,
   getImmediateOrCancelOrderPacket,
   getLimitOrderPacket,
   getLogAuthority,
   getPostOnlyOrderPacket,
-  getRequiredInAmountRouter,
-  getSeatAddress,
-  DEFAULT_L2_LADDER_DEPTH,
-  toBN,
 } from "./index";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
-export type OrderId = {
-  priceInTicks: beet.bignum;
-  orderSequenceNumber: beet.bignum;
-};
+export class MarketMetadata {
+  // The market's address
+  address: PublicKey;
 
-export type RestingOrder = {
-  traderIndex: beet.bignum;
-  numBaseLots: beet.bignum;
-  lastValidSlot: beet.bignum;
-  lastValidUnixTimestampInSeconds: beet.bignum;
-};
-
-export type TraderState = {
-  quoteLotsLocked: beet.bignum;
-  quoteLotsFree: beet.bignum;
-  baseLotsLocked: beet.bignum;
-  baseLotsFree: beet.bignum;
-  padding: beet.bignum[]; // size: 8
-};
-
-export type LadderLevel = {
-  priceInTicks: BN;
-  sizeInBaseLots: BN;
-};
-
-export type Ladder = {
-  bids: Array<LadderLevel>;
-  asks: Array<LadderLevel>;
-};
-
-export type L3Order = {
-  priceInTicks: BN;
-  side: Side;
-  sizeInBaseLots: BN;
-  makerPubkey: string;
-  orderSequenceNumber: BN;
-  lastValidSlot: BN;
-  lastValidUnixTimestampInSeconds: BN;
-};
-
-export type L3UiOrder = {
-  price: number;
-  side: Side;
-  size: number;
-  makerPubkey: string;
-  orderSequenceNumber: string;
-  lastValidSlot: number;
-  lastValidUnixTimestampInSeconds: number;
-};
-
-export type L3Book = {
-  bids: L3Order[];
-  asks: L3Order[];
-};
-
-export type L3UiBook = {
-  bids: L3UiOrder[];
-  asks: L3UiOrder[];
-};
-
-export type UiLadderLevel = {
-  price: number;
-  quantity: number;
-};
-
-export type UiLadder = {
-  bids: Array<UiLadderLevel>;
-  asks: Array<UiLadderLevel>;
-};
-
-export interface MarketData {
-  // The raw MarketHeader from the market account
-  header: MarketHeader;
+  marketSizeParams: MarketSizeParams;
+  baseParams: TokenParams;
+  baseLotSize: number;
+  quoteParams: TokenParams;
+  quoteLotSize: number;
+  tickSizeInQuoteAtomsPerBaseUnit: number;
+  rawBaseUnitsPerBaseUnit: number;
 
   // The number of base lots per base unit
   baseLotsPerBaseUnit: number;
@@ -135,167 +59,70 @@ export interface MarketData {
   // Note that the header contains tick size in quote atoms per base unit
   quoteLotsPerBaseUnitPerTick: number;
 
-  // The next order sequence number of the market
-  orderSequenceNumber: number;
+  // The number of decimal places to display for the price
+  priceDecimalPlaces: number;
 
   // Taker fee in basis points
   takerFeeBps: number;
 
-  // Total fees collected by the market and claimed by fee recipient, in quote lots
-  collectedQuoteLotFees: number;
-
-  // Total unclaimed fees in the market, in quote lots
-  unclaimedQuoteLotFees: number;
-
-  // The bids on the market, sorted from highest to lowest price
-  bids: Array<[OrderId, RestingOrder]>;
-
-  // The asks on the market, sorted from lowest to highest price
-  asks: Array<[OrderId, RestingOrder]>;
-
-  // Map from trader pubkey to trader state
-  traders: Map<string, TraderState>;
-
-  // Map from trader pubkey to trader index
-  traderPubkeyToTraderIndex: Map<string, number>;
-
-  // Map from trader index to trader pubkey
-  traderIndexToTraderPubkey: Map<number, string>;
-}
-
-export class MarketState {
-  address: PublicKey;
-  data: MarketData;
-
-  constructor({ address, data }: { address: PublicKey; data: MarketData }) {
+  constructor({
+    address,
+    marketSizeParams,
+    baseParams,
+    baseLotSize,
+    quoteParams,
+    quoteLotSize,
+    tickSizeInQuoteAtomsPerBaseUnit,
+    rawBaseUnitsPerBaseUnit,
+    baseLotsPerBaseUnit,
+    quoteLotsPerBaseUnitPerTick,
+    priceDecimalPlaces,
+    takerFeeBps,
+  }: {
+    address: PublicKey;
+    marketSizeParams: MarketSizeParams;
+    baseParams: TokenParams;
+    baseLotSize: number;
+    quoteParams: TokenParams;
+    quoteLotSize: number;
+    tickSizeInQuoteAtomsPerBaseUnit: number;
+    rawBaseUnitsPerBaseUnit: number;
+    baseLotsPerBaseUnit: number;
+    quoteLotsPerBaseUnitPerTick: number;
+    priceDecimalPlaces: number;
+    takerFeeBps: number;
+  }) {
     this.address = address;
-    this.data = data;
+    this.marketSizeParams = marketSizeParams;
+    this.baseParams = baseParams;
+    this.baseLotSize = baseLotSize;
+    this.quoteParams = quoteParams;
+    this.quoteLotSize = quoteLotSize;
+    this.rawBaseUnitsPerBaseUnit = rawBaseUnitsPerBaseUnit;
+    this.tickSizeInQuoteAtomsPerBaseUnit = tickSizeInQuoteAtomsPerBaseUnit;
+    this.baseLotsPerBaseUnit = baseLotsPerBaseUnit;
+    this.quoteLotsPerBaseUnitPerTick = quoteLotsPerBaseUnitPerTick;
+    this.priceDecimalPlaces = priceDecimalPlaces;
+    this.takerFeeBps = takerFeeBps;
   }
 
-  /**
-   * Returns a `Market` for a given address, a data buffer, and a list of tokens to use for the market
-   *
-   * @param marketAddress The `PublicKey` of the market account
-   * @param buffer The buffer holding the market account data
-   * @param tokenList The list of tokens to use for the market
-   */
-  static load({
-    address,
-    buffer,
-  }: {
-    address: PublicKey;
-    buffer: Buffer;
-  }): MarketState {
-    const marketData = deserializeMarketData(buffer);
-    // Create the market object
-    const marketState = new MarketState({
-      address,
-      data: marketData,
+  static fromMarketState(marketState: MarketState): MarketMetadata {
+    return new MarketMetadata({
+      address: marketState.address,
+      marketSizeParams: marketState.data.header.marketSizeParams,
+      baseParams: marketState.data.header.baseParams,
+      baseLotSize: toNum(marketState.data.header.baseLotSize),
+      quoteParams: marketState.data.header.quoteParams,
+      quoteLotSize: toNum(marketState.data.header.quoteLotSize),
+      tickSizeInQuoteAtomsPerBaseUnit: toNum(
+        marketState.data.header.tickSizeInQuoteAtomsPerBaseUnit
+      ),
+      rawBaseUnitsPerBaseUnit: marketState.data.header.rawBaseUnitsPerBaseUnit,
+      baseLotsPerBaseUnit: marketState.data.baseLotsPerBaseUnit,
+      quoteLotsPerBaseUnitPerTick: marketState.data.quoteLotsPerBaseUnitPerTick,
+      priceDecimalPlaces: marketState.getPriceDecimalPlaces(),
+      takerFeeBps: marketState.data.takerFeeBps,
     });
-    return marketState;
-  }
-
-  /**
-   * Returns a `Market` for a given address, a data buffer, and a list of tokens to use for the market
-   *
-   * @param connection The Solana `Connection` object
-   * @param address The `PublicKey` of the market account
-   * @param tokenList The list of tokens to use for the market (optional)
-   */
-  static async loadFromAddress({
-    connection,
-    address,
-    tokenList,
-  }: {
-    connection: Connection;
-    address: PublicKey;
-    tokenList?: TokenConfig[];
-  }): Promise<MarketState> {
-    const buffer = await connection
-      .getAccountInfo(address, "confirmed")
-      .then((accountInfo) => accountInfo?.data);
-    if (buffer === undefined) {
-      throw new Error(`Failed to load ${address}`);
-    }
-    if (tokenList) {
-      return MarketState.load({ address, buffer });
-    } else {
-      return new MarketState({ address, data: deserializeMarketData(buffer) });
-    }
-  }
-
-  /**
-   * Reloads market data from buffer
-   *
-   * @param buffer A data buffer with the serialized market data
-   *
-   * @returns The reloaded Market
-   */
-  reload(buffer: Buffer): MarketState {
-    const marketData = deserializeMarketData(buffer);
-    this.data = marketData;
-    return this;
-  }
-
-  /**
-   * Reloads market data from buffer (in place)
-   *
-   * @param connection The Solana `Connection` object
-   *
-   */
-  async reloadFromNetwork(connection: Connection): Promise<void> {
-    const buffer = await connection
-      .getAccountInfo(this.address, "confirmed")
-      .then((accountInfo) => accountInfo?.data);
-    if (!buffer) {
-      throw new Error(`Failed to reload ${this.address}`);
-    }
-    const marketData = deserializeMarketData(buffer);
-    this.data = marketData;
-  }
-
-  public getMarketSequenceNumber(): number {
-    return toNum(this.data.header.marketSequenceNumber);
-  }
-
-  /**
-   * Get a trader's base ATA for a given market
-   *
-   * @param trader The `PublicKey` of the trader account
-   */
-  public getBaseAccountKey(trader: PublicKey): PublicKey {
-    return getAssociatedTokenAddressSync(
-      this.data.header.baseParams.mintKey,
-      trader,
-      true
-    );
-  }
-
-  /**
-   * Get a trader's quote ATA for a given market
-   *
-   * @param trader The `PublicKey` of the trader account
-   */
-  public getQuoteAccountKey(trader: PublicKey): PublicKey {
-    return getAssociatedTokenAddressSync(
-      this.data.header.quoteParams.mintKey,
-      trader,
-      true
-    );
-  }
-
-  /**
-   * Get the quote vault token account address for a given market
-   */
-  public getQuoteVaultKey(): PublicKey {
-    return this.data.header.quoteParams.vaultKey;
-  }
-
-  /**
-   * Get the base vault token account address for a given market
-   */
-  public getBaseVaultKey(): PublicKey {
-    return this.data.header.baseParams.vaultKey;
   }
 
   /**
@@ -308,230 +135,39 @@ export class MarketState {
   }
 
   /**
-   * Returns the ladder of bids and asks as JS numbers for given `MarketData`
+   * Get a trader's base ATA for a given market
    *
-   * @param levels The number of book levels to return
+   * @param trader The `PublicKey` of the trader account
    */
-  public getUiLadder(
-    levels: number = DEFAULT_L2_LADDER_DEPTH,
-    slot: beet.bignum = 0,
-    unixTimestamp: beet.bignum = 0
-  ): UiLadder {
-    const ladder = this.getLadder(slot, unixTimestamp, levels);
-
-    return {
-      bids: ladder.bids.map(({ priceInTicks, sizeInBaseLots }) =>
-        this.levelToUiLevel(toNum(priceInTicks), toNum(sizeInBaseLots))
-      ),
-      asks: ladder.asks.map(({ priceInTicks, sizeInBaseLots }) =>
-        this.levelToUiLevel(toNum(priceInTicks), toNum(sizeInBaseLots))
-      ),
-    };
+  public getBaseAccountKey(trader: PublicKey): PublicKey {
+    return getAssociatedTokenAddressSync(this.baseParams.mintKey, trader, true);
   }
 
   /**
-   * Returns an L2 ladder of bids and asks for given `MarketData`
-   * @description Bids are ordered in descending order by price, and asks are ordered in ascending order by price
+   * Get a trader's quote ATA for a given market
    *
-   * @param marketData The `MarketData` to get the ladder from
-   * @param slot The current slot
-   * @param unixTimestamp The current Unix timestamp, in seconds
-   * @param levels The number of book levels to return, -1 to return the entire book
+   * @param trader The `PublicKey` of the trader account
    */
-  public getLadder(
-    slot: beet.bignum,
-    unixTimestamp: beet.bignum,
-    levels: number = DEFAULT_L2_LADDER_DEPTH
-  ): Ladder {
-    const bids: Array<LadderLevel> = [];
-    const asks: Array<LadderLevel> = [];
-    for (const [orderId, restingOrder] of this.data.bids) {
-      if (
-        restingOrder.lastValidSlot != 0 &&
-        restingOrder.lastValidSlot < slot
-      ) {
-        continue;
-      }
-      if (
-        restingOrder.lastValidUnixTimestampInSeconds != 0 &&
-        restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
-      ) {
-        continue;
-      }
-      const priceInTicks = toBN(orderId.priceInTicks);
-      const sizeInBaseLots = toBN(restingOrder.numBaseLots);
-      if (bids.length === 0) {
-        bids.push({ priceInTicks, sizeInBaseLots });
-      } else {
-        const prev = bids[bids.length - 1];
-        if (!prev) {
-          throw Error;
-        }
-        if (priceInTicks.eq(prev.priceInTicks)) {
-          prev.sizeInBaseLots = prev.sizeInBaseLots.add(sizeInBaseLots);
-        } else {
-          if (bids.length === levels) {
-            break;
-          }
-          bids.push({ priceInTicks, sizeInBaseLots });
-        }
-      }
-    }
-
-    for (const [orderId, restingOrder] of this.data.asks) {
-      if (
-        restingOrder.lastValidSlot != 0 &&
-        restingOrder.lastValidSlot < slot
-      ) {
-        continue;
-      }
-      if (
-        restingOrder.lastValidUnixTimestampInSeconds != 0 &&
-        restingOrder.lastValidUnixTimestampInSeconds < unixTimestamp
-      ) {
-        continue;
-      }
-      const priceInTicks = toBN(orderId.priceInTicks);
-      const sizeInBaseLots = toBN(restingOrder.numBaseLots);
-      if (asks.length === 0) {
-        asks.push({ priceInTicks, sizeInBaseLots });
-      } else {
-        const prev = asks[asks.length - 1];
-        if (!prev) {
-          throw Error;
-        }
-        if (priceInTicks.eq(prev.priceInTicks)) {
-          prev.sizeInBaseLots = prev.sizeInBaseLots.add(sizeInBaseLots);
-        } else {
-          if (asks.length === levels) {
-            break;
-          }
-          asks.push({ priceInTicks, sizeInBaseLots });
-        }
-      }
-    }
-
-    return {
-      asks,
-      bids,
-    };
-  }
-
-  /**
-   * Converts a ladder level from BN to JS number representation
-   *
-   * @param priceInTicks The price of the level in ticks
-   * @param sizeInBaseLots The size of the level in base lots
-   */
-  public levelToUiLevel(
-    priceInTicks: number,
-    sizeInBaseLots: number
-  ): UiLadderLevel {
-    return {
-      price: this.ticksToFloatPrice(priceInTicks),
-      quantity: this.baseLotsToRawBaseUnits(sizeInBaseLots),
-    };
-  }
-
-  /**
-   * Returns the expected amount out for a given swap order
-   *
-   * @param side The side of the order (Bid or Ask)
-   * @param inAmount The amount of the input token
-   * @param slot The current slot
-   * @param unixTimestamp The current unix timestamp, in seconds
-   */
-  getExpectedOutAmount({
-    side,
-    inAmount,
-    slot,
-    unixTimestamp,
-  }: {
-    side: Side;
-    inAmount: number;
-    slot: beet.bignum;
-    unixTimestamp: beet.bignum;
-  }): number {
-    const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
-    const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
-    const uiLadder = this.getUiLadder(
-      Math.max(numBids, numAsks),
-      slot,
-      unixTimestamp
+  public getQuoteAccountKey(trader: PublicKey): PublicKey {
+    return getAssociatedTokenAddressSync(
+      this.quoteParams.mintKey,
+      trader,
+      true
     );
-
-    return getExpectedOutAmountRouter({
-      uiLadder,
-      side,
-      takerFeeBps: this.data.takerFeeBps,
-      inAmount,
-    });
   }
 
   /**
-   * Returns the required amount in for a desired amount of units out
-   *
-   * @param side The side of the order (Bid or Ask)
-   * @param outAmount The amount of the desired output token
-   * @param slot The current slot
-   * @param unixTimestamp The current unix timestamp, in seconds
+   * Get the quote vault token account address for a given market
    */
-  getRequiredInAmount({
-    side,
-    outAmount,
-    slot,
-    unixTimestamp,
-  }: {
-    side: Side;
-    outAmount: number;
-    slot: beet.bignum;
-    unixTimestamp: beet.bignum;
-  }): number {
-    const numBids = toNum(this.data.header.marketSizeParams.bidsSize);
-    const numAsks = toNum(this.data.header.marketSizeParams.asksSize);
-    const uiLadder = getMarketUiLadder(
-      this,
-      Math.max(numBids, numAsks),
-      slot,
-      unixTimestamp
-    );
-
-    return getRequiredInAmountRouter({
-      uiLadder,
-      side,
-      takerFeeBps: this.data.takerFeeBps,
-      outAmount,
-    });
+  public getQuoteVaultKey(): PublicKey {
+    return this.quoteParams.vaultKey;
   }
 
-  getPriceDecimalPlaces(): number {
-    let target = Math.floor(
-      (Math.pow(10, this.data.header.quoteParams.decimals) *
-        this.data.header.rawBaseUnitsPerBaseUnit) /
-        toNum(this.data.header.tickSizeInQuoteAtomsPerBaseUnit)
-    );
-
-    if (target === 0) {
-      return 0;
-    }
-
-    let exp2 = 0;
-    while (target % 2 === 0) {
-      target /= 2;
-      exp2 += 1;
-    }
-    let exp5 = 0;
-    while (target % 5 === 0) {
-      target /= 5;
-      exp5 += 1;
-    }
-    const precision = Math.max(exp2, exp5);
-    if (precision === 0) {
-      // In the off chance that the target does not have 2 or 5 as a prime factor,
-      // we'll just return a precision of 3 decimals.
-      return 3;
-    }
-    return precision;
+  /**
+   * Get the base vault token account address for a given market
+   */
+  public getBaseVaultKey(): PublicKey {
+    return this.baseParams.vaultKey;
   }
 
   /**
@@ -543,11 +179,8 @@ export class MarketState {
    */
   public floatPriceToTicks(price: number): number {
     return Math.round(
-      (price *
-        this.data.header.rawBaseUnitsPerBaseUnit *
-        10 ** this.data.header.quoteParams.decimals) /
-        (this.data.quoteLotsPerBaseUnitPerTick *
-          toNum(this.data.header.quoteLotSize))
+      (price * this.rawBaseUnitsPerBaseUnit * 10 ** this.quoteParams.decimals) /
+        (this.quoteLotsPerBaseUnitPerTick * this.quoteLotSize)
     );
   }
 
@@ -560,11 +193,8 @@ export class MarketState {
    */
   public ticksToFloatPrice(ticks: number): number {
     return (
-      (ticks *
-        this.data.quoteLotsPerBaseUnitPerTick *
-        toNum(this.data.header.quoteLotSize)) /
-      (10 ** this.data.header.quoteParams.decimals *
-        this.data.header.rawBaseUnitsPerBaseUnit)
+      (ticks * this.quoteLotsPerBaseUnitPerTick * this.quoteLotSize) /
+      (10 ** this.quoteParams.decimals * this.rawBaseUnitsPerBaseUnit)
     );
   }
 
@@ -574,8 +204,8 @@ export class MarketState {
    * @param rawBaseUnits The amount of raw base units to convert
    */
   public rawBaseUnitsToBaseLotsRoundedDown(rawBaseUnits: number): number {
-    const baseUnits = rawBaseUnits / this.data.header.rawBaseUnitsPerBaseUnit;
-    return Math.floor(baseUnits * this.data.baseLotsPerBaseUnit);
+    const baseUnits = rawBaseUnits / this.rawBaseUnitsPerBaseUnit;
+    return Math.floor(baseUnits * this.baseLotsPerBaseUnit);
   }
 
   /**
@@ -584,8 +214,8 @@ export class MarketState {
    * @param rawBaseUnits The amount of raw base units to convert
    */
   public rawBaseUnitsToBaseLotsRoundedUp(rawBaseUnits: number): number {
-    const baseUnits = rawBaseUnits / this.data.header.rawBaseUnitsPerBaseUnit;
-    return Math.ceil(baseUnits * this.data.baseLotsPerBaseUnit);
+    const baseUnits = rawBaseUnits / this.rawBaseUnitsPerBaseUnit;
+    return Math.ceil(baseUnits * this.baseLotsPerBaseUnit);
   }
 
   /**
@@ -594,7 +224,7 @@ export class MarketState {
    * @param baseAtoms The amount of base atoms to convert
    */
   public baseAtomsToBaseLots(baseAtoms: number): number {
-    return Math.round(baseAtoms / toNum(this.data.header.baseLotSize));
+    return Math.round(baseAtoms / this.baseLotSize);
   }
 
   /**
@@ -603,7 +233,7 @@ export class MarketState {
    * @param baseLots The amount of base lots to convert
    */
   public baseLotsToBaseAtoms(baseLots: number): number {
-    return baseLots * toNum(this.data.header.baseLotSize);
+    return baseLots * this.baseLotSize;
   }
 
   /**
@@ -622,8 +252,7 @@ export class MarketState {
    */
   public quoteUnitsToQuoteLots(quoteUnits: number): number {
     return Math.round(
-      (quoteUnits * 10 ** this.data.header.quoteParams.decimals) /
-        toNum(this.data.header.quoteLotSize)
+      (quoteUnits * 10 ** this.quoteParams.decimals) / this.quoteLotSize
     );
   }
 
@@ -633,7 +262,7 @@ export class MarketState {
    * @param quoteAtoms The amount of quote atoms to convert
    */
   public quoteAtomsToQuoteLots(quoteAtoms: number): number {
-    return Math.round(quoteAtoms / toNum(this.data.header.quoteLotSize));
+    return Math.round(quoteAtoms / this.quoteLotSize);
   }
 
   /**
@@ -642,7 +271,7 @@ export class MarketState {
    * @param quoteLots The amount of quote lots to convert
    */
   public quoteLotsToQuoteAtoms(quoteLots: number): number {
-    return quoteLots * toNum(this.data.header.quoteLotSize);
+    return quoteLots * this.quoteLotSize;
   }
 
   /**
@@ -660,7 +289,7 @@ export class MarketState {
    * @param baseAtoms The amount of base atoms to convert
    */
   public baseAtomsToRawBaseUnits(baseAtoms: number): number {
-    return baseAtoms / 10 ** this.data.header.baseParams.decimals;
+    return baseAtoms / 10 ** this.baseParams.decimals;
   }
 
   /**
@@ -669,7 +298,7 @@ export class MarketState {
    * @param quoteAtoms The amount of quote atoms to convert
    */
   public quoteAtomsToQuoteUnits(quoteAtoms: number): number {
-    return quoteAtoms / 10 ** this.data.header.quoteParams.decimals;
+    return quoteAtoms / 10 ** this.quoteParams.decimals;
   }
 
   /**
@@ -1095,77 +724,6 @@ export class MarketState {
       },
       args
     );
-  }
-
-  public getSwapOrderPacket({
-    side,
-    inAmount,
-    slippage = DEFAULT_SLIPPAGE_PERCENT,
-    selfTradeBehavior = SelfTradeBehavior.Abort,
-    matchLimit = DEFAULT_MATCH_LIMIT,
-    clientOrderId = 0,
-    useOnlyDepositedFunds = false,
-    lastValidSlot,
-    lastValidUnixTimestampInSeconds,
-  }: {
-    side: Side;
-    inAmount: number;
-    slippage?: number;
-    selfTradeBehavior?: SelfTradeBehavior;
-    matchLimit?: number;
-    clientOrderId?: number;
-    useOnlyDepositedFunds?: boolean;
-    lastValidSlot?: number;
-    lastValidUnixTimestampInSeconds?: number;
-  }): OrderPacket {
-    const uiLadder = getMarketUiLadder(this, Number.MAX_SAFE_INTEGER);
-    const expectedOutAmount = getExpectedOutAmountRouter({
-      uiLadder,
-      takerFeeBps: this.data.takerFeeBps,
-      side,
-      inAmount,
-    });
-    const baseMul = 10 ** this.data.header.baseParams.decimals;
-    const quoteMul = 10 ** this.data.header.quoteParams.decimals;
-    const slippageDenom = 1 - slippage;
-    let numBaseLots = 0;
-    let minBaseLotsToFill = 0;
-    let numQuoteLots = 0;
-    let minQuoteLotsToFill = 0;
-
-    if (side === Side.Ask) {
-      numBaseLots =
-        (inAmount * baseMul) /
-        parseFloat(this.data.header.baseLotSize.toString());
-      minQuoteLotsToFill = Math.ceil(
-        ((expectedOutAmount * quoteMul) /
-          parseFloat(this.data.header.quoteLotSize.toString())) *
-          slippageDenom
-      );
-    } else {
-      numQuoteLots =
-        (inAmount * quoteMul) /
-        parseFloat(this.data.header.quoteLotSize.toString());
-      minBaseLotsToFill = Math.ceil(
-        ((expectedOutAmount * baseMul) /
-          parseFloat(this.data.header.baseLotSize.toString())) *
-          slippageDenom
-      );
-    }
-    return getImmediateOrCancelOrderPacket({
-      side,
-      priceInTicks: null,
-      numBaseLots,
-      numQuoteLots,
-      minBaseLotsToFill,
-      minQuoteLotsToFill,
-      selfTradeBehavior,
-      matchLimit,
-      clientOrderId,
-      useOnlyDepositedFunds,
-      lastValidSlot,
-      lastValidUnixTimestampInSeconds,
-    });
   }
 
   /**
