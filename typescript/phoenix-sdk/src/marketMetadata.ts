@@ -41,7 +41,9 @@ import {
 } from "./index";
 
 export class MarketMetadata {
+  // The market's address
   address: PublicKey;
+
   marketSizeParams: MarketSizeParams;
   baseParams: TokenParams;
   baseLotSize: number;
@@ -49,12 +51,18 @@ export class MarketMetadata {
   quoteLotSize: number;
   tickSizeInQuoteAtomsPerBaseUnit: number;
   rawBaseUnitsPerBaseUnit: number;
+
   // The number of base lots per base unit
   baseLotsPerBaseUnit: number;
+
   // Tick size of the market, in quote lots per base unit
   // Note that the header contains tick size in quote atoms per base unit
   quoteLotsPerBaseUnitPerTick: number;
+
+  // The number of decimal places to display for the price
   priceDecimalPlaces: number;
+
+  // Taker fee in basis points
   takerFeeBps: number;
 
   constructor({
