@@ -229,7 +229,7 @@ export function getLimitOrderPacket({
  */
 export function getImmediateOrCancelOrderPacket({
   side,
-  priceInTicks = null,
+  priceInTicks,
   numBaseLots,
   numQuoteLots,
   minBaseLotsToFill = 0,
@@ -242,7 +242,7 @@ export function getImmediateOrCancelOrderPacket({
   lastValidUnixTimestampInSeconds,
 }: {
   side: Side;
-  priceInTicks: number | null;
+  priceInTicks?: number;
   numBaseLots: number;
   numQuoteLots: number;
   minBaseLotsToFill?: number;
@@ -257,7 +257,7 @@ export function getImmediateOrCancelOrderPacket({
   return {
     __kind: "ImmediateOrCancel",
     side,
-    priceInTicks,
+    priceInTicks: priceInTicks ?? null,
     numBaseLots,
     numQuoteLots,
     minBaseLotsToFill,
