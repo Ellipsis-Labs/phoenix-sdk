@@ -1154,7 +1154,6 @@ export class MarketState {
     }
     return getImmediateOrCancelOrderPacket({
       side,
-      priceInTicks: null,
       numBaseLots,
       numQuoteLots,
       minBaseLotsToFill,
