@@ -740,20 +740,12 @@ export class MarketMetadata {
       priceInTicks,
       numBaseLots,
       selfTradeBehavior: limitOrderTemplate.selfTradeBehavior,
-      matchLimit:
-        limitOrderTemplate.matchLimit === undefined
-          ? null
-          : limitOrderTemplate.matchLimit,
+      matchLimit: limitOrderTemplate.matchLimit,
       clientOrderId: limitOrderTemplate.clientOrderId,
       useOnlyDepositedFunds: limitOrderTemplate.useOnlyDepositedFunds,
-      lastValidSlot:
-        limitOrderTemplate.lastValidSlot === undefined
-          ? null
-          : limitOrderTemplate.lastValidSlot,
+      lastValidSlot: limitOrderTemplate.lastValidSlot,
       lastValidUnixTimestampInSeconds:
-        limitOrderTemplate.lastValidUnixTimestampInSeconds === undefined
-          ? null
-          : limitOrderTemplate.lastValidUnixTimestampInSeconds,
+        limitOrderTemplate.lastValidUnixTimestampInSeconds,
     });
     return this.createPlaceLimitOrderInstruction(orderPacket, trader);
   }
@@ -782,14 +774,9 @@ export class MarketMetadata {
       clientOrderId: postOnlyOrderTemplate.clientOrderId,
       rejectPostOnly: postOnlyOrderTemplate.rejectPostOnly,
       useOnlyDepositedFunds: postOnlyOrderTemplate.useOnlyDepositedFunds,
-      lastValidSlot:
-        postOnlyOrderTemplate.lastValidSlot === undefined
-          ? null
-          : postOnlyOrderTemplate.lastValidSlot,
+      lastValidSlot: postOnlyOrderTemplate.lastValidSlot,
       lastValidUnixTimestampInSeconds:
-        postOnlyOrderTemplate.lastValidUnixTimestampInSeconds === undefined
-          ? null
-          : postOnlyOrderTemplate.lastValidUnixTimestampInSeconds,
+        postOnlyOrderTemplate.lastValidUnixTimestampInSeconds,
     });
     return this.createPlaceLimitOrderInstruction(orderPacket, trader);
   }
@@ -828,22 +815,13 @@ export class MarketMetadata {
       minBaseLotsToFill,
       minQuoteLotsToFill,
       selfTradeBehavior: immediateOrCancelOrderTemplate.selfTradeBehavior,
-      matchLimit:
-        immediateOrCancelOrderTemplate.matchLimit === undefined
-          ? null
-          : immediateOrCancelOrderTemplate.matchLimit,
+      matchLimit: immediateOrCancelOrderTemplate.matchLimit,
       clientOrderId: immediateOrCancelOrderTemplate.clientOrderId,
       useOnlyDepositedFunds:
         immediateOrCancelOrderTemplate.useOnlyDepositedFunds,
-      lastValidSlot:
-        immediateOrCancelOrderTemplate.lastValidSlot === undefined
-          ? null
-          : immediateOrCancelOrderTemplate.lastValidSlot,
+      lastValidSlot: immediateOrCancelOrderTemplate.lastValidSlot,
       lastValidUnixTimestampInSeconds:
-        immediateOrCancelOrderTemplate.lastValidUnixTimestampInSeconds ===
-        undefined
-          ? null
-          : immediateOrCancelOrderTemplate.lastValidUnixTimestampInSeconds,
+        immediateOrCancelOrderTemplate.lastValidUnixTimestampInSeconds,
     });
     return this.createSwapInstruction(orderPacket, trader);
   }

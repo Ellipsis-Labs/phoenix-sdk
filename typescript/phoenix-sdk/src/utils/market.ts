@@ -482,13 +482,21 @@ export function getMarketL3Book(
       const priceInTicks = toBN(orderId.priceInTicks);
       const numBaseLots = toBN(restingOrder.numBaseLots);
 
+      const makerPubkey = marketData.traderIndexToTraderPubkey.get(
+        toNum(restingOrder.traderIndex)
+      );
+
+      if (!makerPubkey) {
+        throw new Error(
+          `Invalid trader index: ${restingOrder.traderIndex.toString()}`
+        );
+      }
+
       const order: L3Order = {
         priceInTicks,
         sizeInBaseLots: numBaseLots,
         side,
-        makerPubkey: marketData.traderIndexToTraderPubkey.get(
-          toNum(restingOrder.traderIndex)
-        ),
+        makerPubkey,
         orderSequenceNumber: getUiOrderSequenceNumber(orderId),
         lastValidSlot: toBN(restingOrder.lastValidSlot),
         lastValidUnixTimestampInSeconds: toBN(
