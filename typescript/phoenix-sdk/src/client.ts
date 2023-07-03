@@ -1,5 +1,4 @@
 import {
-  AccountInfo,
   Connection,
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
@@ -144,18 +143,14 @@ export class Client {
       accountList.push(...marketAddresses);
     }
     accountList.push(SYSVAR_CLOCK_PUBKEY);
-    let accounts: Buffer[] = [];
-    if (useZstd) {
-      accounts = await getConfirmedMarketsAndClockAccountsZstd(
-        connection,
-        accountList
-      );
-    } else {
-      accounts = await getConfirmedMarketsAndClockAccounts(
-        connection,
-        accountList
-      );
-    }
+
+    const accounts = useZstd
+      ? await getConfirmedMarketsAndClockAccountsZstd(
+          connection,
+          marketAddresses
+        )
+      : await getConfirmedMarketsAndClockAccounts(connection, marketAddresses);
+
     const clockBuffer = accounts.pop();
     if (clockBuffer === undefined) {
       throw new Error("Unable to get clock");
@@ -220,19 +215,12 @@ export class Client {
     useZstd = true
   ): Promise<Client> {
     const cluster = await getClusterFromConnection(connection);
-    let accounts: Buffer[];
-
-    if (useZstd) {
-      accounts = await getConfirmedMarketsAndClockAccountsZstd(
-        connection,
-        marketAddresses
-      );
-    } else {
-      accounts = await getConfirmedMarketsAndClockAccounts(
-        connection,
-        marketAddresses
-      );
-    }
+    const accounts = useZstd
+      ? await getConfirmedMarketsAndClockAccountsZstd(
+          connection,
+          marketAddresses
+        )
+      : await getConfirmedMarketsAndClockAccounts(connection, marketAddresses);
 
     const clockBuffer = accounts.pop();
     if (clockBuffer === undefined) {
@@ -275,7 +263,8 @@ export class Client {
   static async createWithMarketAddresses(
     connection: Connection,
     marketAddresses: PublicKey[],
-    configUrl = DEFAULT_CONFIG_URL
+    configUrl = DEFAULT_CONFIG_URL,
+    useZstd = true
   ): Promise<Client> {
     const cluster = await getClusterFromConnection(connection);
 
@@ -306,12 +295,14 @@ export class Client {
       }
     });
 
-    const accounts = await connection.getMultipleAccountsInfo(
-      [...marketAddresses, SYSVAR_CLOCK_PUBKEY],
-      "confirmed"
-    );
+    const accounts = useZstd
+      ? await getConfirmedMarketsAndClockAccountsZstd(
+          connection,
+          marketAddresses
+        )
+      : await getConfirmedMarketsAndClockAccounts(connection, marketAddresses);
 
-    const clockBuffer = accounts.pop()?.data;
+    const clockBuffer = accounts.pop();
     if (clockBuffer === undefined) {
       throw new Error("Unable to get clock");
     }
@@ -319,14 +310,15 @@ export class Client {
 
     const marketStates = new Map<string, MarketState>();
     const marketMetadatas = new Map<string, MarketMetadata>();
-    const marketKeysAndData: Array<[PublicKey, AccountInfo<Buffer>]> =
-      marketAddresses.map((marketAddress, index) => {
-        return [marketAddress, accounts[index] as AccountInfo<Buffer>];
-      });
+    const marketKeysAndData: Array<[PublicKey, Buffer]> = marketAddresses.map(
+      (marketAddress, index) => {
+        return [marketAddress, accounts[index] as Buffer];
+      }
+    );
     marketKeysAndData.forEach(([marketAddress, marketAccount]) => {
       const marketState = MarketState.load({
         address: marketAddress,
-        buffer: marketAccount.data,
+        buffer: marketAccount,
       });
       marketStates.set(marketAddress.toString(), marketState);
       const marketMetadata = MarketMetadata.fromMarketState(marketState);
@@ -373,19 +365,12 @@ export class Client {
     }
 
     const marketKey = new PublicKey(marketAddress);
-    let marketBuffer: Buffer;
-    let clockBuffer: Buffer;
-    if (useZstd) {
-      [marketBuffer, clockBuffer] =
-        await getConfirmedMarketsAndClockAccountsZstd(this.connection, [
+
+    const [marketBuffer, clockBuffer] = useZstd
+      ? await getConfirmedMarketsAndClockAccountsZstd(this.connection, [
           marketKey,
-        ]);
-    } else {
-      [marketBuffer, clockBuffer] = await getConfirmedMarketsAndClockAccounts(
-        this.connection,
-        [marketKey]
-      );
-    }
+        ])
+      : await getConfirmedMarketsAndClockAccounts(this.connection, [marketKey]);
 
     const marketState = MarketState.load({
       address: marketKey,
@@ -409,19 +394,12 @@ export class Client {
     const marketKeys = Array.from(this.marketStates.keys()).map((market) => {
       return new PublicKey(market);
     });
-    let accounts: Buffer[];
-
-    if (useZstd) {
-      accounts = await getConfirmedMarketsAndClockAccountsZstd(
-        this.connection,
-        marketKeys
-      );
-    } else {
-      accounts = await getConfirmedMarketsAndClockAccounts(
-        this.connection,
-        marketKeys
-      );
-    }
+    const accounts = useZstd
+      ? await getConfirmedMarketsAndClockAccountsZstd(
+          this.connection,
+          marketKeys
+        )
+      : await getConfirmedMarketsAndClockAccounts(this.connection, marketKeys);
 
     const clockBuffer = accounts.pop();
     if (clockBuffer === undefined) {
@@ -459,19 +437,12 @@ export class Client {
       throw new Error("Market does not exist: " + marketKey.toBase58());
     }
 
-    let marketBuffer: Buffer;
-    let clockBuffer: Buffer;
-    if (useZstd) {
-      [marketBuffer, clockBuffer] =
-        await getConfirmedMarketsAndClockAccountsZstd(this.connection, [
+    const [marketBuffer, clockBuffer] = useZstd
+      ? await getConfirmedMarketsAndClockAccountsZstd(this.connection, [
           marketKey,
-        ]);
-    } else {
-      [marketBuffer, clockBuffer] = await getConfirmedMarketsAndClockAccounts(
-        this.connection,
-        [marketKey]
-      );
-    }
+        ])
+      : await getConfirmedMarketsAndClockAccounts(this.connection, [marketKey]);
+
     existingMarketState.reload(marketBuffer);
     if (clockBuffer === undefined) {
       throw new Error("Unable to get clock");

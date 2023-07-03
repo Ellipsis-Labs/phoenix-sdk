@@ -1,6 +1,9 @@
 import { Connection, PublicKey, SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js";
 import { ZSTDDecoder } from "zstddec";
 
+// Largest configured account size (multiplied by 2)
+const MAX_ACCOUNT_SIZE_BYTES = 1723488 * 2;
+
 /**
  * Get market account data and clock data with zstd compression
  * @param marketKey The market address
@@ -69,7 +72,7 @@ export const getConfirmedMarketsAndClockAccountsZstd = async (
     }
     const compressedMarketData = Buffer.from(payload.data[0], "base64");
     const marketBuffer = Buffer.from(
-      decoder.decode(compressedMarketData, 1 << 23)
+      decoder.decode(compressedMarketData, MAX_ACCOUNT_SIZE_BYTES)
     );
     markets.push(marketBuffer);
   }
@@ -114,6 +117,9 @@ export const getConfirmedMarketAccountZstd = async (
   const compressedMarketData = Buffer.from(value?.data[0], "base64");
   const decoder = new ZSTDDecoder();
   await decoder.init();
-  const marketBuffer = decoder.decode(compressedMarketData, 1 << 23);
+  const marketBuffer = decoder.decode(
+    compressedMarketData,
+    MAX_ACCOUNT_SIZE_BYTES
+  );
   return Buffer.from(marketBuffer);
 };
