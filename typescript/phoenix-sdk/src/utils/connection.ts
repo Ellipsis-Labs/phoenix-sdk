@@ -27,7 +27,7 @@ export const getConfirmedMarketsAndClockAccounts = async (
       commitment
     )
   ).map((account) => account?.data);
-  if (!rawAccounts.every((account) => account !== undefined)) {
+  if (rawAccounts.some((account) => account === undefined)) {
     throw new Error("Unable to get account data");
   }
   return rawAccounts as Buffer[];
