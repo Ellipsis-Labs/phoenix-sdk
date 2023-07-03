@@ -340,7 +340,7 @@ export class Client {
    * Add a market to the client. Useful for localnet as markets will not be loaded in by default.
    * @param marketAddress The `PublicKey` of the market account
    * @param forceReload If this is set to true, it will reload the market even if it already exists
-   * @param useZstd If this is set to true, it will use zstd compression to get the market data. This is useful for fetching accounts with a lot of padding.
+   * @param useZstd If this is set to true, it will use zstd compression to get the market data. This is useful for fetching large accounts with a lot of repetitive data.
    */
   public async addMarket(
     marketAddress: string,
@@ -388,7 +388,7 @@ export class Client {
 
   /**
    * Refreshes the market data for all markets and the clock
-   * @param useZstd If this is set to true, it will use zstd compression to get the market data. This is useful for fetching accounts with a lot of padding.
+   * @param useZstd If this is set to true, it will use zstd compression to get the market data. This is useful for fetching large accounts with a lot of repetitive data.
    */
   public async refreshAllMarkets(useZstd = true) {
     const marketKeys = Array.from(this.marketStates.keys()).map((market) => {
@@ -424,7 +424,7 @@ export class Client {
    * Refreshes the market data and clock
    *
    * @param marketAddress The address of the market to refresh
-   * @param useZstd If this is set to true, it will use zstd compression to get the market data. This is useful for fetching accounts with a lot of padding.
+   * @param useZstd If this is set to true, it will use zstd compression to get the market data. This is useful for fetching large accounts with a lot of repetitive data.
    * @returns The refreshed Market
    */
   public async refreshMarket(
