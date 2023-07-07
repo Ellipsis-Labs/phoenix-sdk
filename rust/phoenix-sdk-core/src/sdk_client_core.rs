@@ -2,7 +2,7 @@ use anyhow::anyhow;
 
 use anyhow::Result;
 use borsh::BorshDeserialize;
-use ellipsis_client::transaction_utils::ParsedTransaction;
+use ellipsis_transaction_utils::ParsedTransaction;
 use itertools::Itertools;
 use phoenix::program::MarketHeader;
 use phoenix::program::MarketSizeParams;

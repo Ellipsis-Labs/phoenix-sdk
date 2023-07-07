@@ -2948,7 +2948,7 @@ dependencies = [
  "anyhow",
  "borsh 0.9.3",
  "bytemuck",
- "ellipsis-client",
+ "ellipsis-transaction-utils",
  "itertools",
  "num-traits",
  "phoenix-v1",
