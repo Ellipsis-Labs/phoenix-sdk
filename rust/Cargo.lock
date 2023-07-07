@@ -1416,6 +1416,8 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 [[package]]
 name = "ellipsis-client"
 version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50438b4d560219c04908a80c7b3434ba95366bd0c8de72a8003a0067338ea2e3"
 dependencies = [
  "anyhow",
  "assert_matches",
@@ -1468,6 +1470,8 @@ dependencies = [
 [[package]]
 name = "ellipsis-transaction-utils"
 version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd744831aaf3aa86346efb8eba40d113097ff9a1954f92e0ea54f631453b1fbd"
 dependencies = [
  "bs58 0.4.0",
  "itertools",

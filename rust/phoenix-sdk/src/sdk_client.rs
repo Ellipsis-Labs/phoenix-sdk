@@ -277,7 +277,7 @@ impl SDKClient {
 impl SDKClient {
     pub async fn get_market_metadata(&self, market_key: &Pubkey) -> Result<MarketMetadata> {
         match self.markets.get(market_key) {
-            Some(metadata) => return Ok(metadata.clone()),
+            Some(metadata) => Ok(*metadata),
             None => {
                 let market_account_data = (self.client.get_account_data(market_key))
                     .await
@@ -306,7 +306,7 @@ impl SDKClient {
         market_key: &Pubkey,
     ) -> anyhow::Result<&MarketMetadata> {
         match self.markets.get(market_key) {
-            Some(metadata) => return Ok(metadata),
+            Some(metadata) => Ok(metadata),
             None => Err(anyhow!(
                 "Market metadata not found in cache. Try calling add_market first."
             )),
@@ -443,9 +443,9 @@ impl SDKClient {
         let mut cached_metadata = self.markets.clone();
         for raw_phoenix_event in raw_phoenix_events {
             let header = raw_phoenix_event.header;
-            if !cached_metadata.contains_key(&header.market) {
+            if let std::collections::btree_map::Entry::Vacant(e) = cached_metadata.entry(header.market) {
                 let metadata = self.get_market_metadata(&header.market).await.ok()?;
-                cached_metadata.insert(header.market, metadata);
+                e.insert(metadata);
             }
             let meta = cached_metadata.get(&header.market)?;
 

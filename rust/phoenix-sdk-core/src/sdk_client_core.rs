@@ -515,8 +515,7 @@ impl SDKClientCore {
                 header,
                 batch: batches
                     .cloned()
-                    .map(|event| event.batch.clone())
-                    .flatten()
+                    .flat_map(|event| event.batch)
                     .collect::<Vec<_>>(),
             })
             .collect();
