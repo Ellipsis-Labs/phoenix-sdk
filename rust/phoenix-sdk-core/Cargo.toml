@@ -2,7 +2,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 name = "phoenix-sdk-core"
-version = "0.4.2"
+version = "0.4.3"
 description = "Core SDK for interacting with the Phoenix program"
 edition = "2021"
 license = "MIT"
@@ -19,6 +19,6 @@ rust_decimal_macros = { workspace = true }
 itertools = "0.10.5"
 rand = { workspace = true }
 anyhow = { workspace = true }
-ellipsis-client = { workspace = true }
+ellipsis-transaction-utils = { workspace = true }
 bytemuck = { workspace = true }
 spl-token = { workspace = true }

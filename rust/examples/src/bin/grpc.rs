@@ -26,7 +26,7 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let url = args.url.trim_end_matches("/").to_string();
+    let url = args.url.trim_end_matches('/').to_string();
     let sdk_url = url.clone();
 
     let (sender, mut receiver) = channel(10000);
@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
         Some(t) => t,
         None => {
             // Split url by forward slash
-            let mut url_split: Vec<&str> = url.split("/").collect();
+            let mut url_split: Vec<&str> = url.split('/').collect();
             let token = url_split.pop().unwrap();
             token.to_string()
         }
