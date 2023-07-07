@@ -219,7 +219,7 @@ async fn cancel_and_place_quotes(
     };
 
     println!("Placing bid for size {}, price {}", bid_size, bid_price);
-    println!("Placing ask for size {}, price {}", ask_price, ask_size);
+    println!("Placing ask for size {}, price {}", ask_size, ask_price);
 
     let market_metadata = sdk.get_market_metadata(market).await?;
     // Use an SDK-provided helper function to convert the limit order template into a limit order instruction, which contains Phoenix-specific units that the orderbook uses.
