@@ -34,3 +34,6 @@ itertools = "0.10.5"
 bytemuck = "1.11.0"
 serde = "^1.0.63"
 phoenix-seat-manager = "0.1.0"
+yellowstone-grpc-proto = "=1.6.0+solana.1.16.1"
+yellowstone-grpc-client = "=1.6.0+solana.1.16.1"
+

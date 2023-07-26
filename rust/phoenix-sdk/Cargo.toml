@@ -33,3 +33,6 @@ phoenix-sdk-core = { version = "0.4.2", path = "../phoenix-sdk-core" }
 serde = { workspace = true }
 spl-associated-token-account = { workspace = true }
 phoenix-seat-manager = { workspace = true }
+yellowstone-grpc-proto = { workspace = true }
+yellowstone-grpc-client = { workspace = true }
+

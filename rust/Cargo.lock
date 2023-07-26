@@ -2943,6 +2943,8 @@ dependencies = [
  "spl-associated-token-account",
  "spl-token",
  "tokio",
+ "yellowstone-grpc-client",
+ "yellowstone-grpc-proto",
 ]
 
 [[package]]
@@ -2962,6 +2964,8 @@ dependencies = [
  "solana-program",
  "solana-sdk",
  "spl-token",
+ "yellowstone-grpc-client",
+ "yellowstone-grpc-proto",
 ]
 
 [[package]]
@@ -6201,9 +6205,9 @@ dependencies = [
 
 [[package]]
 name = "yellowstone-grpc-client"
-version = "1.5.0+solana.1.16.1"
+version = "1.6.0+solana.1.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54daad468c0bfe4311682297ae9dc82804f1f434ba46ea5b84293a97ff1904d2"
+checksum = "a8bbe28a6ee8b7596f6ff29100fcc56922e8392a184367bc2d1f84d3fdec7d68"
 dependencies = [
  "bytes",
  "futures 0.3.28",
@@ -6216,9 +6220,9 @@ dependencies = [
 
 [[package]]
 name = "yellowstone-grpc-proto"
-version = "1.5.0+solana.1.16.1"
+version = "1.6.0+solana.1.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "811b0e008e149110c4ef8e9133a8fecb63b8837ebc9d0922c2e677e9d421d4bb"
+checksum = "4d79e2cf1cace6d4b456eb3c4ec8834bceeaf030026ec537a3b74834e8820aac"
 dependencies = [
  "anyhow",
  "prost",
