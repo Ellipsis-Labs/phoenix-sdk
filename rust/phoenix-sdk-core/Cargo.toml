@@ -22,3 +22,6 @@ anyhow = { workspace = true }
 ellipsis-transaction-utils = { workspace = true }
 bytemuck = { workspace = true }
 spl-token = { workspace = true }
+yellowstone-grpc-proto = { workspace = true }
+yellowstone-grpc-client = { workspace = true }
+
