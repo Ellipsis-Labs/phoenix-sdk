@@ -14,6 +14,7 @@ use phoenix::{
     program::instruction_builders::{
         create_cancel_all_orders_instruction, create_cancel_multiple_orders_by_id_instruction,
         create_cancel_up_to_instruction, create_new_order_instruction,
+        create_withdraw_funds_instruction,
     },
     program::reduce_order::CancelOrderParams,
     quantities::{BaseLots, Ticks, WrapperU64},
@@ -1049,6 +1050,19 @@ impl SDKClientCore {
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
         Ok(create_cancel_all_orders_instruction(
+            &market_key.clone(),
+            &self.trader,
+            &market.base_mint,
+            &market.quote_mint,
+        ))
+    }
+
+    pub fn get_withdraw_ix(&self, market_key: &Pubkey) -> Result<Instruction> {
+        let market = self
+            .markets
+            .get(market_key)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
+        Ok(create_withdraw_funds_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
