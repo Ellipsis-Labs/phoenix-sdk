@@ -52,7 +52,13 @@ use crate::orderbook::Orderbook;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonMarketConfig {
-    pub markets: Vec<String>,
+    pub markets: Vec<MarketInfoConfig>,
+}
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MarketInfoConfig {
+    pub market: String,
+    pub baseMint: String,
+    pub quoteMint: String,
 }
 
 pub struct SDKClient {
@@ -213,7 +219,8 @@ impl SDKClient {
 impl SDKClient {
     /// Load in all known markets from a pre-defined config file located in the SDK github.
     pub async fn add_all_markets(&mut self) -> Result<()> {
-        let config_url = "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/typescript/phoenix-sdk/config.json";
+        let config_url =
+            "https://raw.githubusercontent.com/Ellipsis-Labs/phoenix-sdk/master/master_config.json";
 
         let genesis = self.client.get_genesis_hash().await?;
 
@@ -235,8 +242,8 @@ impl SDKClient {
             .get(cluster)
             .ok_or_else(|| anyhow!("Failed to find cluster {} in config file", cluster))?;
 
-        for market_key in market_details.markets.iter() {
-            let market_key = Pubkey::from_str(market_key).map_err(|e| anyhow!(e))?;
+        for market in market_details.markets.iter() {
+            let market_key = Pubkey::from_str(&market.market).map_err(|e| anyhow!(e))?;
             if self.markets.get(&market_key).is_some() {
                 continue;
             }
@@ -443,7 +450,9 @@ impl SDKClient {
         let mut cached_metadata = self.markets.clone();
         for raw_phoenix_event in raw_phoenix_events {
             let header = raw_phoenix_event.header;
-            if let std::collections::btree_map::Entry::Vacant(e) = cached_metadata.entry(header.market) {
+            if let std::collections::btree_map::Entry::Vacant(e) =
+                cached_metadata.entry(header.market)
+            {
                 let metadata = self.get_market_metadata(&header.market).await.ok()?;
                 e.insert(metadata);
             }

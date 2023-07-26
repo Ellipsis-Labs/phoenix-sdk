@@ -4,6 +4,7 @@ use anyhow::Result;
 use borsh::BorshDeserialize;
 use ellipsis_transaction_utils::ParsedTransaction;
 use itertools::Itertools;
+use phoenix::program::create_withdraw_funds_instruction;
 use phoenix::program::MarketHeader;
 use phoenix::program::MarketSizeParams;
 use phoenix::program::PhoenixInstruction;
@@ -1049,6 +1050,19 @@ impl SDKClientCore {
             .get(market_key)
             .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
         Ok(create_cancel_all_orders_instruction(
+            &market_key.clone(),
+            &self.trader,
+            &market.base_mint,
+            &market.quote_mint,
+        ))
+    }
+
+    pub fn get_withdraw_ix(&self, market_key: &Pubkey) -> Result<Instruction> {
+        let market = self
+            .markets
+            .get(market_key)
+            .ok_or_else(|| anyhow!("Market not found! Please load in the market first."))?;
+        Ok(create_withdraw_funds_instruction(
             &market_key.clone(),
             &self.trader,
             &market.base_mint,
