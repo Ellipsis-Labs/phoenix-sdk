@@ -4,7 +4,6 @@ use anyhow::Result;
 use borsh::BorshDeserialize;
 use ellipsis_transaction_utils::ParsedTransaction;
 use itertools::Itertools;
-use phoenix::program::create_withdraw_funds_instruction;
 use phoenix::program::MarketHeader;
 use phoenix::program::MarketSizeParams;
 use phoenix::program::PhoenixInstruction;
@@ -15,6 +14,7 @@ use phoenix::{
     program::instruction_builders::{
         create_cancel_all_orders_instruction, create_cancel_multiple_orders_by_id_instruction,
         create_cancel_up_to_instruction, create_new_order_instruction,
+        create_withdraw_funds_instruction,
     },
     program::reduce_order::CancelOrderParams,
     quantities::{BaseLots, Ticks, WrapperU64},
