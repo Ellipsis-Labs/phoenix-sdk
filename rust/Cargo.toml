@@ -22,7 +22,7 @@ borsh = "0.9.3"
 rand = "0.7.3"
 ellipsis-client = "0.2.1"
 ellipsis-transaction-utils = "0.1.0"
-phoenix-v1 = { version = "0.2.2", features = [ "no-entrypoint" ]} 
+phoenix-v1 = { version = "0.2.4", features = [ "no-entrypoint" ]} 
 tokio = { version = "1.23.0", features = ["full"] }
 solana-client = "1.10.32"
 clap = { version = "3.0.13", features = ["derive"] }
