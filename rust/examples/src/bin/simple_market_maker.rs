@@ -202,6 +202,7 @@ async fn cancel_and_place_quotes(
         last_valid_unix_timestamp_in_seconds: Some(
             (clock.unix_timestamp + order_lifetime_in_seconds) as u64,
         ),
+        fail_silently_on_insufficient_funds: false,
     };
 
     let ask_limit_order_template = LimitOrderTemplate {
@@ -216,6 +217,7 @@ async fn cancel_and_place_quotes(
         last_valid_unix_timestamp_in_seconds: Some(
             (clock.unix_timestamp + order_lifetime_in_seconds) as u64,
         ),
+        fail_silently_on_insufficient_funds: false,
     };
 
     println!("Placing bid for size {}, price {}", bid_size, bid_price);

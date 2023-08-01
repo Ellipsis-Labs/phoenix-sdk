@@ -997,6 +997,7 @@ impl SDKClient {
             use_only_deposited_funds,
             last_valid_slot,
             last_valid_unix_timestamp_in_seconds,
+            fail_silently_on_insufficient_funds,
         } = limit_order_template;
 
         let price_in_ticks = self.float_price_to_ticks_rounded_down(market_key, *price_as_float)?;
@@ -1013,6 +1014,7 @@ impl SDKClient {
             use_only_deposited_funds: *use_only_deposited_funds,
             last_valid_slot: *last_valid_slot,
             last_valid_unix_timestamp_in_seconds: *last_valid_unix_timestamp_in_seconds,
+            fail_silently_on_insufficient_funds: *fail_silently_on_insufficient_funds,
         };
 
         let limit_order_ix = create_new_order_instruction(
@@ -1041,6 +1043,7 @@ impl SDKClient {
             use_only_deposited_funds,
             last_valid_slot,
             last_valid_unix_timestamp_in_seconds,
+            fail_silently_on_insufficient_funds,
         } = post_only_order_template;
 
         let price_in_ticks = self.float_price_to_ticks_rounded_down(market_key, *price_as_float)?;
@@ -1056,6 +1059,7 @@ impl SDKClient {
             use_only_deposited_funds: *use_only_deposited_funds,
             last_valid_slot: *last_valid_slot,
             last_valid_unix_timestamp_in_seconds: *last_valid_unix_timestamp_in_seconds,
+            fail_silently_on_insufficient_funds: *fail_silently_on_insufficient_funds,
         };
 
         let post_only_ix = create_new_order_instruction(

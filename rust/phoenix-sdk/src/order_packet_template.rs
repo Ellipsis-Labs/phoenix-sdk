@@ -33,6 +33,10 @@ pub struct LimitOrderTemplate {
 
     /// If this is set, the order will be invalid after the specified unix timestamp.
     pub last_valid_unix_timestamp_in_seconds: Option<u64>,
+
+    /// Flag for whether or not to have the entire transaction fail if there are insufficient funds to place the order.
+    /// When set to true and there are insufficient funds, the order will not be placed but the transaction will not immediately fail.
+    pub fail_silently_on_insufficient_funds: bool,
 }
 
 /// PostOnlyOrderTemplate is a helper type for creating a post-only order, which will never be matched against existing orders.
@@ -66,6 +70,10 @@ pub struct PostOnlyOrderTemplate {
 
     /// If this is set, the order will be invalid after the specified unix timestamp.
     pub last_valid_unix_timestamp_in_seconds: Option<u64>,
+
+    /// Flag for whether or not to have the entire transaction fail if there are insufficient funds to place the order.
+    /// When set to true and there are insufficient funds, the order will not be placed but the transaction will not immediately fail.
+    pub fail_silently_on_insufficient_funds: bool,
 }
 
 /// ImmediateOrCancelOrderTemplate is a helper type for creating an immediate or cancel order.

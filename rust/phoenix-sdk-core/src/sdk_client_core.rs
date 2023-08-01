@@ -824,7 +824,9 @@ impl SDKClientCore {
         side: Side,
         size: u64,
     ) -> Result<Instruction> {
-        self.get_post_only_generic_ix(market_key, price, side, size, None, None, None, None, None)
+        self.get_post_only_generic_ix(
+            market_key, price, side, size, None, None, None, None, None, None,
+        )
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -839,6 +841,7 @@ impl SDKClientCore {
         use_only_deposited_funds: Option<bool>,
         last_valid_slot: Option<u64>,
         last_valid_unix_timestamp_in_seconds: Option<u64>,
+        fail_silently_on_insufficient_funds: Option<bool>,
     ) -> Result<Instruction> {
         let market = self
             .markets
@@ -848,6 +851,8 @@ impl SDKClientCore {
         let client_order_id = client_order_id.unwrap_or(0);
         let reject_post_only = reject_post_only.unwrap_or(false);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
+        let fail_silently_on_insufficient_funds =
+            fail_silently_on_insufficient_funds.unwrap_or(false);
         let order_packet = OrderPacket::PostOnly {
             side,
             price_in_ticks: Ticks::new(price_in_ticks),
@@ -857,6 +862,7 @@ impl SDKClientCore {
             use_only_deposited_funds,
             last_valid_slot,
             last_valid_unix_timestamp_in_seconds,
+            fail_silently_on_insufficient_funds,
         };
         Ok(create_new_order_instruction(
             &market_key.clone(),
@@ -911,7 +917,7 @@ impl SDKClientCore {
         size: u64,
     ) -> Result<Instruction> {
         self.get_limit_order_generic_ix(
-            market_key, price, side, size, None, None, None, None, None, None,
+            market_key, price, side, size, None, None, None, None, None, None, None,
         )
     }
 
@@ -928,6 +934,7 @@ impl SDKClientCore {
         use_only_deposited_funds: Option<bool>,
         last_valid_slot: Option<u64>,
         last_valid_unix_timestamp_in_seconds: Option<u64>,
+        fail_silently_on_insufficient_funds: Option<bool>,
     ) -> Result<Instruction> {
         let market = self
             .markets
@@ -937,6 +944,8 @@ impl SDKClientCore {
         let self_trade_behavior = self_trade_behavior.unwrap_or(SelfTradeBehavior::DecrementTake);
         let client_order_id = client_order_id.unwrap_or(0);
         let use_only_deposited_funds = use_only_deposited_funds.unwrap_or(false);
+        let fail_silently_on_insufficient_funds =
+            fail_silently_on_insufficient_funds.unwrap_or(false);
         let order_packet = OrderPacket::Limit {
             side,
             price_in_ticks: Ticks::new(num_quote_ticks_per_base_unit),
@@ -947,6 +956,7 @@ impl SDKClientCore {
             use_only_deposited_funds,
             last_valid_slot,
             last_valid_unix_timestamp_in_seconds,
+            fail_silently_on_insufficient_funds,
         };
         Ok(create_new_order_instruction(
             &market_key.clone(),
