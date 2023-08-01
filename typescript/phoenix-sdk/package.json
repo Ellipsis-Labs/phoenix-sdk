@@ -1,6 +1,6 @@
 {
   "name": "@ellipsis-labs/phoenix-sdk",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "TypeScript SDK for Phoenix",
   "author": "Ellipsis Labs",
   "repository": "https://github.com/Ellipsis-Labs/phoenix-sdk",
@@ -21,7 +21,6 @@
     "bn.js": "^5.2.1",
     "borsh": "^0.7.0",
     "bs58": "^5.0.0",
-    "fs": "^0.0.1-security",
     "zstddec": "^0.0.2"
   },
   "devDependencies": {
