@@ -26,3 +26,4 @@ export * from "./Side";
 export * from "./TimeInForceEvent";
 export * from "./TokenParams";
 export * from "./WithdrawParams";
+export * from "./FailedMultipleLimitOrderBehavior";

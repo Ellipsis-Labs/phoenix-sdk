@@ -27,6 +27,7 @@ export type OrderPacketRecord = {
     useOnlyDepositedFunds: boolean;
     lastValidSlot: beet.COption<beet.bignum>;
     lastValidUnixTimestampInSeconds: beet.COption<beet.bignum>;
+    failSilentlyOnInsufficientFunds: boolean;
   };
   Limit: {
     side: Side;
@@ -38,6 +39,7 @@ export type OrderPacketRecord = {
     useOnlyDepositedFunds: boolean;
     lastValidSlot: beet.COption<beet.bignum>;
     lastValidUnixTimestampInSeconds: beet.COption<beet.bignum>;
+    failSilentlyOnInsufficientFunds: boolean;
   };
   ImmediateOrCancel: {
     side: Side;
@@ -96,6 +98,7 @@ export const orderPacketBeet = beet.dataEnum<OrderPacketRecord>([
         ["useOnlyDepositedFunds", beet.bool],
         ["lastValidSlot", beet.coption(beet.u64)],
         ["lastValidUnixTimestampInSeconds", beet.coption(beet.u64)],
+        ["failSilentlyOnInsufficientFunds", beet.bool],
       ],
       'OrderPacketRecord["PostOnly"]'
     ),
@@ -114,6 +117,7 @@ export const orderPacketBeet = beet.dataEnum<OrderPacketRecord>([
         ["useOnlyDepositedFunds", beet.bool],
         ["lastValidSlot", beet.coption(beet.u64)],
         ["lastValidUnixTimestampInSeconds", beet.coption(beet.u64)],
+        ["failSilentlyOnInsufficientFunds", beet.bool],
       ],
       'OrderPacketRecord["Limit"]'
     ),

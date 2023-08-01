@@ -7,11 +7,15 @@
 
 import * as beet from "@metaplex-foundation/beet";
 import { CondensedOrder, condensedOrderBeet } from "./CondensedOrder";
+import {
+  FailedMultipleLimitOrderBehavior,
+  failedMultipleLimitOrderBehaviorBeet,
+} from "./FailedMultipleLimitOrderBehavior";
 export type MultipleOrderPacket = {
   bids: CondensedOrder[];
   asks: CondensedOrder[];
   clientOrderId: beet.COption<beet.bignum>;
-  rejectPostOnly: boolean;
+  failedMultipleLimitOrderBehavior: FailedMultipleLimitOrderBehavior;
 };
 
 /**
@@ -24,7 +28,10 @@ export const multipleOrderPacketBeet =
       ["bids", beet.array(condensedOrderBeet)],
       ["asks", beet.array(condensedOrderBeet)],
       ["clientOrderId", beet.coption(beet.u128)],
-      ["rejectPostOnly", beet.bool],
+      [
+        "failedMultipleLimitOrderBehavior",
+        failedMultipleLimitOrderBehaviorBeet,
+      ],
     ],
     "MultipleOrderPacket"
   );
