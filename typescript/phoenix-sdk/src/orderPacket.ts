@@ -133,6 +133,7 @@ export interface ImmediateOrCancelOrderTemplate {
  * @param useOnlyDepositedFunds Whether to use only deposited funds
  * @param lastValidSlot The last valid slot for a time in force order
  * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for a time in force order
+ * @param failSilientlyOnInsufficientFunds Whether to fail silently on insufficient funds
  */
 export function getPostOnlyOrderPacket({
   side,
@@ -143,6 +144,7 @@ export function getPostOnlyOrderPacket({
   useOnlyDepositedFunds = false,
   lastValidSlot,
   lastValidUnixTimestampInSeconds,
+  failSilientlyOnInsufficientFunds,
 }: {
   side: Side;
   priceInTicks: number;
@@ -152,6 +154,7 @@ export function getPostOnlyOrderPacket({
   useOnlyDepositedFunds?: boolean;
   lastValidSlot?: number;
   lastValidUnixTimestampInSeconds?: number;
+  failSilientlyOnInsufficientFunds?: boolean;
 }): OrderPacket {
   return {
     __kind: "PostOnly",
@@ -163,6 +166,7 @@ export function getPostOnlyOrderPacket({
     useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
     lastValidSlot: lastValidSlot ?? null,
     lastValidUnixTimestampInSeconds: lastValidUnixTimestampInSeconds ?? null,
+    failSilentlyOnInsufficientFunds: failSilientlyOnInsufficientFunds ?? false,
   };
 }
 
@@ -176,6 +180,7 @@ export function getPostOnlyOrderPacket({
  * @param useOnlyDepositedFunds Whether to use only deposited funds
  * @param lastValidSlot The last valid slot for a time in force order
  * @param lastValidUnixTimestampInSeconds The last valid unix timestamp in seconds for a time in force order
+ * @param failSilientlyOnInsufficientFunds Whether to fail silently on insufficient funds
  */
 export function getLimitOrderPacket({
   side,
@@ -187,6 +192,7 @@ export function getLimitOrderPacket({
   useOnlyDepositedFunds = false,
   lastValidSlot,
   lastValidUnixTimestampInSeconds,
+  failSilientlyOnInsufficientFunds,
 }: {
   side: Side;
   priceInTicks: number;
@@ -197,6 +203,7 @@ export function getLimitOrderPacket({
   useOnlyDepositedFunds?: boolean;
   lastValidSlot?: number;
   lastValidUnixTimestampInSeconds?: number;
+  failSilientlyOnInsufficientFunds?: boolean;
 }): OrderPacket {
   return {
     __kind: "Limit",
@@ -209,6 +216,7 @@ export function getLimitOrderPacket({
     useOnlyDepositedFunds: useOnlyDepositedFunds ?? false,
     lastValidSlot: lastValidSlot ?? null,
     lastValidUnixTimestampInSeconds: lastValidUnixTimestampInSeconds ?? null,
+    failSilentlyOnInsufficientFunds: failSilientlyOnInsufficientFunds ?? false,
   };
 }
 

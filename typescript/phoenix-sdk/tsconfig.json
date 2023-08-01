@@ -8,7 +8,7 @@
     "resolveJsonModule": true,
     "strict": true,
     "declaration": true,
-    "types": ["mocha"],
+    "types": ["mocha", "node"],
     "paths": {
       "@instructions/*": ["instructions/*"],
       "@types/*": ["types/*"]
