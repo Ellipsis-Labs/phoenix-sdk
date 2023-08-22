@@ -467,14 +467,14 @@ impl SDKClient {
     ///
     /// * `market_key` - The public key of the Phoenix market.
     /// * `input_mint_key` - The public key of the input Mint.
-    /// * `atoms` - The amount in atoms to sell.
+    /// * `atoms_to_sell` - The amount in atoms to sell.
     /// * `expiration` - Expiration details for the simulation (optional but recommended for real-time simulations).
     ///
     pub async fn simulate_market_transaction(
         &self,
         market_key: &Pubkey,
         input_mint_key: &Pubkey,
-        atoms: u64,
+        atoms_to_sell: u64,
         expiration: Option<LadderExpiration>,
     ) -> Result<SimulationSummaryInAtoms> {
         let LadderExpiration{last_valid_slot, last_valid_unix_timestamp_in_seconds} = expiration.unwrap_or_default();
@@ -496,8 +496,8 @@ impl SDKClient {
 
         // convert atoms to lots
         let mut lots_to_sell = match side {
-            Side::Bid => metadata.quote_atoms_to_quote_lots_rounded_down(atoms),
-            Side::Ask => metadata.base_atoms_to_base_lots_rounded_down(atoms)
+            Side::Bid => metadata.quote_atoms_to_quote_lots_rounded_down(atoms_to_sell),
+            Side::Ask => metadata.base_atoms_to_base_lots_rounded_down(atoms_to_sell)
         };
 
         // If the input is quote, apply the fee before the swap
