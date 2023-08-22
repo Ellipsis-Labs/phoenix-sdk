@@ -66,15 +66,9 @@ pub struct MarketInfoConfig {
 const FEE_DIVISOR: u64 = 10000;
 
 #[derive(Debug, Clone)]
-pub struct MarketSimulationResultInAtoms {
+pub struct SimulationSummaryInAtoms {
     pub base_atoms_filled: u64,
     pub quote_atoms_filled: u64,
-}
-
-impl MarketSimulationResultInAtoms {
-    pub fn get_price_in_ticks(&self) -> f64 {
-        self.quote_atoms_filled as f64 / self.base_atoms_filled as f64
-    }
 }
 
 pub struct MarketWrapper2 {
@@ -386,7 +380,7 @@ impl SDKClient {
         input_mint_key: &Pubkey,
         atoms: u64,
         expiration: Option<LadderExpiration>,
-    ) -> Result<MarketSimulationResultInAtoms> {
+    ) -> Result<SimulationSummaryInAtoms> {
         let LadderExpiration{last_valid_slot, last_valid_unix_timestamp_in_seconds} = expiration.unwrap_or_default();
         let wrapper = self.get_market_wrapper(market_key).await?;
         let market = wrapper.get_market_wrapper()?;
@@ -430,7 +424,7 @@ impl SDKClient {
         // Convert lots to atoms
         let base_atoms_filled = metadata.base_lots_to_base_atoms(simulation_result.base_lots_filled);
         let quote_atoms_filled = metadata.quote_lots_to_quote_atoms(simulation_result.quote_lots_filled);
-        Ok(MarketSimulationResultInAtoms{base_atoms_filled, quote_atoms_filled})
+        Ok(SimulationSummaryInAtoms{base_atoms_filled, quote_atoms_filled})
     }
 
     pub async fn get_market_orderbook(
