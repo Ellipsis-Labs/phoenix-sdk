@@ -1,4 +1,4 @@
-use phoenix::state::{Side, markets::Ladder};
+use phoenix::state::{markets::Ladder, Side};
 
 #[derive(Debug, Clone)]
 pub struct SimulationSummaryInLots {
@@ -64,11 +64,10 @@ impl MarketSimulator for Ladder {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use phoenix::state::markets::LadderOrder;
     use super::*;
+    use phoenix::state::markets::LadderOrder;
 
     struct Fixture {
         pub ladder: Ladder,
@@ -82,14 +81,32 @@ mod test {
     fn get_sol_usdc_ladder() -> Fixture {
         let ladder = Ladder {
             bids: vec![
-                LadderOrder { price_in_ticks: 0x58bf, size_in_base_lots: 0x043f },
-                LadderOrder { price_in_ticks: 0x58b9, size_in_base_lots: 0x043f },
-                LadderOrder { price_in_ticks: 0x58a7, size_in_base_lots: 0x043f },
+                LadderOrder {
+                    price_in_ticks: 0x58bf,
+                    size_in_base_lots: 0x043f,
+                },
+                LadderOrder {
+                    price_in_ticks: 0x58b9,
+                    size_in_base_lots: 0x043f,
+                },
+                LadderOrder {
+                    price_in_ticks: 0x58a7,
+                    size_in_base_lots: 0x043f,
+                },
             ],
             asks: vec![
-                LadderOrder { price_in_ticks: 0x58c0, size_in_base_lots: 0x3036 },
-                LadderOrder { price_in_ticks: 0x58c0, size_in_base_lots: 0x01e1ff },
-                LadderOrder { price_in_ticks: 0x58c0, size_in_base_lots: 0x02a261 },
+                LadderOrder {
+                    price_in_ticks: 0x58c0,
+                    size_in_base_lots: 0x3036,
+                },
+                LadderOrder {
+                    price_in_ticks: 0x58c0,
+                    size_in_base_lots: 0x01e1ff,
+                },
+                LadderOrder {
+                    price_in_ticks: 0x58c0,
+                    size_in_base_lots: 0x02a261,
+                },
             ],
         };
         let fixture = Fixture {
@@ -101,7 +118,7 @@ mod test {
         };
         fixture
     }
-    
+
     fn lots_to_unit_amount(lots: u64, lots_to_atoms: f64, atoms_to_unit: f64) -> f64 {
         let atoms = lots_to_atoms * lots as f64;
         let unit = atoms / atoms_to_unit;
@@ -118,14 +135,14 @@ mod test {
         assert_eq!(result.base_lots_filled, 0);
         assert_eq!(result.quote_lots_filled, 0);
     }
-    
+
     #[test]
     fn test_sell_more_than_available() {
-        let Fixture{ladder, ..} = get_sol_usdc_ladder();
+        let Fixture { ladder, .. } = get_sol_usdc_ladder();
 
         // Compute the max lots you can sell
         let max_lots_purchaseable: u64 = ladder.bids.iter().map(|bid| bid.size_in_base_lots).sum();
-        
+
         // Sell twice as much, and assert that only the max is filled
         let to_purchase = max_lots_purchaseable * 2;
         let result = ladder.simulate_market_sell(Side::Ask, to_purchase);
@@ -135,19 +152,22 @@ mod test {
 
     #[test]
     fn test_buy_more_than_available() {
-        let Fixture{ladder, ..} = get_sol_usdc_ladder();
-    
+        let Fixture { ladder, .. } = get_sol_usdc_ladder();
+
         // Compute the max lots you can buy (from available asks)
-        let max_lots_sellable: u64 = ladder.asks.iter().map(|ask| ask.size_in_base_lots * ask.price_in_ticks).sum();
-        
+        let max_lots_sellable: u64 = ladder
+            .asks
+            .iter()
+            .map(|ask| ask.size_in_base_lots * ask.price_in_ticks)
+            .sum();
+
         // Try to buy twice as much, which means you are selling twice as much base
         let to_sell = max_lots_sellable * 2;
         let result = ladder.simulate_market_sell(Side::Bid, to_sell);
-        
+
         assert_eq!(result.quote_lots_filled, max_lots_sellable);
         assert!(result.quote_lots_filled > 0);
     }
-
 
     #[test]
     fn test_simulate_market() {
@@ -158,23 +178,43 @@ mod test {
             (Side::Ask, 0, 0, 0, "0.000"),
             (Side::Bid, 0, 0, 0, "0.000"),
         ];
-    
+
         for (side, input, expected_base, expected_quote, expected_price) in test_cases.into_iter() {
             let fixture = get_sol_usdc_ladder();
             let ladder = fixture.ladder;
             let result = ladder.simulate_market_sell(side, input);
-            assert_eq!(result.base_lots_filled, expected_base, "Failed for side {:?} with input {}", side, input);
-            assert_eq!(result.quote_lots_filled, expected_quote, "Failed for side {:?} with input {}", side, input);
+            assert_eq!(
+                result.base_lots_filled, expected_base,
+                "Failed for side {:?} with input {}",
+                side, input
+            );
+            assert_eq!(
+                result.quote_lots_filled, expected_quote,
+                "Failed for side {:?} with input {}",
+                side, input
+            );
             let price = match result.base_lots_filled {
                 0 => 0.0,
                 _ => {
-                    let base_units = lots_to_unit_amount(result.base_lots_filled, fixture.atoms_in_base_lot, fixture.atoms_in_base_unit);
-                    let quote_units = lots_to_unit_amount(result.quote_lots_filled, fixture.atoms_in_quote_lot, fixture.atoms_in_quote_unit);
+                    let base_units = lots_to_unit_amount(
+                        result.base_lots_filled,
+                        fixture.atoms_in_base_lot,
+                        fixture.atoms_in_base_unit,
+                    );
+                    let quote_units = lots_to_unit_amount(
+                        result.quote_lots_filled,
+                        fixture.atoms_in_quote_lot,
+                        fixture.atoms_in_quote_unit,
+                    );
                     quote_units / base_units
                 }
             };
             let price_formatted = format!("{:.3}", price);
-            assert_eq!(price_formatted, expected_price, "Price mismatch for side {:?} with input {}", side, input);
+            assert_eq!(
+                price_formatted, expected_price,
+                "Price mismatch for side {:?} with input {}",
+                side, input
+            );
         }
     }
 }
