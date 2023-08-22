@@ -1,3 +1,4 @@
+use crate::ladder_utils::{SimulationSummaryInLots, MarketSimulator};
 use crate::order_packet_template::ImmediateOrCancelOrderTemplate;
 use crate::order_packet_template::LimitOrderTemplate;
 use crate::order_packet_template::PostOnlyOrderTemplate;
@@ -8,7 +9,6 @@ use anyhow::Result;
 use anyhow::bail;
 use ellipsis_client::EllipsisClient;
 use phoenix::program::create_new_order_instruction;
-use phoenix::program::dispatch_market;
 use phoenix::program::dispatch_market::*;
 use phoenix::program::EvictEvent;
 use phoenix::program::ExpiredOrderEvent;
@@ -52,6 +52,20 @@ use std::{collections::BTreeMap, mem::size_of, ops::DerefMut};
 
 use crate::orderbook::Orderbook;
 
+const FEE_DIVISOR: u64 = 10000;
+
+#[derive(Debug, Default)]
+pub struct LadderExpiration {
+    pub last_valid_slot: Option<u64>,
+    pub last_valid_unix_timestamp_in_seconds: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SimulationSummaryInAtoms {
+    pub base_atoms_filled: u64,
+    pub quote_atoms_filled: u64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonMarketConfig {
     pub markets: Vec<MarketInfoConfig>,
@@ -61,49 +75,6 @@ pub struct MarketInfoConfig {
     pub market: String,
     pub baseMint: String,
     pub quoteMint: String,
-}
-
-const FEE_DIVISOR: u64 = 10000;
-
-#[derive(Debug, Clone)]
-pub struct SimulationSummaryInAtoms {
-    pub base_atoms_filled: u64,
-    pub quote_atoms_filled: u64,
-}
-
-pub struct MarketWrapper2 {
-    meta: MarketMetadata,
-    bytes: Vec<u8>,
-}
-
-impl<'a> MarketWrapper2 {
-    pub fn is_empty(&self) -> bool {
-        self.bytes.is_empty()
-    }
-
-    pub fn new(account_data: Vec<u8>) -> Result<Self> {
-        let (header_bytes, bytes) = account_data.split_at(size_of::<MarketHeader>());
-        let meta = bytemuck::try_from_bytes(header_bytes)
-            .map_err(|_| anyhow!("Failed to deserialize market header"))
-            .and_then(MarketMetadata::from_header)?;
-        Ok(Self {
-            meta,
-            bytes: bytes.to_vec(),
-        })
-    }
-
-    pub fn get_market_wrapper(&self) -> Result<MarketWrapper<Pubkey, FIFOOrderId, FIFORestingOrder, OrderPacket>> {
-        let market = load_with_dispatch(&self.meta.market_size_params, &self.bytes)
-            .map_err(|_| anyhow!("Market configuration not found"))?;
-        Ok(market)
-    }
-
-}
-
-#[derive(Debug, Default)]
-pub struct LadderExpiration {
-    pub last_valid_slot: Option<u64>,
-    pub last_valid_unix_timestamp_in_seconds: Option<u64>,
 }
 
 pub struct SDKClient {
@@ -331,12 +302,21 @@ impl SDKClient {
         match self.markets.get(market_key) {
             Some(metadata) => Ok(*metadata),
             None => {
-                let wrapper = self.get_market_wrapper(market_key).await?;
-                Ok(wrapper.meta)
+                let market_account_data = (self.client.get_account_data(market_key))
+                    .await
+                    .map_err(|_| anyhow!("Failed to find market account"))?;
+                self.get_market_metadata_from_header_bytes(
+                    &market_account_data[..size_of::<MarketHeader>()],
+                )
             }
         }
     }
 
+    fn get_market_metadata_from_header_bytes(&self, header_bytes: &[u8]) -> Result<MarketMetadata> {
+        bytemuck::try_from_bytes(header_bytes)
+            .map_err(|_| anyhow!("Failed to deserialize market header"))
+            .and_then(MarketMetadata::from_header)
+    }
 
     /// Fetches a market's metadata from the SDKClient's market cache. This cache must be
     /// explicitly populated by calling `add_market` or `add_all_markets`.
@@ -356,17 +336,17 @@ impl SDKClient {
         }
     }
 
-    async fn get_market_wrapper(&self, market_key: &Pubkey) -> Result<MarketWrapper2> {
+    pub async fn get_market_ladder(&self, market_key: &Pubkey, levels: u64) -> Result<Ladder> {
         let market_account_data = (self.client.get_account_data(market_key))
             .await
             .map_err(|_| anyhow!("Failed to get market account data"))?;
-        MarketWrapper2::new(market_account_data)
-    }
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let market = load_with_dispatch(&meta.market_size_params, bytes)
+            .map_err(|_| anyhow!("Market configuration not found"))?
+            .inner;
 
-    pub async fn get_market_ladder(&self, market_key: &Pubkey, levels: u64) -> Result<Ladder> {
-        let market = self.get_market_wrapper(market_key).await?;
-        let wrapper = market.get_market_wrapper()?;
-        Ok(wrapper.inner.get_ladder(levels))
+        Ok(market.get_ladder(levels))
     }
 
     pub fn get_market_ladder_sync(&self, market_key: &Pubkey, levels: u64) -> Result<Ladder> {
@@ -374,84 +354,35 @@ impl SDKClient {
         rt.block_on(self.get_market_ladder(market_key, levels))
     }
 
-    pub async fn simulate_market_transaction(
-        &self,
-        market_key: &Pubkey,
-        input_mint_key: &Pubkey,
-        atoms: u64,
-        expiration: Option<LadderExpiration>,
-    ) -> Result<SimulationSummaryInAtoms> {
-        let LadderExpiration{last_valid_slot, last_valid_unix_timestamp_in_seconds} = expiration.unwrap_or_default();
-        let wrapper = self.get_market_wrapper(market_key).await?;
-        let market = wrapper.get_market_wrapper()?;
-        let ladder = market.inner.get_ladder_with_expiration(u64::MAX, last_valid_slot, last_valid_unix_timestamp_in_seconds);
-        let metadata = self.get_market_metadata_from_cache(market_key)?;
-        let side = match input_mint_key {
-            _ if input_mint_key == &metadata.base_mint => Side::Ask,
-            _ if input_mint_key == &metadata.quote_mint => Side::Bid,
-            _ => bail!("Input mint key does not match market base or quote mint")
-        };
-        println!("side: {:?}", side);
-
-        // convert atoms to lots
-        let mut lots_to_sell = match side {
-            Side::Bid => metadata.quote_atoms_to_quote_lots_rounded_down(atoms),
-            Side::Ask => metadata.base_atoms_to_base_lots_rounded_down(atoms)
-        };
-
-        // If the input is quote, apply the fee before the swap
-        if side == Side::Bid {
-            let fee = market.inner.get_taker_fee_bps();
-            lots_to_sell = lots_to_sell * (FEE_DIVISOR - fee) / FEE_DIVISOR;
-        }
-
-        let simulation_result = ladder.simulate_market_sell(side, lots_to_sell);
-
-        // If the output is quote, apply the fee after the swap
-        let simulation_result = match side {
-            Side::Bid => simulation_result,
-            Side::Ask => {
-                let fee = market.inner.get_taker_fee_bps();
-                let quote_lots_filled = simulation_result.quote_lots_filled * (FEE_DIVISOR - fee) / FEE_DIVISOR;
-                MarketSimulationResult{
-                    base_lots_filled: simulation_result.base_lots_filled,
-                    quote_lots_filled
-                }
-            }
-        };
-        println!("simulation_result: {:?}", simulation_result);
-
-        // Convert lots to atoms
-        let base_atoms_filled = metadata.base_lots_to_base_atoms(simulation_result.base_lots_filled);
-        let quote_atoms_filled = metadata.quote_lots_to_quote_atoms(simulation_result.quote_lots_filled);
-        Ok(SimulationSummaryInAtoms{base_atoms_filled, quote_atoms_filled})
-    }
-
     pub async fn get_market_orderbook(
         &self,
         market_key: &Pubkey,
     ) -> Result<Orderbook<FIFOOrderId, PhoenixOrder>> {
-        let wrapper = self.get_market_wrapper(market_key).await?;
+        let market_account_data = (self.client.get_account_data(market_key))
+            .await
+            .unwrap_or_default();
         let default_orderbook = Orderbook::<FIFOOrderId, PhoenixOrder> {
-            taker_fee_bps: 0,
             raw_base_units_per_base_lot: 0.0,
             quote_units_per_raw_base_unit_per_tick: 0.0,
             bids: BTreeMap::new(),
             asks: BTreeMap::new(),
         };
-        if wrapper.is_empty() {
+        if market_account_data.is_empty() {
             return Ok(default_orderbook);
         }
-        let meta = &wrapper.meta;
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
         let raw_base_units_per_base_lot = meta.raw_base_units_per_base_lot();
         let quote_units_per_raw_base_unit_per_tick = meta.quote_units_per_raw_base_unit_per_tick();
-        let market = wrapper.get_market_wrapper()?;
-        let orderbook = Orderbook::from_market(
-            market.inner,
-            raw_base_units_per_base_lot,
-            quote_units_per_raw_base_unit_per_tick,
-        );
-        Ok(orderbook)
+        Ok(load_with_dispatch(&meta.market_size_params, bytes)
+            .map(|market| {
+                Orderbook::from_market(
+                    market.inner,
+                    raw_base_units_per_base_lot,
+                    quote_units_per_raw_base_unit_per_tick,
+                )
+            })
+            .unwrap_or_else(|_| default_orderbook.clone()))
     }
 
     pub async fn get_market_orderbook_sync(
@@ -466,10 +397,17 @@ impl SDKClient {
         &self,
         market_key: &Pubkey,
     ) -> Result<BTreeMap<Pubkey, TraderState>> {
-        let wrapper = self.get_market_wrapper(market_key).await?;
-        let market = wrapper.get_market_wrapper()?;
+        let market_account_data = match (self.client.get_account_data(market_key)).await {
+            Ok(data) => data,
+            Err(_) => return Ok(BTreeMap::new()),
+        };
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let market = load_with_dispatch(&meta.market_size_params, bytes)
+            .map_err(|_| anyhow!("Market configuration not found"))?
+            .inner;
+
         Ok(market
-            .inner
             .get_registered_traders()
             .iter()
             .map(|(k, v)| (*k, *v))
@@ -485,12 +423,11 @@ impl SDKClient {
     }
 
     pub async fn get_market_state(&self, market_key: &Pubkey) -> Result<MarketState> {
-        let wrapper = match self.get_market_wrapper(market_key).await {
+        let market_account_data = match (self.client.get_account_data(market_key)).await {
             Ok(data) => data,
             Err(_) => {
                 return Ok(MarketState {
                     orderbook: Orderbook {
-                        taker_fee_bps: 0,
                         raw_base_units_per_base_lot: 0.0,
                         quote_units_per_raw_base_unit_per_tick: 0.0,
                         bids: BTreeMap::new(),
@@ -500,8 +437,11 @@ impl SDKClient {
                 })
             }
         };
-        let meta = &wrapper.meta;
-        let market = wrapper.get_market_wrapper()?.inner;
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let market = load_with_dispatch(&meta.market_size_params, bytes)
+            .map_err(|_| anyhow!("Market configuration not found"))?
+            .inner;
         let orderbook = Orderbook::from_market(
             market,
             meta.raw_base_units_per_base_lot(),
@@ -515,6 +455,62 @@ impl SDKClient {
             .collect();
 
         Ok(MarketState { orderbook, traders })
+    }
+
+    pub async fn simulate_market_transaction(
+        &self,
+        market_key: &Pubkey,
+        input_mint_key: &Pubkey,
+        atoms: u64,
+        expiration: Option<LadderExpiration>,
+    ) -> Result<SimulationSummaryInAtoms> {
+        let LadderExpiration{last_valid_slot, last_valid_unix_timestamp_in_seconds} = expiration.unwrap_or_default();
+
+        let market_account_data = self.client.get_account_data(market_key).await?;
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let market = load_with_dispatch(&meta.market_size_params, bytes)
+            .map_err(|_| anyhow!("Market configuration not found"))?
+            .inner;
+
+        let ladder = market.get_ladder_with_expiration(u64::MAX, last_valid_slot, last_valid_unix_timestamp_in_seconds);
+        let metadata = self.get_market_metadata_from_cache(market_key)?;
+        let side = match input_mint_key {
+            _ if input_mint_key == &metadata.base_mint => Side::Ask,
+            _ if input_mint_key == &metadata.quote_mint => Side::Bid,
+            _ => bail!("Input mint key does not match market base or quote mint")
+        };
+
+        // convert atoms to lots
+        let mut lots_to_sell = match side {
+            Side::Bid => metadata.quote_atoms_to_quote_lots_rounded_down(atoms),
+            Side::Ask => metadata.base_atoms_to_base_lots_rounded_down(atoms)
+        };
+
+        // If the input is quote, apply the fee before the swap
+        if side == Side::Bid {
+            let fee = market.get_taker_fee_bps();
+            lots_to_sell = lots_to_sell * (FEE_DIVISOR - fee) / FEE_DIVISOR;
+        }
+
+        let simulation_result = ladder.simulate_market_sell(side, lots_to_sell);
+
+        // If the output is quote, apply the fee after the swap
+        let simulation_result = match side {
+            Side::Bid => simulation_result,
+            Side::Ask => {
+                let fee = market.get_taker_fee_bps();
+                let quote_lots_filled = simulation_result.quote_lots_filled * (FEE_DIVISOR - fee) / FEE_DIVISOR;
+                SimulationSummaryInLots{
+                    base_lots_filled: simulation_result.base_lots_filled,
+                    quote_lots_filled
+                }
+            }
+        };
+        // Convert lots to atoms
+        let base_atoms_filled = metadata.base_lots_to_base_atoms(simulation_result.base_lots_filled);
+        let quote_atoms_filled = metadata.quote_lots_to_quote_atoms(simulation_result.quote_lots_filled);
+        Ok(SimulationSummaryInAtoms{base_atoms_filled, quote_atoms_filled})
     }
 
     pub async fn parse_raw_phoenix_events(
