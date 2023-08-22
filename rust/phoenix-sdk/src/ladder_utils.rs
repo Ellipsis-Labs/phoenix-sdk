@@ -6,14 +6,12 @@ pub struct SimulationSummaryInLots {
     pub quote_lots_filled: u64,
 }
 
-// Trait definition
 pub trait MarketSimulator {
     fn sell_quote(&self, num_lots_quote: u64) -> SimulationSummaryInLots;
     fn sell_base(&self, num_lots_base: u64) -> SimulationSummaryInLots;
     fn simulate_market_sell(&self, side: Side, size_in_lots: u64) -> SimulationSummaryInLots;
 }
 
-// Implementing the trait for Ladder
 impl MarketSimulator for Ladder {
     fn sell_quote(&self, num_lots_quote: u64) -> SimulationSummaryInLots {
         let mut remaining_quote_lots = num_lots_quote;
@@ -38,7 +36,6 @@ impl MarketSimulator for Ladder {
     }
 
     fn sell_base(&self, num_lots_base: u64) -> SimulationSummaryInLots {
-        // Check the bids, these are orders to BUY
         let mut remaining_base_lots = num_lots_base;
         let mut quote_lots = 0;
 
