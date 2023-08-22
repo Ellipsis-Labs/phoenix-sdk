@@ -457,6 +457,19 @@ impl SDKClient {
         Ok(MarketState { orderbook, traders })
     }
 
+    /// Simulates a market transaction based on provided parameters.
+    ///
+    /// This function simulates the market transaction for a given market key, input mint key,
+    /// number of atoms, and optional expiration details. It calculates the number of base and quote atoms
+    /// that would be filled based on the current market state and returns them as a summary.
+    ///
+    /// # Arguments
+    ///
+    /// * `market_key` - The public key of the Phoenix market.
+    /// * `input_mint_key` - The public key of the input Mint.
+    /// * `atoms` - The amount in atoms to sell.
+    /// * `expiration` - Expiration details for the simulation (optional but recommended for real-time simulations).
+    ///
     pub async fn simulate_market_transaction(
         &self,
         market_key: &Pubkey,
@@ -470,7 +483,7 @@ impl SDKClient {
         let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
         let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
         let market = load_with_dispatch(&meta.market_size_params, bytes)
-            .map_err(|_| anyhow!("Market configuration not found"))?
+            .map_err(|_| anyhow!("Market configuration not found for key {}", market_key.to_string()))?
             .inner;
 
         let ladder = market.get_ladder_with_expiration(u64::MAX, last_valid_slot, last_valid_unix_timestamp_in_seconds);
@@ -478,7 +491,7 @@ impl SDKClient {
         let side = match input_mint_key {
             _ if input_mint_key == &metadata.base_mint => Side::Ask,
             _ if input_mint_key == &metadata.quote_mint => Side::Bid,
-            _ => bail!("Input mint key does not match market base or quote mint")
+            _ => bail!("Input mint key {} does not match market base or quote mint", input_mint_key.to_string())
         };
 
         // convert atoms to lots
@@ -493,20 +506,21 @@ impl SDKClient {
             lots_to_sell = lots_to_sell * (FEE_DIVISOR - fee) / FEE_DIVISOR;
         }
 
-        let simulation_result = ladder.simulate_market_sell(side, lots_to_sell);
-
         // If the output is quote, apply the fee after the swap
-        let simulation_result = match side {
-            Side::Bid => simulation_result,
-            Side::Ask => {
-                let fee = market.get_taker_fee_bps();
-                let quote_lots_filled = simulation_result.quote_lots_filled * (FEE_DIVISOR - fee) / FEE_DIVISOR;
-                SimulationSummaryInLots{
-                    base_lots_filled: simulation_result.base_lots_filled,
-                    quote_lots_filled
+        let simulation_result = {
+            let result = ladder.simulate_market_sell(side, lots_to_sell);
+            match side {
+                Side::Bid => result,
+                Side::Ask => {
+                    let fee = market.get_taker_fee_bps();
+                    let quote_lots_filled = result.quote_lots_filled * (FEE_DIVISOR - fee) / FEE_DIVISOR;
+                    SimulationSummaryInLots{
+                        base_lots_filled: result.base_lots_filled,
+                        quote_lots_filled
+                    }
                 }
             }
-        };
+        }; 
         // Convert lots to atoms
         let base_atoms_filled = metadata.base_lots_to_base_atoms(simulation_result.base_lots_filled);
         let quote_atoms_filled = metadata.quote_lots_to_quote_atoms(simulation_result.quote_lots_filled);
