@@ -570,25 +570,28 @@ impl SDKClient {
                         total_base_lots_filled,
                         total_quote_lots_filled,
                         total_fee_in_quote_lots,
-                    }) => market_events.push(PhoenixEvent {
-                        market: header.market,
-                        sequence_number: header.sequence_number,
-                        slot: header.slot,
-                        timestamp: header.timestamp,
-                        signature: header.signature,
-                        signer: header.signer,
-                        event_index: index as u64,
-                        details: MarketEventDetails::FillSummary(FillSummary {
-                            client_order_id,
-                            total_base_filled: total_base_lots_filled
-                                * meta.base_atoms_per_base_lot,
-                            total_quote_filled_including_fees: total_quote_lots_filled
-                                * meta.quote_atoms_per_quote_lot,
-                            total_quote_fees: total_fee_in_quote_lots
-                                * meta.quote_atoms_per_quote_lot,
-                            trade_direction: trade_direction.unwrap_or(0),
-                        }),
-                    }),
+                    }) => {
+                        market_events.push(PhoenixEvent {
+                            market: header.market,
+                            sequence_number: header.sequence_number,
+                            slot: header.slot,
+                            timestamp: header.timestamp,
+                            signature: header.signature,
+                            signer: header.signer,
+                            event_index: index as u64,
+                            details: MarketEventDetails::FillSummary(FillSummary {
+                                client_order_id,
+                                total_base_filled: total_base_lots_filled
+                                    * meta.base_atoms_per_base_lot,
+                                total_quote_filled_including_fees: total_quote_lots_filled
+                                    * meta.quote_atoms_per_quote_lot,
+                                total_quote_fees: total_fee_in_quote_lots
+                                    * meta.quote_atoms_per_quote_lot,
+                                trade_direction: trade_direction.unwrap_or(0),
+                            }),
+                        });
+                        trade_direction = None;
+                    }
                     PhoenixMarketEvent::Fee(FeeEvent {
                         index,
                         fees_collected_in_quote_lots,
