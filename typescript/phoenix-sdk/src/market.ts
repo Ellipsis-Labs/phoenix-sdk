@@ -177,7 +177,6 @@ export class MarketState {
    *
    * @param marketAddress The `PublicKey` of the market account
    * @param buffer The buffer holding the market account data
-   * @param tokenList The list of tokens to use for the market
    */
   static load({
     address,
