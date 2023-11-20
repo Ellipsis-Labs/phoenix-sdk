@@ -103,6 +103,12 @@
         "symbol": "JitoSOL",
         "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
         "logoUri": "https://storage.googleapis.com/token-metadata/JitoSOL-256.png"
+      },
+      {
+        "name": "Pyth Network",
+        "symbol": "PYTH",
+        "mint": "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3",
+        "logoUri": "https://pyth.network/token.svg"
       }
     ],
 
@@ -115,6 +121,11 @@
       {
         "market": "Ew3vFDdtdGrknJAVVfraxCA37uNJtimXYPY4QjnfhFHH",
         "baseMint": "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "2sTMN9A1D1qeZLF95XQgJCUPiKe5DiV52jLfZGqMP46m",
+        "baseMint": "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       },
       {
