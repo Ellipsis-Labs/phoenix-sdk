@@ -109,6 +109,12 @@
         "symbol": "PYTH",
         "mint": "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3",
         "logoUri": "https://pyth.network/token.svg"
+      },
+      {
+        "name": "JITO",
+        "symbol": "JTO",
+        "mint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
+        "logoUri": "https://metadata.jito.network/token/jto/image"
       }
     ],
 
@@ -126,6 +132,11 @@
       {
         "market": "2sTMN9A1D1qeZLF95XQgJCUPiKe5DiV52jLfZGqMP46m",
         "baseMint": "HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "BRLLmdtPGuuFn3BU6orYw4KHaohAEptBToi3dwRUnHQZ",
+        "baseMint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       },
       {
