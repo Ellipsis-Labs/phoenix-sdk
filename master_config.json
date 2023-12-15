@@ -115,6 +115,12 @@
         "symbol": "JTO",
         "mint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
         "logoUri": "https://metadata.jito.network/token/jto/image"
+      },
+      {
+        "name": "EURC",
+        "symbol": "EURC",
+        "mint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+        "logoUri": "https://www.circle.com/hubfs/Brand/EURC/EURC-icon_128x128.png"
       }
     ],
 
@@ -148,6 +154,11 @@
         "market": "FicF181nDsEcasznMTPp9aLa5Rbpdtd11GtSEa1UUWzx",
         "baseMint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
         "quoteMint": "So11111111111111111111111111111111111111112"
+      },
+      {
+        "market": "5x91Aaegvx1JmW7g8gDfWqwb6kPF7CdNunqNoYCdLjk1",
+        "baseMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       },
       {
         "market": "FZRgpfpvicJ3p23DfmZuvUgcQZBHJsWScTf2N2jK8dy6",
