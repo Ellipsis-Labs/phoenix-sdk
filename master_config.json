@@ -121,6 +121,12 @@
         "symbol": "EURC",
         "mint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
         "logoUri": "https://www.circle.com/hubfs/Brand/EURC/EURC-icon_128x128.png"
+      },
+      {
+        "name": "dogwifhat",
+        "symbol": "WIF",
+        "mint": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+        "logoUri": "https://bafkreibk3covs5ltyqxa272uodhculbr6kea6betidfwy3ajsav2vjzyum.ipfs.nftstorage.link/"
       }
     ],
 
@@ -158,6 +164,11 @@
       {
         "market": "5x91Aaegvx1JmW7g8gDfWqwb6kPF7CdNunqNoYCdLjk1",
         "baseMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "6ojSigXF7nDPyhFRgmn3V9ywhYseKF9J32ZrranMGVSX",
+        "baseMint": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       },
       {
