@@ -127,6 +127,12 @@
         "symbol": "$WIF",
         "mint": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
         "logoUri": "https://bafkreibk3covs5ltyqxa272uodhculbr6kea6betidfwy3ajsav2vjzyum.ipfs.nftstorage.link/"
+      },
+      {
+        "name": "USDT",
+        "symbol": "USDT",
+        "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+        "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.svg"
       }
     ],
 
@@ -135,6 +141,11 @@
         "market": "4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg",
         "baseMint": "So11111111111111111111111111111111111111112",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "3J9LfemPBLowAJgpG3YdYPB9n6pUk7HEjwgS6Y5ToSFg",
+        "baseMint": "So11111111111111111111111111111111111111112",
+        "quoteMint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
       },
       {
         "market": "Ew3vFDdtdGrknJAVVfraxCA37uNJtimXYPY4QjnfhFHH",
