@@ -173,6 +173,11 @@
         "quoteMint": "So11111111111111111111111111111111111111112"
       },
       {
+        "market": "2jxpfobdZDU3z9MsDCjAz8psSaTb5HPoDEtusFLGrPnD",
+        "baseMint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+        "quoteMint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+      },
+      {
         "market": "5x91Aaegvx1JmW7g8gDfWqwb6kPF7CdNunqNoYCdLjk1",
         "baseMint": "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
@@ -180,6 +185,11 @@
       {
         "market": "6ojSigXF7nDPyhFRgmn3V9ywhYseKF9J32ZrranMGVSX",
         "baseMint": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "5LQLfGtqcC5rm2WuGxJf4tjqYmDjsQAbKo2AMLQ8KB7p",
+        "baseMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       },
       {
