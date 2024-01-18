@@ -103,7 +103,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
     );
 
     // Note we could bundle this with the place order transaction below, but we choose to cancel
-    // seperately since getting the price could take an non-deterministic amount of time
+    // separately since getting the price could take an non-deterministic amount of time
     try {
       const cancelTransaction = new Transaction().add(cancelAll);
       const txid = await sendAndConfirmTransaction(
