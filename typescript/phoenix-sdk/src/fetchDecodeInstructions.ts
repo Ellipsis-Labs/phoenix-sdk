@@ -31,7 +31,7 @@ export function decodeInstructionData(data: Buffer, idl: any): string {
 
   const instructionEnum = decoded[0];
 
-  const matchedIdlInstruction = idl.instructions.filter((instruction) => {
+  const matchedIdlInstruction = idl.instructions.filter((instruction: any) => {
     return instruction.discriminant.value === instructionEnum;
   });
 
