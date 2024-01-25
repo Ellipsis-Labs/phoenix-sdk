@@ -133,6 +133,18 @@
         "symbol": "USDT",
         "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.svg"
+      },
+      {
+        "name": "Helium Network Token",
+        "symbol": "HNT",
+        "mint": "hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux",
+        "logoUri": "https://shdw-drive.genesysgo.net/6tcnBSybPG7piEDShBcrVtYJDPSvGrDbVvXmXKpzBvWP/hnt.png"
+      },
+      {
+        "name": "MYRO",
+        "symbol": "$MYRO",
+        "mint": "HhJpBhRRn4g56VsyLuT8DL5Bv31HkXqsrahTTUCZeZg4",
+        "logoUri": "https://i.ibb.co/9nr3xFp/MYRO-200x200.png"
       }
     ],
 
@@ -201,6 +213,16 @@
         "market": "2t9TBYyUyovhHQq434uAiBxW6DmJCg7w4xdDoSK6LRjP",
         "baseMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
         "quoteMint": "So11111111111111111111111111111111111111112"
+      },
+      {
+        "market": "Dw1QomczWKpqCvJufRSinrqYj5jQTF2ct9DfHoiLPUpi",
+        "baseMint": "hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "4ahqRcJkAepQAm2QBCwmQEYATm5nWuiSKMCBehz584yH",
+        "baseMint": "HhJpBhRRn4g56VsyLuT8DL5Bv31HkXqsrahTTUCZeZg4",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       }
     ]
   }
