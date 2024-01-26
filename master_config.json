@@ -145,7 +145,14 @@
         "symbol": "$MYRO",
         "mint": "HhJpBhRRn4g56VsyLuT8DL5Bv31HkXqsrahTTUCZeZg4",
         "logoUri": "https://i.ibb.co/9nr3xFp/MYRO-200x200.png"
+      },
+      {
+        "name": "Wen",
+        "symbol": "WEN",
+        "mint": "WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk",
+        "logoUri": "https://shdw-drive.genesysgo.net/GwJapVHVvfM4Mw4sWszkzywncUWuxxPd6s9VuFfXRgie/wen_logo.png"
       }
+      
     ],
 
     "markets": [
@@ -205,11 +212,6 @@
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       },
       {
-        "market": "FZRgpfpvicJ3p23DfmZuvUgcQZBHJsWScTf2N2jK8dy6",
-        "baseMint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
-        "quoteMint": "So11111111111111111111111111111111111111112"
-      },
-      {
         "market": "2t9TBYyUyovhHQq434uAiBxW6DmJCg7w4xdDoSK6LRjP",
         "baseMint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
         "quoteMint": "So11111111111111111111111111111111111111112"
@@ -223,6 +225,16 @@
         "market": "4ahqRcJkAepQAm2QBCwmQEYATm5nWuiSKMCBehz584yH",
         "baseMint": "HhJpBhRRn4g56VsyLuT8DL5Bv31HkXqsrahTTUCZeZg4",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "EPZsr3WEzYzmRjQhs4E7rsAu1bvXpvX7vMqJPRReFxwD",
+        "baseMint": "WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "FZRgpfpvicJ3p23DfmZuvUgcQZBHJsWScTf2N2jK8dy6",
+        "baseMint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+        "quoteMint": "So11111111111111111111111111111111111111112"
       }
     ]
   }
