@@ -151,6 +151,12 @@
         "symbol": "WEN",
         "mint": "WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk",
         "logoUri": "https://shdw-drive.genesysgo.net/GwJapVHVvfM4Mw4sWszkzywncUWuxxPd6s9VuFfXRgie/wen_logo.png"
+      },
+      {
+        "name": "Jupiter",
+        "symbol": "JUP",
+        "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "logoUri": "https://image-cdn.solana.fm/images/?imageUrl=https://static.jup.ag/jup/icon.png"
       }
     ],
 
@@ -169,6 +175,16 @@
         "market": "Ew3vFDdtdGrknJAVVfraxCA37uNJtimXYPY4QjnfhFHH",
         "baseMint": "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "2pspvjWWaf3dNgt3jsgSzFCNvMGPb7t8FrEYvLGjvcCe",
+        "baseMint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "Ge1Vb599LquMJziLbLTF5aR4icq8MZQxpmgNywvdPqjL",
+        "baseMint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        "quoteMint": "So11111111111111111111111111111111111111112"
       },
       {
         "market": "2sTMN9A1D1qeZLF95XQgJCUPiKe5DiV52jLfZGqMP46m",
