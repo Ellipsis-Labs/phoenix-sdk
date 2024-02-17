@@ -114,7 +114,7 @@
         "name": "JITO",
         "symbol": "JTO",
         "mint": "jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL",
-        "logoUri": "https://metadata.jito.network/token/jto/image"
+        "logoUri": "https://image-cdn.solana.fm/images/?imageUrl=https://metadata.jito.network/token/jto/image"
       },
       {
         "name": "EURC",
