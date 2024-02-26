@@ -1,9 +1,11 @@
+use crate::ladder_utils::{MarketSimulator, SimulationSummaryInLots};
 use crate::order_packet_template::ImmediateOrCancelOrderTemplate;
 use crate::order_packet_template::LimitOrderTemplate;
 use crate::order_packet_template::PostOnlyOrderTemplate;
 use crate::utils::create_ata_ix_if_needed;
 use crate::utils::create_claim_seat_ix_if_needed;
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Result;
 use ellipsis_client::EllipsisClient;
 use phoenix::program::create_new_order_instruction;
@@ -49,6 +51,20 @@ use std::str::FromStr;
 use std::{collections::BTreeMap, mem::size_of, ops::DerefMut};
 
 use crate::orderbook::Orderbook;
+
+const FEE_DIVISOR: u64 = 10000;
+
+#[derive(Debug, Default)]
+pub struct LadderExpiration {
+    pub last_valid_slot: Option<u64>,
+    pub last_valid_unix_timestamp_in_seconds: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SimulationSummaryInAtoms {
+    pub base_atoms_filled: u64,
+    pub quote_atoms_filled: u64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonMarketConfig {
@@ -439,6 +455,97 @@ impl SDKClient {
             .collect();
 
         Ok(MarketState { orderbook, traders })
+    }
+
+    /// Simulates a market transaction based on provided parameters.
+    ///
+    /// This function simulates the market transaction for a given market key, input mint key,
+    /// number of atoms, and optional expiration details. It calculates the number of base and quote atoms
+    /// that would be filled based on the current market state and returns them as a summary.
+    ///
+    /// # Arguments
+    ///
+    /// * `market_key` - The public key of the Phoenix market.
+    /// * `input_mint_key` - The public key of the input Mint.
+    /// * `atoms_to_sell` - The amount in atoms to sell.
+    /// * `expiration` - Expiration details for the simulation (optional but recommended for real-time simulations).
+    ///
+    pub async fn simulate_market_transaction(
+        &self,
+        market_key: &Pubkey,
+        input_mint_key: &Pubkey,
+        atoms_to_sell: u64,
+        expiration: Option<LadderExpiration>,
+    ) -> Result<SimulationSummaryInAtoms> {
+        let LadderExpiration {
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        } = expiration.unwrap_or_default();
+
+        let market_account_data = self.client.get_account_data(market_key).await?;
+        let (header_bytes, bytes) = market_account_data.split_at(size_of::<MarketHeader>());
+        let meta = self.get_market_metadata_from_header_bytes(header_bytes)?;
+        let market = load_with_dispatch(&meta.market_size_params, bytes)
+            .map_err(|_| {
+                anyhow!(
+                    "Market configuration not found for key {}",
+                    market_key.to_string()
+                )
+            })?
+            .inner;
+
+        let ladder = market.get_ladder_with_expiration(
+            u64::MAX,
+            last_valid_slot,
+            last_valid_unix_timestamp_in_seconds,
+        );
+        let metadata = self.get_market_metadata_from_cache(market_key)?;
+        let side = match input_mint_key {
+            _ if input_mint_key == &metadata.base_mint => Side::Ask,
+            _ if input_mint_key == &metadata.quote_mint => Side::Bid,
+            _ => bail!(
+                "Input mint key {} does not match market base or quote mint",
+                input_mint_key.to_string()
+            ),
+        };
+
+        // convert atoms to lots
+        let mut lots_to_sell = match side {
+            Side::Bid => metadata.quote_atoms_to_quote_lots_rounded_down(atoms_to_sell),
+            Side::Ask => metadata.base_atoms_to_base_lots_rounded_down(atoms_to_sell),
+        };
+
+        // If the input is quote, apply the fee before the swap
+        if side == Side::Bid {
+            let fee = market.get_taker_fee_bps();
+            lots_to_sell = lots_to_sell * (FEE_DIVISOR - fee) / FEE_DIVISOR;
+        }
+
+        // If the output is quote, apply the fee after the swap
+        let simulation_result = {
+            let result = ladder.simulate_market_sell(side, lots_to_sell);
+            match side {
+                Side::Bid => result,
+                Side::Ask => {
+                    let fee = market.get_taker_fee_bps();
+                    let quote_lots_filled =
+                        result.quote_lots_filled * (FEE_DIVISOR - fee) / FEE_DIVISOR;
+                    SimulationSummaryInLots {
+                        base_lots_filled: result.base_lots_filled,
+                        quote_lots_filled,
+                    }
+                }
+            }
+        };
+        // Convert lots to atoms
+        let base_atoms_filled =
+            metadata.base_lots_to_base_atoms(simulation_result.base_lots_filled);
+        let quote_atoms_filled =
+            metadata.quote_lots_to_quote_atoms(simulation_result.quote_lots_filled);
+        Ok(SimulationSummaryInAtoms {
+            base_atoms_filled,
+            quote_atoms_filled,
+        })
     }
 
     pub async fn parse_raw_phoenix_events(
