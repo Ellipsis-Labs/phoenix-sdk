@@ -165,6 +165,12 @@
         "logoUri": "https://shdw-drive.genesysgo.net/GwJapVHVvfM4Mw4sWszkzywncUWuxxPd6s9VuFfXRgie/wen_logo.png"
       },
       {
+        "name": "Book Of Meme",
+        "symbol": "BOME",
+        "mint": "ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82",
+        "logoUri": "https://assets.coingecko.com/coins/images/36071/standard/bome.png?1710407255"
+      },
+      {
         "name": "Jupiter",
         "symbol": "JUP",
         "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
@@ -256,6 +262,11 @@
       {
         "market": "EPZsr3WEzYzmRjQhs4E7rsAu1bvXpvX7vMqJPRReFxwD",
         "baseMint": "WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "2usAgRgkwqqqtMrkkM6ktaxfLWjA4nm7xS8bmKw1hvPw",
+        "baseMint": "ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       },
       {
