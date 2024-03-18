@@ -171,6 +171,12 @@
         "logoUri": "https://assets.coingecko.com/coins/images/36071/standard/bome.png?1710407255"
       },
       {
+        "name": "SLERF",
+        "symbol": "SLERF",
+        "mint": "7BgBvyjrZX1YKz4oh9mjb8ZScatkkwb8DzFx7LoiVkM3",
+        "logoUri": "https://s2.coinmarketcap.com/static/img/coins/64x64/29920.png"
+      },
+      {
         "name": "Jupiter",
         "symbol": "JUP",
         "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
@@ -267,6 +273,11 @@
       {
         "market": "2usAgRgkwqqqtMrkkM6ktaxfLWjA4nm7xS8bmKw1hvPw",
         "baseMint": "ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "6moHUcknpJ7vuVtoJzMBu7DEiuqevNLvXuf31d2PucJB",
+        "baseMint": "7BgBvyjrZX1YKz4oh9mjb8ZScatkkwb8DzFx7LoiVkM3",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       },
       {
