@@ -181,6 +181,12 @@
         "symbol": "JUP",
         "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
         "logoUri": "https://image-cdn.solana.fm/images/?imageUrl=https://static.jup.ag/jup/icon.png"
+      },
+      {
+        "name": "Wormhole Token",
+        "symbol": "W",
+        "mint": "85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ",
+        "logoUri": "https://wormhole.com/token.png"
       }
     ],
 
@@ -289,6 +295,16 @@
         "market": "7zbKWvcNKTU9WcYAP1ZCNQaSHfxNkLzwWaRgfMTzMTby",
         "baseMint": "rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "8dFTCTAbtGuHsdDL8WEPrTU6pXFDrU1QSjBTutw8fwZk",
+        "baseMint": "85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "5WyJr7R3aYpHTjSKXFmrgnVaRU987FoxgCkcELeAJqcm",
+        "baseMint": "85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ",
+        "quoteMint": "So11111111111111111111111111111111111111112"
       },
       {
         "market": "2t9TBYyUyovhHQq434uAiBxW6DmJCg7w4xdDoSK6LRjP",
