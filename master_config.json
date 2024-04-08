@@ -195,7 +195,6 @@
         "logoUri": "https://arweave.net/beGAyeIzjV_UkyjFtxbkZyi_YqfOBWayiQ0B6wqWygY"
       }
     ],
-
     "markets": [
       {
         "market": "4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg",
@@ -326,6 +325,11 @@
         "market": "AbJCZ9TAJiby5AY3cHcXS2gUdENC6mtsm6m7XpC2ZMvE",
         "baseMint": "TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "B1Tkeva9jZVvkGW9QK3WqEMpWFRZkTMouvqTgQCHeZGq",
+        "baseMint": "TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6",
+        "quoteMint": "So11111111111111111111111111111111111111112"
       }
     ]
   }
