@@ -187,6 +187,12 @@
         "symbol": "W",
         "mint": "85VBFQZC9TZkfaptBWjvUw7YbZjy52A6mjtPGjstQAmQ",
         "logoUri": "https://wormhole.com/token.png"
+      },
+      {
+        "name": "Tensor",
+        "symbol": "TNSR",
+        "mint": "TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6",
+        "logoUri": "https://arweave.net/beGAyeIzjV_UkyjFtxbkZyi_YqfOBWayiQ0B6wqWygY"
       }
     ],
 
@@ -315,6 +321,11 @@
         "market": "FZRgpfpvicJ3p23DfmZuvUgcQZBHJsWScTf2N2jK8dy6",
         "baseMint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
         "quoteMint": "So11111111111111111111111111111111111111112"
+      },
+      {
+        "market": "AbJCZ9TAJiby5AY3cHcXS2gUdENC6mtsm6m7XpC2ZMvE",
+        "baseMint": "TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       }
     ]
   }
