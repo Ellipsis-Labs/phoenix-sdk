@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use phoenix::{program::MarketSizeParams, state::Side};
-use solana_program::pubkey::Pubkey;
+use solana_sdk::pubkey::Pubkey;
 
 use crate::{
     market_event::Fill,

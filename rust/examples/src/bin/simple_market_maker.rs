@@ -1,12 +1,13 @@
 use anyhow::anyhow;
 use phoenix::state::Side;
-use solana_program::{clock::Clock, sysvar};
 use solana_sdk::{account::Account, signature::Signature};
+use solana_sdk::{clock::Clock, sysvar};
 use spl_token::state::Mint;
 use std::str::FromStr;
 
 use clap::Parser;
 use phoenix_sdk::{order_packet_template::LimitOrderTemplate, sdk_client::SDKClient};
+use phoenix_sdk_core::ata_utils::{create_associated_token_account, get_associated_token_address};
 use solana_cli_config::{Config, CONFIG_FILE};
 #[allow(unused_imports)]
 use solana_sdk::{
@@ -16,7 +17,6 @@ use solana_sdk::{
     signature::{read_keypair_file, Keypair},
     signer::Signer,
 };
-use spl_associated_token_account::instruction::create_associated_token_account;
 
 // Command-line arguments to parameterize the market maker.
 #[derive(Parser)]
@@ -284,11 +284,9 @@ pub async fn create_airdrop_spl_ixs(
     // Get or create the ATA for the recipient. If doesn't exist, create token account
     let mut instructions = vec![];
 
-    let recipient_ata_base =
-        spl_associated_token_account::get_associated_token_address(recipient_pubkey, &base_mint);
+    let recipient_ata_base = get_associated_token_address(recipient_pubkey, &base_mint);
 
-    let recipient_ata_quote =
-        spl_associated_token_account::get_associated_token_address(recipient_pubkey, &quote_mint);
+    let recipient_ata_quote = get_associated_token_address(recipient_pubkey, &quote_mint);
 
     let recipient_ata_accounts = sdk_client
         .client

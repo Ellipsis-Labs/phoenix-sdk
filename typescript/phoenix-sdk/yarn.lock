@@ -16,6 +16,20 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
+"@ellipsis-labs/phoenix-sdk@^2.0.2":
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/@ellipsis-labs/phoenix-sdk/-/phoenix-sdk-2.0.2.tgz#327bef2455e270abafd53acccc7053bad557e053"
+  integrity sha512-TcCunSLCLf8rWj0mS2uXDn+cLkWw9OdZxo9qgK0/ZSJtEih+E67pPrpFrlMv4gx48Lpi/37lfl6w+Wk3/BJHyQ==
+  dependencies:
+    "@metaplex-foundation/beet" "^0.7.1"
+    "@metaplex-foundation/rustbin" "^0.3.1"
+    "@metaplex-foundation/solita" "^0.12.2"
+    "@solana/spl-token" "^0.3.7"
+    bn.js "^5.2.1"
+    borsh "^0.7.0"
+    bs58 "^5.0.0"
+    zstddec "^0.0.2"
+
 "@esbuild/android-arm64@0.17.11":
   version "0.17.11"
   resolved "https://registry.yarnpkg.com/@esbuild/android-arm64/-/android-arm64-0.17.11.tgz#52c3e6cabc19c5e4c1c0c01cb58f0442338e1c14"
@@ -370,10 +384,12 @@
   resolved "https://registry.npmjs.org/@types/mocha/-/mocha-10.0.1.tgz"
   integrity sha512-/fvYntiO1GeICvqbQ3doGDIP97vWmvFt83GKguJ6prmQM2iXZfFcq6YE8KteFyRtX2/h5Hf91BYvPodJKFYv5Q==
 
-"@types/node@*", "@types/node@^18.11.13":
-  version "18.16.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.16.2.tgz#2f610ea71034b3971c312192377f8a7178eb57f1"
-  integrity sha512-GQW/JL/5Fz/0I8RpeBG9lKp0+aNcXEaVL71c0D2Q0QHDTFvlYKT7an0onCUXj85anv7b4/WesqdfchLc0jtsCg==
+"@types/node@*", "@types/node@^20.4.5":
+  version "20.12.5"
+  resolved "https://registry.npmjs.org/@types/node/-/node-20.12.5.tgz"
+  integrity sha512-BD+BjQ9LS/D8ST9p5uqBxghlN+S42iuNxjsUGjeZobe/ciXzk2qb1B6IXc6AnRLS+yFJRpN2IPEHMzwspfDJNw==
+  dependencies:
+    undici-types "~5.26.4"
 
 "@types/node@^12.12.54":
   version "12.20.55"
@@ -1805,7 +1821,7 @@ rollup@^3.2.5:
 
 rpc-websockets@^7.5.1:
   version "7.5.1"
-  resolved "https://registry.yarnpkg.com/rpc-websockets/-/rpc-websockets-7.5.1.tgz#e0a05d525a97e7efc31a0617f093a13a2e10c401"
+  resolved "https://registry.npmjs.org/rpc-websockets/-/rpc-websockets-7.5.1.tgz"
   integrity sha512-kGFkeTsmd37pHPMaHIgN1LVKXMi0JD782v4Ds9ZKtLlwdTKjn+CxM9A9/gLT2LaOuEcEFGL98h1QWQtlOIdW0w==
   dependencies:
     "@babel/runtime" "^7.17.2"
@@ -2006,10 +2022,10 @@ ts-interface-checker@^0.1.9:
   resolved "https://registry.npmjs.org/ts-interface-checker/-/ts-interface-checker-0.1.13.tgz"
   integrity sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==
 
-ts-node@^10.9.1:
-  version "10.9.1"
-  resolved "https://registry.npmjs.org/ts-node/-/ts-node-10.9.1.tgz"
-  integrity sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==
+ts-node@^10.9.2:
+  version "10.9.2"
+  resolved "https://registry.npmjs.org/ts-node/-/ts-node-10.9.2.tgz"
+  integrity sha512-f0FFpIdcHgn8zcPSbf1dRevwt047YMnaiJM3u2w2RewrB+fob/zePZcrOyQoLMMO7aBIddLcQIEK5dYjkLnGrQ==
   dependencies:
     "@cspotcode/source-map-support" "^0.8.0"
     "@tsconfig/node10" "^1.0.7"
@@ -2083,6 +2099,11 @@ typescript@^4.9.4:
   version "4.9.5"
   resolved "https://registry.npmjs.org/typescript/-/typescript-4.9.5.tgz"
   integrity sha512-1FXk9E2Hm+QzZQ7z+McJiHL4NW1F2EzMu9Nq9i3zAaGqibafqYwCVU6WyWAuyQRRzOlxou8xZSyXLEN8oKj24g==
+
+undici-types@~5.26.4:
+  version "5.26.5"
+  resolved "https://registry.npmjs.org/undici-types/-/undici-types-5.26.5.tgz"
+  integrity sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==
 
 uri-js@^4.2.2:
   version "4.4.1"
@@ -2231,5 +2252,5 @@ yocto-queue@^0.1.0:
 
 zstddec@^0.0.2:
   version "0.0.2"
-  resolved "https://registry.yarnpkg.com/zstddec/-/zstddec-0.0.2.tgz#57e2f28dd1ff56b750e07d158a43f0611ad9eeb4"
+  resolved "https://registry.npmjs.org/zstddec/-/zstddec-0.0.2.tgz"
   integrity sha512-DCo0oxvcvOTGP/f5FA6tz2Z6wF+FIcEApSTu0zV5sQgn9hoT5lZ9YRAKUraxt9oP7l4e8TnNdi8IZTCX6WCkwA==

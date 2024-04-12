@@ -1,5 +1,5 @@
 use phoenix::state::enums::Side;
-use solana_program::pubkey::Pubkey;
+use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signature::Signature;
 
 #[derive(Clone, Copy, Debug)]

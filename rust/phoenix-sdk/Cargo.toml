@@ -2,7 +2,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 name = "phoenix-sdk"
-version = "0.5.1"
+version = "0.6.0"
 description = "SDK for interacting with the Phoenix program"
 edition = "2021"
 license = "MIT"
@@ -10,8 +10,8 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 anyhow = { workspace = true }
-solana-program = { workspace = true }
-phoenix-v1 = { workspace = true }
+phoenix-common = { workspace = true }
+phoenix-seat-manager-common = { workspace = true }
 clap = { workspace = true }
 borsh = { workspace = true }
 rand = { workspace = true }
@@ -21,7 +21,7 @@ solana-client = { workspace = true }
 tokio = { workspace = true }
 ellipsis-client = { workspace = true }
 futures = "0.3.21"
-solana-transaction-status = "1.14.5"
+solana-transaction-status = ">=1.14.12, <1.18"
 async-trait = "0.1.52"
 coinbase-pro-rs = "0.8.1"
 num-traits = { workspace = true }
@@ -31,8 +31,4 @@ bytemuck = { workspace = true }
 itertools = "0.10.5"
 phoenix-sdk-core = { version = "0.5.1", path = "../phoenix-sdk-core" }
 serde = { workspace = true }
-spl-associated-token-account = { workspace = true }
-phoenix-seat-manager = { workspace = true }
-yellowstone-grpc-proto = { workspace = true }
-yellowstone-grpc-client = { workspace = true }
 

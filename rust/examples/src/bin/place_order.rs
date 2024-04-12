@@ -3,6 +3,7 @@ use std::str::FromStr;
 use ellipsis_client::EllipsisClient;
 use phoenix::state::Side;
 use phoenix_sdk::sdk_client::SDKClient;
+use phoenix_sdk_core::ata_utils::{create_associated_token_account, get_associated_token_address};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::account::Account;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -14,7 +15,6 @@ use solana_sdk::{
     signature::{read_keypair_file, Keypair},
     signer::Signer,
 };
-use spl_associated_token_account::instruction::create_associated_token_account;
 use spl_token::state::Mint;
 #[tokio::main]
 async fn main() {
@@ -153,11 +153,9 @@ pub async fn create_airdrop_spl_ixs(
     // Get or create the ATA for the recipient. If doesn't exist, create token account
     let mut instructions = vec![];
 
-    let recipient_ata_base =
-        spl_associated_token_account::get_associated_token_address(recipient_pubkey, &base_mint);
+    let recipient_ata_base = get_associated_token_address(recipient_pubkey, &base_mint);
 
-    let recipient_ata_quote =
-        spl_associated_token_account::get_associated_token_address(recipient_pubkey, &quote_mint);
+    let recipient_ata_quote = get_associated_token_address(recipient_pubkey, &quote_mint);
 
     let recipient_ata_accounts = sdk_client
         .client
