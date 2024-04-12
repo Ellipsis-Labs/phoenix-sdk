@@ -1,4 +1,4 @@
-rust/target/*
+**/target/*
 **/node_modules/*
 **/dist/*
 .DS_Store

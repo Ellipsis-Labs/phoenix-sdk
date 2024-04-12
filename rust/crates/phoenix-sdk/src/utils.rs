@@ -4,6 +4,9 @@ use ellipsis_client::EllipsisClient;
 use phoenix::program::{
     dispatch_market, get_seat_address, status::SeatApprovalStatus, MarketHeader, Seat,
 };
+use phoenix_sdk_core::ata_utils::{
+    get_associated_token_address, create_associated_token_account,
+};
 use phoenix_seat_manager::{
     get_seat_manager_address,
     instruction_builders::{
@@ -11,10 +14,7 @@ use phoenix_seat_manager::{
     },
     seat_manager::SeatManager,
 };
-use solana_program::{instruction::Instruction, pubkey::Pubkey};
-use spl_associated_token_account::{
-    get_associated_token_address, instruction::create_associated_token_account,
-};
+use solana_sdk::{instruction::Instruction, pubkey::Pubkey};
 
 pub async fn create_ata_ix_if_needed(
     client: &EllipsisClient,

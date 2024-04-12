@@ -1,8 +1,8 @@
 use clap::Parser;
 use ellipsis_client::grpc_client::transaction_subscribe;
 use phoenix_sdk::sdk_client::SDKClient;
-use solana_sdk::{pubkey::Pubkey, signature::Keypair};
-use tokio::{sync::mpsc::channel, try_join};
+use solana_sdk::{commitment_config::CommitmentLevel, pubkey::Pubkey, signature::Keypair};
+use tokio::{sync::mpsc::unbounded_channel, try_join};
 
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let url = args.url.trim_end_matches('/').to_string();
     let sdk_url = url.clone();
 
-    let (sender, mut receiver) = channel(10000);
+    let (sender, mut receiver) = unbounded_channel();
 
     let x_token = match args.x_token {
         Some(t) => t,
@@ -51,6 +51,7 @@ async fn main() -> anyhow::Result<()> {
             sender,
             args.accounts_to_include,
             args.accounts_to_exclude,
+            Some(CommitmentLevel::Confirmed),
         )
         .await
     });

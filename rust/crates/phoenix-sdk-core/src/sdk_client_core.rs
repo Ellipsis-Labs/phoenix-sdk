@@ -24,8 +24,8 @@ use phoenix::{
     state::trader_state::TraderState,
 };
 use rand::{rngs::StdRng, Rng};
-use solana_program::{instruction::Instruction, pubkey::Pubkey};
 use solana_sdk::signature::Signature;
+use solana_sdk::{instruction::Instruction, pubkey::Pubkey};
 use std::str::FromStr;
 use std::{
     collections::BTreeMap,

@@ -38,7 +38,7 @@ pub use phoenix_sdk_core::{
 use serde::{Deserialize, Serialize};
 use solana_client::client_error::reqwest;
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_program::instruction::Instruction;
+use solana_sdk::instruction::Instruction;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     pubkey::Pubkey,
