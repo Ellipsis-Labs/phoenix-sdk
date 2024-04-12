@@ -3156,7 +3156,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3184,7 +3184,7 @@ dependencies = [
 
 [[package]]
 name = "phoenix-sdk-core"
-version = "0.5.2"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "borsh 0.9.3",

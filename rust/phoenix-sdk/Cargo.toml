@@ -29,6 +29,6 @@ rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 bytemuck = { workspace = true }
 itertools = "0.10.5"
-phoenix-sdk-core = { version = "0.5.1", path = "../phoenix-sdk-core" }
+phoenix-sdk-core = { version = "0.6.0", path = "../phoenix-sdk-core" }
 serde = { workspace = true }
 
