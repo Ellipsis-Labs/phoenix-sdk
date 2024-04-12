@@ -8,21 +8,22 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = { workspace = true }
-rand = { workspace = true }
-solana-sdk = { workspace = true }
-solana-client = { workspace = true }
-spl-token = { workspace = true }
-bs58 = "0.4.0"
-tokio = { workspace = true }
-bytemuck = { workspace = true }
-ellipsis-client = { workspace = true }
-clap = { workspace = true }
-shellexpand = { workspace = true }
-borsh = { workspace = true }
-phoenix-common = { workspace = true }
-phoenix-sdk = { path = "../phoenix-sdk" }
-phoenix-sdk-core = { path = "../phoenix-sdk-core" }
+spl-token = { version = "3.5.0", features = ["no-entrypoint"] }
+anyhow = "1.0.52"
+solana-sdk = ">=1.14.12, <1.18"
+solana-client = ">=1.14.12, <1.18"
+rand = "0.7.3"
+ellipsis-client = { version = "0.3.0" }
+bs58 = "0.4.0" 
+tokio = { version = "1.23.0", features = ["full"] }
+bytemuck = "1.13.1"
+clap = { version = "3.0.13", features = ["derive"] }
+shellexpand = "2.1.2"
+borsh = "0.9.3"
+phoenix-common = { version = "0.2.1", features = [ "no-entrypoint" ]} 
+phoenix-seat-manager-common = { version = "0.1.1", features = [ "no-entrypoint" ] }
+phoenix-sdk = { path = "../crates/phoenix-sdk" }
+phoenix-sdk-core = { path = "../crates/phoenix-sdk-core" }
 generic-token-faucet = "0.1.2"
 solana-cli-config = "1.14.7"
 reqwest = "0.11.14"

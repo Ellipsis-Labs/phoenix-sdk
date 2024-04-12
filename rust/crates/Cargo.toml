@@ -2,8 +2,7 @@
 resolver = "2"
 members = [
     "phoenix-sdk",
-    "phoenix-sdk-core",
-    "examples"
+    "phoenix-sdk-core"
 ]
 
 [profile.release]
