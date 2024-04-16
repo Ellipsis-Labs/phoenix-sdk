@@ -193,6 +193,12 @@
         "symbol": "TNSR",
         "mint": "TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6",
         "logoUri": "https://arweave.net/beGAyeIzjV_UkyjFtxbkZyi_YqfOBWayiQ0B6wqWygY"
+      },
+      {
+        "name": "Parcl",
+        "symbol": "PRCL",
+        "mint": "4LLbsb5ReP3yEtYzmXewyGjcir5uXtKFURtaEUVC2AHs",
+        "logoUri": "https://ipfs.filebase.io/ipfs/QmVDpnYjKMCBdmqGddQNyW8cc3tBU5cKZFiSV5y18J5YnK"
       }
     ],
     "markets": [
@@ -329,6 +335,11 @@
       {
         "market": "B1Tkeva9jZVvkGW9QK3WqEMpWFRZkTMouvqTgQCHeZGq",
         "baseMint": "TNSRxcUxoT9xBG3de7PiJyTDYu7kskLqcpddxnEJAS6",
+        "quoteMint": "So11111111111111111111111111111111111111112"
+      },
+      {
+        "market": "9JXE9RZskL63ZySYo3xDPnqbhCbXHkLQH4E5Xh7UDekk",
+        "baseMint": "4LLbsb5ReP3yEtYzmXewyGjcir5uXtKFURtaEUVC2AHs",
         "quoteMint": "So11111111111111111111111111111111111111112"
       }
     ]
