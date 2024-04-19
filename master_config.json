@@ -87,6 +87,12 @@
         "logoUri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs/logo.png"
       },
       {
+        "name": "Wrapped BTC (Wormhole)",
+        "symbol": "WBTC",
+        "mint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "logoUri": "https://assets.coingecko.com/coins/images/23004/large/WBTC_wh_small.png?1696522299"
+      },
+      {
         "name": "Bonk",
         "symbol": "Bonk",
         "mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
@@ -341,6 +347,11 @@
         "market": "9JXE9RZskL63ZySYo3xDPnqbhCbXHkLQH4E5Xh7UDekk",
         "baseMint": "4LLbsb5ReP3yEtYzmXewyGjcir5uXtKFURtaEUVC2AHs",
         "quoteMint": "So11111111111111111111111111111111111111112"
+      },
+      {
+        "market": "6BVnCYbEQZXkDZuQyaKTQMPs4HjpKcd7poMxKnRNEX32",
+        "baseMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       }
     ]
   }
