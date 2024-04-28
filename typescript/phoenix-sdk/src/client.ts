@@ -145,11 +145,8 @@ export class Client {
     accountList.push(SYSVAR_CLOCK_PUBKEY);
 
     const accounts = useZstd
-      ? await getConfirmedMarketsAndClockAccountsZstd(
-          connection,
-          marketAddresses
-        )
-      : await getConfirmedMarketsAndClockAccounts(connection, marketAddresses);
+      ? await getConfirmedMarketsAndClockAccountsZstd(connection, accountList)
+      : await getConfirmedMarketsAndClockAccounts(connection, accountList);
 
     const clockBuffer = accounts.pop();
     if (clockBuffer === undefined) {
