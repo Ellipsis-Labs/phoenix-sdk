@@ -10,9 +10,9 @@ edition = "2021"
 [dependencies]
 spl-token = { version = "3.5.0", features = ["no-entrypoint"] }
 anyhow = "1.0.52"
-solana-sdk = ">=1.14.12, <1.18"
-solana-client = ">=1.14.12, <1.18"
-solana-account-decoder = ">=1.14.12, <1.18"
+solana-sdk = ">=1.14.12, <1.19"
+solana-client = ">=1.14.12, <1.19"
+solana-account-decoder = ">=1.14.12, <1.19"
 rand = "0.7.3"
 ellipsis-client = { version = "0.3.0" }
 bs58 = "0.4.0" 

@@ -774,6 +774,7 @@ impl SDKClient {
             return None;
         }
         let events = self.core.parse_events_from_transaction(&tx)?;
+        println!("{:?}", events);
         self.parse_raw_phoenix_events(events).await
     }
 
