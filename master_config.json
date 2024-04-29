@@ -205,6 +205,12 @@
         "symbol": "PRCL",
         "mint": "4LLbsb5ReP3yEtYzmXewyGjcir5uXtKFURtaEUVC2AHs",
         "logoUri": "https://ipfs.filebase.io/ipfs/QmVDpnYjKMCBdmqGddQNyW8cc3tBU5cKZFiSV5y18J5YnK"
+      },
+      {
+        "name": "Kamino",
+        "symbol": "KMNO",
+        "mint": "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
+        "logoUri": "https://cdn.kamino.finance/kamino.svg"
       }
     ],
     "markets": [
@@ -351,6 +357,11 @@
       {
         "market": "6BVnCYbEQZXkDZuQyaKTQMPs4HjpKcd7poMxKnRNEX32",
         "baseMint": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "6U5LibaXfAo84orySzuok3xchfaMipV7iiZjLDYfrbxb",
+        "baseMint": "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
       }
     ]
