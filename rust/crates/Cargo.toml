@@ -18,8 +18,8 @@ solana-sdk = ">=1.14.12, <1.18"
 solana-client = ">=1.14.12, <1.18"
 borsh = "0.9.3"
 rand = "0.7.3"
-ellipsis-client = { path = "../../../ellipsis-client/crates/ellipsis-client" }
-ellipsis-transaction-utils = { path = "../../../ellipsis-client/crates/transaction-utils" }
+ellipsis-client = "1.0.0"
+ellipsis-transaction-utils = "1.0.0" 
 phoenix-common = { version = "0.2.1", features = [ "no-entrypoint" ]} 
 tokio = { version = "1.23.0", features = ["full"] }
 clap = { version = "3.0.13", features = ["derive"] }
