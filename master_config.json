@@ -211,6 +211,12 @@
         "symbol": "KMNO",
         "mint": "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
         "logoUri": "https://cdn.kamino.finance/kamino.svg"
+      },
+      {
+        "name": "Drift",
+        "symbol": "DRIFT",
+        "mint": "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7",
+        "logoUri": "http://metadata.drift.foundation/drift.png"
       }
     ],
     "markets": [
@@ -363,6 +369,16 @@
         "market": "6U5LibaXfAo84orySzuok3xchfaMipV7iiZjLDYfrbxb",
         "baseMint": "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
         "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "8BV6rrWsUabnTDA3dE6A69oUDJAj3hMhtBHTJyXB7czp",
+        "baseMint": "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7",
+        "quoteMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+      },
+      {
+        "market": "7gpjEGSznykiEY62tkiikX3eMH9e2FiVpgFrF9nAM1A3",
+        "baseMint": "DriFtupJYLTosbwoN8koMbEYSx54aFAVLddWsbksjwg7",
+        "quoteMint": "So11111111111111111111111111111111111111112"
       }
     ]
   }
