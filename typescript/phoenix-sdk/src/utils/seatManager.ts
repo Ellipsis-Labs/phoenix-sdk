@@ -195,7 +195,7 @@ export async function confirmOrCreateClaimSeatIxs(
     instructions.push(getClaimSeatIx(marketState.address, trader));
   } else {
     const seatAccount = seatBeet.deserialize(seatAccountInfo.data);
-    if (seatAccount[0].approvalStatus !== SeatApprovalStatus.Approved) {
+    if (Number(seatAccount[0].approvalStatus) !== SeatApprovalStatus.Approved) {
       instructions.push(getClaimSeatIx(marketState.address, trader));
     }
   }
