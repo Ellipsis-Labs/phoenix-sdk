@@ -5,7 +5,7 @@ import {
 import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import * as beet from "@metaplex-foundation/beet";
 import * as beetSolana from "@metaplex-foundation/beet-solana";
-import { getLogAuthority, getSeatAddress, MarketState, PROGRAM_ID } from "..";
+import { getLogAuthority, getSeatAddress, MarketState, PROGRAM_ID, SeatApprovalStatus, seatBeet } from "..";
 
 import {
   createEvictSeatInstruction,
@@ -165,7 +165,7 @@ export function getEvictSeatIx(
 }
 
 /**
- * Checks if the given trader has a seat on the given market
+ * Checks if the given trader has an approved seat on the given market
  * If not, return claim seat instructions
  * @param connection An instance of the Connection class
  * @param marketState The market object
@@ -193,6 +193,11 @@ export async function confirmOrCreateClaimSeatIxs(
       instructions.push(getEvictSeatIx(marketState, traderToEvict, trader));
     }
     instructions.push(getClaimSeatIx(marketState.address, trader));
+  } else {
+    const seatAccount = seatBeet.deserialize(seatAccountInfo.data);
+    if (Number(seatAccount[0].approvalStatus) !== SeatApprovalStatus.Approved) {
+      instructions.push(getClaimSeatIx(marketState.address, trader));
+    }
   }
 
   return instructions;
