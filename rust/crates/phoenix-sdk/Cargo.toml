@@ -2,7 +2,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 name = "phoenix-sdk"
-version = "0.7.0"
+version = "0.7.1"
 description = "SDK for interacting with the Phoenix program"
 edition = "2021"
 license = "MIT"
