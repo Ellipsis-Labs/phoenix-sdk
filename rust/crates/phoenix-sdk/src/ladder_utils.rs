@@ -65,24 +65,24 @@ pub trait MarketSimulator {
 impl MarketSimulator for LadderWithAdjustment {
     fn sell_quote(&self, num_lots_quote: u64) -> SimulationSummaryInLots {
         let adjusted_quote_lots = num_lots_quote * self.base_lots_per_base_unit;
-        let mut remaining_quote_lots = adjusted_quote_lots;
+        let mut remaining_adjusted_quote_lots = adjusted_quote_lots;
         let mut base_lots = 0;
 
         for ask in self.asks.iter() {
-            if remaining_quote_lots == 0 {
+            if remaining_adjusted_quote_lots == 0 {
                 break;
             }
 
-            let max_base_lots_you_can_buy = remaining_quote_lots
+            let max_base_lots_you_can_buy = remaining_adjusted_quote_lots
                 / (ask.price_in_ticks * self.tick_size_in_quote_lots_per_base_unit);
             let amount_lots_to_buy = max_base_lots_you_can_buy.min(ask.size_in_base_lots);
             base_lots += amount_lots_to_buy;
-            remaining_quote_lots -= amount_lots_to_buy
+            remaining_adjusted_quote_lots -= amount_lots_to_buy
                 * (ask.price_in_ticks * self.tick_size_in_quote_lots_per_base_unit);
         }
 
         let quote_lots_used =
-            (adjusted_quote_lots - remaining_quote_lots) / self.base_lots_per_base_unit;
+            (adjusted_quote_lots - remaining_adjusted_quote_lots) / self.base_lots_per_base_unit;
         SimulationSummaryInLots {
             base_lots_filled: base_lots,
             quote_lots_filled: quote_lots_used,
@@ -91,7 +91,7 @@ impl MarketSimulator for LadderWithAdjustment {
 
     fn sell_base(&self, num_lots_base: u64) -> SimulationSummaryInLots {
         let mut remaining_base_lots = num_lots_base;
-        let mut quote_lots = 0;
+        let mut adjusted_quote_lots = 0;
 
         for bid in self.bids.iter() {
             if remaining_base_lots == 0 {
@@ -99,7 +99,7 @@ impl MarketSimulator for LadderWithAdjustment {
             }
 
             let lots_to_fill = remaining_base_lots.min(bid.size_in_base_lots);
-            quote_lots +=
+            adjusted_quote_lots +=
                 lots_to_fill * bid.price_in_ticks * self.tick_size_in_quote_lots_per_base_unit;
             remaining_base_lots -= lots_to_fill;
         }
@@ -107,7 +107,7 @@ impl MarketSimulator for LadderWithAdjustment {
         let base_lots_used = num_lots_base - remaining_base_lots;
         SimulationSummaryInLots {
             base_lots_filled: base_lots_used,
-            quote_lots_filled: quote_lots / self.base_lots_per_base_unit,
+            quote_lots_filled: adjusted_quote_lots / self.base_lots_per_base_unit,
         }
     }
 
