@@ -121,8 +121,11 @@ impl MarketSimulator for LadderWithAdjustment {
 
 #[cfg(test)]
 mod test {
+    use crate::sdk_client::{self, SDKClient};
+
     use super::*;
     use phoenix::state::markets::LadderOrder;
+    use solana_sdk::{pubkey, signature::Keypair};
 
     struct Fixture {
         pub ladder: LadderWithAdjustment,
@@ -284,5 +287,32 @@ mod test {
                 side, input
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_with_mainnet_market() {
+        let mut sdk = SDKClient::new(&Keypair::new(), "https://api.mainnet-beta.solana.com")
+            .await
+            .unwrap();
+        let solusdc = pubkey!("4DoNfFBfF7UokCC2FQzriy7yHK6DY6NVdYpuekQ5pRgg");
+        sdk.add_market(&solusdc).await.unwrap();
+        let sol = pubkey!("So11111111111111111111111111111111111111112");
+        let usdc = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+        let res = sdk
+            .simulate_market_transaction(&solusdc, &sol, 1_000_000_000, None)
+            .await
+            .unwrap();
+        println!(
+            "Sell Price: {}",
+            (res.quote_atoms_filled as f64 / 1e6) / (res.base_atoms_filled as f64 / 1e9)
+        );
+        let res = sdk
+            .simulate_market_transaction(&solusdc, &usdc, 1_000_000_000, None)
+            .await
+            .unwrap();
+        println!(
+            "Buy Price: {}",
+            (res.quote_atoms_filled as f64 / 1e6) / (res.base_atoms_filled as f64 / 1e9)
+        )
     }
 }
