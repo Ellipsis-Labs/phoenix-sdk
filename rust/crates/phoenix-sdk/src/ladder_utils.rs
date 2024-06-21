@@ -1,9 +1,59 @@
-use phoenix::state::{markets::Ladder, Side};
+use std::ops::Deref;
+
+use phoenix::{
+    quantities::WrapperU64,
+    state::{
+        markets::{FIFOOrderId, FIFORestingOrder, Ladder, Market},
+        OrderPacket, Side,
+    },
+};
+use solana_sdk::pubkey::Pubkey;
 
 #[derive(Debug, Clone)]
 pub struct SimulationSummaryInLots {
     pub base_lots_filled: u64,
     pub quote_lots_filled: u64,
+}
+
+impl Deref for LadderWithAdjustment {
+    type Target = Ladder;
+    fn deref(&self) -> &Self::Target {
+        &self.ladder
+    }
+}
+
+pub struct LadderWithAdjustment {
+    pub ladder: Ladder,
+    pub tick_size_in_quote_lots_per_base_unit: u64,
+    pub base_lots_per_base_unit: u64,
+}
+
+impl LadderWithAdjustment {
+    pub fn from_market(
+        market: &dyn Market<Pubkey, FIFOOrderId, FIFORestingOrder, OrderPacket>,
+    ) -> Self {
+        Self {
+            ladder: market.get_ladder(u64::MAX),
+            tick_size_in_quote_lots_per_base_unit: market.get_tick_size().as_u64(),
+            base_lots_per_base_unit: market.get_base_lots_per_base_unit().as_u64(),
+        }
+    }
+
+    pub fn from_market_with_expiration(
+        market: &dyn Market<Pubkey, FIFOOrderId, FIFORestingOrder, OrderPacket>,
+        last_valid_slot: Option<u64>,
+        last_valid_unix_timestamp_in_seconds: Option<u64>,
+    ) -> Self {
+        Self {
+            ladder: market.get_ladder_with_expiration(
+                u64::MAX,
+                last_valid_slot,
+                last_valid_unix_timestamp_in_seconds,
+            ),
+            tick_size_in_quote_lots_per_base_unit: market.get_tick_size().as_u64(),
+            base_lots_per_base_unit: market.get_base_lots_per_base_unit().as_u64(),
+        }
+    }
 }
 
 pub trait MarketSimulator {
@@ -12,9 +62,10 @@ pub trait MarketSimulator {
     fn simulate_market_sell(&self, side: Side, size_in_lots: u64) -> SimulationSummaryInLots;
 }
 
-impl MarketSimulator for Ladder {
+impl MarketSimulator for LadderWithAdjustment {
     fn sell_quote(&self, num_lots_quote: u64) -> SimulationSummaryInLots {
-        let mut remaining_quote_lots = num_lots_quote;
+        let adjusted_quote_lots = num_lots_quote * self.base_lots_per_base_unit;
+        let mut remaining_quote_lots = adjusted_quote_lots;
         let mut base_lots = 0;
 
         for ask in self.asks.iter() {
@@ -22,13 +73,16 @@ impl MarketSimulator for Ladder {
                 break;
             }
 
-            let max_base_lots_you_can_buy = remaining_quote_lots / ask.price_in_ticks;
+            let max_base_lots_you_can_buy = remaining_quote_lots
+                / (ask.price_in_ticks * self.tick_size_in_quote_lots_per_base_unit);
             let amount_lots_to_buy = max_base_lots_you_can_buy.min(ask.size_in_base_lots);
             base_lots += amount_lots_to_buy;
-            remaining_quote_lots -= amount_lots_to_buy * ask.price_in_ticks;
+            remaining_quote_lots -= amount_lots_to_buy
+                * (ask.price_in_ticks * self.tick_size_in_quote_lots_per_base_unit);
         }
 
-        let quote_lots_used = num_lots_quote - remaining_quote_lots;
+        let quote_lots_used =
+            (adjusted_quote_lots - remaining_quote_lots) / self.base_lots_per_base_unit;
         SimulationSummaryInLots {
             base_lots_filled: base_lots,
             quote_lots_filled: quote_lots_used,
@@ -45,14 +99,15 @@ impl MarketSimulator for Ladder {
             }
 
             let lots_to_fill = remaining_base_lots.min(bid.size_in_base_lots);
-            quote_lots += lots_to_fill * bid.price_in_ticks;
+            quote_lots +=
+                lots_to_fill * bid.price_in_ticks * self.tick_size_in_quote_lots_per_base_unit;
             remaining_base_lots -= lots_to_fill;
         }
 
         let base_lots_used = num_lots_base - remaining_base_lots;
         SimulationSummaryInLots {
             base_lots_filled: base_lots_used,
-            quote_lots_filled: quote_lots,
+            quote_lots_filled: quote_lots / self.base_lots_per_base_unit,
         }
     }
 
@@ -70,7 +125,7 @@ mod test {
     use phoenix::state::markets::LadderOrder;
 
     struct Fixture {
-        pub ladder: Ladder,
+        pub ladder: LadderWithAdjustment,
         pub atoms_in_base_lot: f64,
         pub atoms_in_quote_lot: f64,
         pub atoms_in_base_unit: f64,
@@ -110,7 +165,11 @@ mod test {
             ],
         };
         let fixture = Fixture {
-            ladder,
+            ladder: LadderWithAdjustment {
+                ladder,
+                tick_size_in_quote_lots_per_base_unit: 1000,
+                base_lots_per_base_unit: 1000,
+            },
             atoms_in_base_lot: 1e6,
             atoms_in_quote_lot: 1.,
             atoms_in_base_unit: 1e9,
@@ -127,9 +186,13 @@ mod test {
 
     #[test]
     fn test_empty_ladder_sell() {
-        let ladder = Ladder {
-            bids: vec![],
-            asks: vec![],
+        let ladder = LadderWithAdjustment {
+            ladder: Ladder {
+                bids: vec![],
+                asks: vec![],
+            },
+            tick_size_in_quote_lots_per_base_unit: 1000,
+            base_lots_per_base_unit: 1000,
         };
         let result = ladder.simulate_market_sell(Side::Ask, 1000);
         assert_eq!(result.base_lots_filled, 0);
@@ -155,15 +218,20 @@ mod test {
         let Fixture { ladder, .. } = get_sol_usdc_ladder();
 
         // Compute the max lots you can buy (from available asks)
-        let max_lots_sellable: u64 = ladder
+        let max_lots_sellable = ladder
             .asks
             .iter()
-            .map(|ask| ask.size_in_base_lots * ask.price_in_ticks)
-            .sum();
+            .map(|ask| {
+                ask.size_in_base_lots
+                    * ask.price_in_ticks
+                    * ladder.tick_size_in_quote_lots_per_base_unit
+            })
+            .sum::<u64>()
+            / ladder.base_lots_per_base_unit;
 
         // Try to buy twice as much, which means you are selling twice as much base
         let to_sell = max_lots_sellable * 2;
-        let result = ladder.simulate_market_sell(Side::Bid, to_sell);
+        let result: SimulationSummaryInLots = ladder.simulate_market_sell(Side::Bid, to_sell);
 
         assert_eq!(result.quote_lots_filled, max_lots_sellable);
         assert!(result.quote_lots_filled > 0);

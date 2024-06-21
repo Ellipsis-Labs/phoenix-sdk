@@ -1,4 +1,4 @@
-use crate::ladder_utils::{MarketSimulator, SimulationSummaryInLots};
+use crate::ladder_utils::{LadderWithAdjustment, MarketSimulator, SimulationSummaryInLots};
 use crate::order_packet_template::ImmediateOrCancelOrderTemplate;
 use crate::order_packet_template::LimitOrderTemplate;
 use crate::order_packet_template::PostOnlyOrderTemplate;
@@ -494,8 +494,8 @@ impl SDKClient {
             })?
             .inner;
 
-        let ladder = market.get_ladder_with_expiration(
-            u64::MAX,
+        let ladder = LadderWithAdjustment::from_market_with_expiration(
+            market,
             last_valid_slot,
             last_valid_unix_timestamp_in_seconds,
         );
