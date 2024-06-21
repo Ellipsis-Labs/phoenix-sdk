@@ -23,9 +23,9 @@ impl Deref for LadderWithAdjustment {
 }
 
 pub struct LadderWithAdjustment {
-    pub ladder: Ladder,
-    pub tick_size_in_quote_lots_per_base_unit: u64,
-    pub base_lots_per_base_unit: u64,
+    ladder: Ladder,
+    tick_size_in_quote_lots_per_base_unit: u64,
+    base_lots_per_base_unit: u64,
 }
 
 impl LadderWithAdjustment {
