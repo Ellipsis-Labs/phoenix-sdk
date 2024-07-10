@@ -47,8 +47,8 @@ async function simpleSwap() {
 
   // Build an order packet for a market swap
   const orderPacket = marketState.getSwapOrderPacket({
-    side: Phoenix.Side.Ask,
-    inAmount: 1,
+    side: Phoenix.Side.Bid,
+    inAmount: 100,
   });
 
   // Submit a market order buying 100 USDC worth of SOL
