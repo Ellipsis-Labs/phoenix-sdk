@@ -13,9 +13,9 @@ overflow-checks = true
 [workspace.dependencies]
 spl-token = { version = "3.5.0", features = ["no-entrypoint"] }
 anyhow = "1.0.52"
-solana-account-decoder = ">=1.14.12, <1.18"
-solana-sdk = ">=1.14.12, <1.18"
-solana-client = ">=1.14.12, <1.18"
+solana-account-decoder = ">=1.14.12, <1.19"
+solana-sdk = ">=1.14.12, <1.19"
+solana-client = ">=1.14.12, <1.19"
 borsh = "0.9.3"
 rand = "0.7.3"
 ellipsis-client = "1.0.0"

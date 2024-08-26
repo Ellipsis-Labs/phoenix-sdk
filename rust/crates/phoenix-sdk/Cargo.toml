@@ -2,7 +2,7 @@ cargo-features = ["workspace-inheritance"]
 
 [package]
 name = "phoenix-sdk"
-version = "0.7.0"
+version = "0.8.0"
 description = "SDK for interacting with the Phoenix program"
 edition = "2021"
 license = "MIT"
@@ -21,7 +21,7 @@ solana-client = { workspace = true }
 tokio = { workspace = true }
 ellipsis-client = { workspace = true }
 futures = "0.3.21"
-solana-transaction-status = ">=1.14.12, <1.18"
+solana-transaction-status = ">=1.14.12, <1.19"
 async-trait = "0.1.52"
 coinbase-pro-rs = "0.8.1"
 num-traits = { workspace = true }
@@ -29,6 +29,6 @@ rust_decimal = { workspace = true }
 rust_decimal_macros = { workspace = true }
 bytemuck = { workspace = true }
 itertools = "0.10.5"
-phoenix-sdk-core = { version = "0.7.0", path = "../phoenix-sdk-core" }
+phoenix-sdk-core = { version = "0.8.0", path = "../phoenix-sdk-core" }
 serde = { workspace = true }
 
