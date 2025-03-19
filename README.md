@@ -2,7 +2,7 @@
 
 An SDK for interacting with the Phoenix program.
 
-\*_We currently support Rust and TypeScript, with Python on the way._
+We currently support Rust, Typescript, and [Python](https://github.com/Ellipsis-Labs/phoenixpy).
 
 ## Rust
 
