@@ -81,21 +81,17 @@ pub async fn get_evictable_trader_ix(
         .map_err(|e| anyhow::anyhow!("Error deserializing market header. Error: {:?}", e))?;
 
     let max_traders = market_header.market_size_params.num_seats;
-    let num_traders =
-        dispatch_market::load_with_dispatch(&market_header.market_size_params, market_bytes)?
-            .inner
-            .get_registered_traders()
-            .len() as u64;
-
+    let market_state = dispatch_market::load_with_dispatch(
+    &market_header.market_size_params,
+    market_bytes,
+    )?.inner;
+    let registered_traders = market_state.get_registered_traders();
+    let num_traders = registered_traders.len() as u64;
+  
     // If the market's trader state is full, evict a trader to make room for a new trader.
     if num_traders == max_traders {
-        let trader_tree =
-            dispatch_market::load_with_dispatch(&market_header.market_size_params, market_bytes)?
-                .inner
-                .get_registered_traders()
-                .iter()
-                .map(|(k, v)| (*k, *v))
-                .collect::<BTreeMap<_, _>>();
+       let trader_tree = registered_traders
+        .iter().map(|(k, v)| (*k, *v)).collect::<BTreeMap<_, _>>();
 
         let seat_manager_address = get_seat_manager_address(market_pubkey).0;
         let seat_manager_account = client.get_account_data(&seat_manager_address).await?;
