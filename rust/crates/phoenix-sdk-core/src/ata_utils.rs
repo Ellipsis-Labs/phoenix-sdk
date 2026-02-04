@@ -1,5 +1,5 @@
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-// Copy-pasted from https://github.com/solana-labs/solana-program-library/blob/master/associated-token-account/program/src/lib.rs
+// Copy-pasted from https://github.com/solana-program/associated-token-account/blob/main/program/src/lib.rs
 // Solana dependency graph is too complicated. I don't want to talk about it
 use solana_sdk::{
     instruction::{AccountMeta, Instruction},
