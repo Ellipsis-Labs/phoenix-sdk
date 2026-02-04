@@ -36,8 +36,8 @@ export const NameMarketAuthoritySuccessorStruct = new beet.BeetArgsStruct<
 /**
  * Accounts required by the _NameMarketAuthoritySuccessor_ instruction
  *
- * @property [] phoenixProgram Phoenix program
- * @property [] logAuthority Phoenix log authority
+ * @property [] phoenixProgram Phoenix Legacy program
+ * @property [] logAuthority Phoenix Legacy log authority
  * @property [_writable_] market This account holds the market state
  * @property [**signer**] marketAuthority The market_authority account must sign to name market successor
  * @property [**signer**] seatManagerAuthority The seat manager authority must sign to name a new market authority successor

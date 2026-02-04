@@ -103,7 +103,7 @@ pub struct MarketMetadata {
     pub base_atoms_per_base_lot: u64,
     pub tick_size_in_quote_atoms_per_base_unit: u64,
     pub num_base_lots_per_base_unit: u64,
-    /// The adjustment factor to convert from the raw base unit (i.e. 1 BONK token) to the Phoenix BaseUnit (which may be a multiple of whole tokens).
+    /// The adjustment factor to convert from the raw base unit (i.e. 1 BONK token) to the Phoenix Legacy BaseUnit (which may be a multiple of whole tokens).
     /// The adjustment factor is almost always 1, unless one base token is worth less than one quote atom (i.e. 1e-6 USDC)
     pub raw_base_units_per_base_unit: u32,
     pub market_size_params: MarketSizeParams,

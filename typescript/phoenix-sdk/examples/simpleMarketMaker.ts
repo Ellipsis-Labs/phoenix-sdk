@@ -9,7 +9,7 @@ import * as PhoenixSdk from "../src";
 import fs from "fs";
 import { airdropSplTokensForMarketIxs } from "../src/utils/genericTokenMint";
 
-// This script runs a simple market maker example, which provides limit order bids and asks, on a devnet phoenix market.
+// This script runs a simple market maker example, which provides limit order bids and asks, on a devnet Phoenix Legacy market.
 // To run: ts-node examples/simpleMarketMaker.ts $PATH-TO-KEYPAIR.
 export async function simpleMarketMaker(privateKeyPath: string) {
   // Devnet test market - SOL/USDC
@@ -30,7 +30,7 @@ export async function simpleMarketMaker(privateKeyPath: string) {
   // Load in the keypair for the trader you wish to trade with
   const privateKey = JSON.parse(fs.readFileSync(privateKeyPath, "utf-8"));
   const trader = Keypair.fromSeed(Uint8Array.from(privateKey.slice(0, 32)));
-  // Create a Phoenix Client
+  // Create a Phoenix Legacy Client
   const client = await PhoenixSdk.Client.create(connection);
   // Get the market metadata for the market you wish to trade on
   const marketState = client.marketStates.get(marketPubkey.toString());
