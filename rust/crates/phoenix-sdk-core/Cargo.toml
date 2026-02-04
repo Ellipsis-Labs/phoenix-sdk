@@ -3,7 +3,7 @@ cargo-features = ["workspace-inheritance"]
 [package]
 name = "phoenix-sdk-core"
 version = "0.8.0"
-description = "Core SDK for interacting with the Phoenix program"
+description = "Core SDK for interacting with the Phoenix Legacy program"
 edition = "2021"
 license = "MIT"
 
@@ -21,4 +21,3 @@ anyhow = { workspace = true }
 ellipsis-transaction-utils = { workspace = true }
 bytemuck = { workspace = true }
 spl-token = { workspace = true }
-

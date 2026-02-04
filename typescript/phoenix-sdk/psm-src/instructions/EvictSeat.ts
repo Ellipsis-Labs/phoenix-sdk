@@ -20,8 +20,8 @@ export const EvictSeatStruct = new beet.BeetArgsStruct<{
 /**
  * Accounts required by the _EvictSeat_ instruction
  *
- * @property [] phoenixProgram Phoenix program
- * @property [] logAuthority Phoenix log authority
+ * @property [] phoenixProgram Phoenix Legacy program
+ * @property [] logAuthority Phoenix Legacy log authority
  * @property [_writable_] market This account holds the market state
  * @property [_writable_] seatManager The seat manager account must sign to evict a seat
  * @property [_writable_] seatDepositCollector Collects deposits for claiming new seats and refunds for evicting seats

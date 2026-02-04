@@ -52,7 +52,7 @@ export const DEFAULT_MATCH_LIMIT = 2048;
 export const DEFAULT_SLIPPAGE_PERCENT = 0.005;
 
 /**
- * Find the trader's seat account on Phoenix market.
+ * Find the trader's seat account on Phoenix Legacy market.
  * If the trader does not have a seat account, the PDA seat pubkey will still be returned.
  * In that case, the seat account will need to be initialized with the claim seat instruction.
  * @param marketPubkey The market's address
@@ -578,7 +578,7 @@ function getL3UiOrder(l3Order: L3Order, marketData: MarketData): L3UiOrder {
 }
 
 /**
- * Returns a Phoenix swap transaction
+ * Returns a Phoenix Legacy swap transaction
  *
  * @param market The market object
  * @param trader The `PublicKey` of the trader

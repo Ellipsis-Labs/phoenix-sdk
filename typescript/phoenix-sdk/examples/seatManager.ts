@@ -19,10 +19,10 @@ const devnetSeatManagerAuthority = new PublicKey(
   "AJbjEM3LCmFZq57fKg9Cmz4RaXyZn48H6T5KBwRsvF81"
 );
 
-// This script contains actions that you can perform on a Phoenix Seat account.
+// This script contains actions that you can perform on a Phoenix Legacy Seat account.
 // The main actions are: (i) claim seat, (ii) evict seat, (iii) and get a market's Seat Manager data, each contained in example functions below.
 // You can execute this Typescript script by using ts-node, the Typescript execution and REPL package for node.js. Installation and details: https://www.npmjs.com/package/ts-node
-// Example: At the root Phoenix SDK directory, run `ts-node typescript/phoenix-sdk/examples/seatManager.ts`
+// Example: At the root Phoenix Legacy SDK directory, run `ts-node typescript/phoenix-sdk/examples/seatManager.ts`
 
 // Get the seat manager data for a given market.
 // Useful if you want to know the seat manager authority, the seat manager successor, the number of makers on the market, or designated market makers, if any.
@@ -64,7 +64,7 @@ export async function getSeatManager() {
   );
 }
 
-// You need to claim a seat on a Phoenix market before you can place limit orders.
+// You need to claim a seat on a Phoenix Legacy market before you can place limit orders.
 // This example shows how to claim a seat on a given market.
 // If you are new to a market and want to place a limit order,
 // please see the `getMakerSetupInstructionsForMarket` function and the `placeLimitOrder.ts` in the examples directory, which contains additional logic to place limit orders.

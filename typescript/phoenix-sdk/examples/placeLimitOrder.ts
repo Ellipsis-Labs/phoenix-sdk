@@ -9,9 +9,9 @@ import { airdropSplTokensForMarketIxs } from "../src/utils/genericTokenMint";
 
 import * as PhoenixSdk from "../src";
 
-// This script sets up a trader as a maker on a phoenix market and sends a limit order on behalf of the trader.
+// This script sets up a trader as a maker on a Phoenix Legacy market and sends a limit order on behalf of the trader.
 // You can execute this Typescript script by using ts-node, the Typescript execution and REPL package for node.js. Installation and details: https://www.npmjs.com/package/ts-node
-// Example: At the root Phoenix SDK directory, run `ts-node typescript/phoenix-sdk/examples/placeLimitOrder.ts`
+// Example: At the root Phoenix Legacy SDK directory, run `ts-node typescript/phoenix-sdk/examples/placeLimitOrder.ts`
 export async function placeLimitOrderExample() {
   const endpoint = "https://api.devnet.solana.com";
   const connection = new Connection(endpoint);

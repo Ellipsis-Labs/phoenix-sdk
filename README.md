@@ -1,6 +1,6 @@
-# Phoenix SDK
+# Phoenix Legacy SDK
 
-An SDK for interacting with the Phoenix program.
+An SDK for interacting with the Phoenix Legacy program.
 
 We currently support Rust, Typescript, and [Python](https://github.com/Ellipsis-Labs/phoenixpy).
 
@@ -31,7 +31,7 @@ async function simpleSwap() {
     )
   );
 
-  // Create a Phoenix client and select a market
+  // Create a Phoenix Legacy client and select a market
   const phoenix = await Phoenix.Client.create(connection);
   const marketConfig = phoenix.marketConfigs.find((market) => market.name === "SOL/USDC");
   if (!marketConfig) {

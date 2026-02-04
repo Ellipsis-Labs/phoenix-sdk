@@ -69,7 +69,7 @@ pub fn get_network(network_str: &str) -> &str {
 // `cargo run --bin simple_market_maker -- -m CS2H8nbAVVEUHWPF5extCSymqheQdkd4d7thik6eet9N -u $YOUR_DEVNET_RPC_ENDPOINT`
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Connect to the solana network and create a Phoenix Client with your trader keypair and the market pubkey.
+    // Connect to the solana network and create a Phoenix Legacy Client with your trader keypair and the market pubkey.
     let args = Args::parse();
     let config = match CONFIG_FILE.as_ref() {
         Some(config_file) => Config::load(config_file).unwrap_or_else(|_| {
@@ -110,7 +110,7 @@ async fn main() -> anyhow::Result<()> {
         setup_tx
     );
 
-    // To place limit orders on Phoenix, you need to ensure that you have associated token accounts for the base and quote tokens, and that you have a seat on the market.
+    // To place limit orders on Phoenix Legacy, you need to ensure that you have associated token accounts for the base and quote tokens, and that you have a seat on the market.
     // This method checks these requirements and returns instructions to create the necessary accounts, if needed:
     // - Creation of associated token accounts for base and quote tokens, if needed.
     // - Claiming of the market's seat, if needed.
@@ -224,7 +224,7 @@ async fn cancel_and_place_quotes(
     println!("Placing ask for size {}, price {}", ask_size, ask_price);
 
     let market_metadata = sdk.get_market_metadata(market).await?;
-    // Use an SDK-provided helper function to convert the limit order template into a limit order instruction, which contains Phoenix-specific units that the orderbook uses.
+    // Use an SDK-provided helper function to convert the limit order template into a limit order instruction, which contains Phoenix Legacy-specific units that the orderbook uses.
     let bid_ix =
         sdk.get_limit_order_ix_from_template(market, &market_metadata, &bid_limit_order_template)?;
 

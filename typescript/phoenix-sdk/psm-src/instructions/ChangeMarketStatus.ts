@@ -36,8 +36,8 @@ export const ChangeMarketStatusStruct = new beet.BeetArgsStruct<
 /**
  * Accounts required by the _ChangeMarketStatus_ instruction
  *
- * @property [] phoenixProgram Phoenix program
- * @property [] logAuthority Phoenix log authority
+ * @property [] phoenixProgram Phoenix Legacy program
+ * @property [] logAuthority Phoenix Legacy log authority
  * @property [_writable_] market This account holds the market state
  * @property [_writable_, **signer**] marketAuthority The market_authority account must sign to change market status
  * @property [**signer**] seatManagerAuthority The seat manager account must sign change market status
