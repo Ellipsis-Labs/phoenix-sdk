@@ -3,7 +3,7 @@ cargo-features = ["workspace-inheritance"]
 [package]
 name = "phoenix-sdk"
 version = "0.8.0"
-description = "SDK for interacting with the Phoenix program"
+description = "SDK for interacting with the Phoenix Legacy program"
 edition = "2021"
 license = "MIT"
 
@@ -31,4 +31,3 @@ bytemuck = { workspace = true }
 itertools = "0.10.5"
 phoenix-sdk-core = { version = "0.8.0", path = "../phoenix-sdk-core" }
 serde = { workspace = true }
-

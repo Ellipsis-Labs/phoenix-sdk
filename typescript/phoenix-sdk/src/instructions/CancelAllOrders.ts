@@ -20,8 +20,8 @@ export const CancelAllOrdersStruct = new beet.BeetArgsStruct<{
 /**
  * Accounts required by the _CancelAllOrders_ instruction
  *
- * @property [] phoenixProgram Phoenix program
- * @property [] logAuthority Phoenix log authority
+ * @property [] phoenixProgram Phoenix Legacy program
+ * @property [] logAuthority Phoenix Legacy log authority
  * @property [_writable_] market This account holds the market state
  * @property [**signer**] trader
  * @property [_writable_] baseAccount Trader base token account

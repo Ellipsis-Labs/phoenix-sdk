@@ -465,7 +465,7 @@ impl SDKClient {
     ///
     /// # Arguments
     ///
-    /// * `market_key` - The public key of the Phoenix market.
+    /// * `market_key` - The public key of the Phoenix Legacy market.
     /// * `input_mint_key` - The public key of the input Mint.
     /// * `atoms_to_sell` - The amount in atoms to sell.
     /// * `expiration` - Expiration details for the simulation (optional but recommended for real-time simulations).
@@ -846,7 +846,7 @@ impl SDKClient {
     }
 }
 
-/// Functions for sending transactions that interact with the Phoenix program
+/// Functions for sending transactions that interact with the Phoenix Legacy program
 impl SDKClient {
     pub async fn send_ioc(
         &self,

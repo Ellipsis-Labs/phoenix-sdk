@@ -91,7 +91,7 @@ export function getPhoenixEventsFromLogData(
 }
 
 /**
- * Returns a list of Phoenix events for a given transaction object
+ * Returns a list of Phoenix Legacy events for a given transaction object
  *
  * @param txData The transaction object returned by `getParsedTransaction` of type `ParsedTransactionWithMeta`
  */
@@ -140,7 +140,7 @@ export function getPhoenixEventsFromTransactionData(
 }
 
 /**
- * Returns a list of Phoenix events for a given transaction signature
+ * Returns a list of Phoenix Legacy events for a given transaction signature
  *
  * @param connection The Solana `Connection` object
  * @param signature The signature of the transaction to fetch
@@ -160,7 +160,7 @@ export async function getPhoenixEventsFromTransactionSignature(
 }
 
 /**
- * Returns a list of Phoenix events for a given transaction signature
+ * Returns a list of Phoenix Legacy events for a given transaction signature
  *
  * @param connection The Solana `Connection` object
  * @param signature The signature of the transaction to fetch

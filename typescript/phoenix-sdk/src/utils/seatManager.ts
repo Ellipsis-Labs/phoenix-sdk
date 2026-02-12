@@ -72,7 +72,7 @@ export function getSeatDepositCollectorAddress(market: PublicKey): PublicKey {
 }
 
 /**
- * Returns an instruction to claim a seat on a market, via the Phoenix Seat Manager
+ * Returns an instruction to claim a seat on a market, via the Phoenix Legacy Seat Manager
  *
  * @param market The market's address
  * @param trader The trader's address
@@ -101,7 +101,7 @@ export function getClaimSeatIx(
 }
 
 /**
- * Returns an instruction to evict a seat on a market, via the Phoenix Seat Manager
+ * Returns an instruction to evict a seat on a market, via the Phoenix Legacy Seat Manager
  * Evict seat is only allowed if the trader state is full for a given market, unless performed by the seat manager authority
  *
  * @param marketState The market object

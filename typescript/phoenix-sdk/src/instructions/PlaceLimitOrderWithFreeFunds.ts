@@ -37,8 +37,8 @@ export const PlaceLimitOrderWithFreeFundsStruct =
 /**
  * Accounts required by the _PlaceLimitOrderWithFreeFunds_ instruction
  *
- * @property [] phoenixProgram Phoenix program
- * @property [] logAuthority Phoenix log authority
+ * @property [] phoenixProgram Phoenix Legacy program
+ * @property [] logAuthority Phoenix Legacy log authority
  * @property [_writable_] market This account holds the market state
  * @property [**signer**] trader
  * @property [] seat

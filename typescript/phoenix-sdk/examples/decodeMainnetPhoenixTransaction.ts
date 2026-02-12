@@ -3,7 +3,7 @@ import { Connection } from "@solana/web3.js";
 import * as Phoenix from "../src";
 
 /*
-Prints out the Phoenix events for a specific transaction. Notable, the transaction being parsed in this
+Prints out the Phoenix Legacy events for a specific transaction. Notable, the transaction being parsed in this
 example is a Solana V0 transaction (rather than a legacy Solana transaction)
 
 Expected output:

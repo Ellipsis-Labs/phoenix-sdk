@@ -27,7 +27,7 @@ export const PROGRAM_ADDRESS = "PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY";
 export const PROGRAM_ID = new PublicKey(PROGRAM_ADDRESS);
 
 /**
- * Returns the Phoenix log authority Pubkey
+ * Returns the Phoenix Legacy log authority Pubkey
  */
 export function getLogAuthority(): PublicKey {
   return PublicKey.findProgramAddressSync([Buffer.from("log")], PROGRAM_ID)[0];
