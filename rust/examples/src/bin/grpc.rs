@@ -34,10 +34,11 @@ async fn main() -> anyhow::Result<()> {
     let x_token = match args.x_token {
         Some(t) => t,
         None => {
-            // Split url by forward slash
-            let mut url_split: Vec<&str> = url.split('/').collect();
-            let token = url_split.pop().unwrap();
-            token.to_string()
+            let mut url_split: Vec<&str> = url.rsplitn(2, '/').collect();
+            if url_split.len() < 2 {
+                return Err(anyhow::anyhow!("Invalid URL format, cannot extract x_token"));
+            }
+            url_split[0].to_string()
         }
     };
 
